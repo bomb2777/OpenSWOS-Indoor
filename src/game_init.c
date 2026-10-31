@@ -1012,6 +1012,10 @@ cancelled:
  */
 __attribute__((used, externally_visible))
 void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
+    /* OpenSWOS INDOOR: the FRIENDLY screen's switch, for this match only (indoor.h);
+     * before SetupPlayers, whose line-up screen shows five a side indoors. */
+    Indoor_BeginMatch();
+
     /* SetupPlayers: mode=0, maxSubs=_maxSubstitutes, excludeFlags=1, allowSquadChanges=1 */
     SetupPlayers(team1, team2, (int16_t)_maxSubstitutes, 1, 1, 0);
 
@@ -1057,15 +1061,14 @@ void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
     }
 #endif
     { extern void ModMatch_TieRules(void); ModMatch_TieRules(); }   /* a mod's match's (mod_match.c) */
-    /* OpenSWOS INDOOR: the FRIENDLY screen's switch, for this match only (indoor.h). */
-    Indoor_BeginMatch();
+    Indoor_PinPitch();          /* INDOOR: the floor's pitch type */
 
     /* d0=1, d1=minSubs, d2=maxSubs, d3=0, d7=-1, a1=team1, a2=team2 */
     InitializeInGameTeamsAndStartGame(1, (int16_t)_minSubstitutes,
         (int16_t)_maxSubstitutes, 0, -1, &team1->team, &team2->team);
-    Indoor_EndMatch();
 
 done:
+    Indoor_EndMatch();
     _isCareer = 0;
 }
 

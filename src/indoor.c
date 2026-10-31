@@ -79,13 +79,19 @@ void Indoor_BeginMatch(void)
 
     _gIndoor = 1;
     _gIndoorFloor = floor;
+#ifdef SWOS_SDL_BUILD
+    fprintf(stderr, "[indoor] this friendly is played indoors: %s, pitch type %d\n",
+            Indoor_FloorName(floor), Indoor_PitchTypeForFloor(floor));
+#endif
+}
+
+void Indoor_PinPitch(void)
+{
+    if (!_gIndoor)
+        return;
     /* The floor decides the pitch, whatever the screen's PITCH TYPE said. */
     _gamePitchTypeOrSeason = 0;
-    _gamePitchType = (uint16_t)Indoor_PitchTypeForFloor(floor);
-#ifdef SWOS_SDL_BUILD
-    fprintf(stderr, "[indoor] this friendly is played indoors: %s, pitch type %u\n",
-            Indoor_FloorName(floor), (unsigned)_gamePitchType);
-#endif
+    _gamePitchType = (uint16_t)Indoor_PitchTypeForFloor(_gIndoorFloor);
 }
 
 void Indoor_EndMatch(void)
@@ -135,4 +141,9 @@ int16_t Indoor_RestartOrdinal(int16_t ordinal)
     if (!_gIndoor || ordinal < 1 || ordinal > INDOOR_PLAYERS)
         return ordinal;
     return kRole[ordinal];
+}
+
+int16_t Indoor_IsParkedSlot(uint16_t slot)
+{
+    return (_gIndoor && slot >= INDOOR_PLAYERS && slot < 11) ? 1 : 0;
 }

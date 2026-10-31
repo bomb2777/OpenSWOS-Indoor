@@ -16,6 +16,7 @@
 #include "string_utils.h"
 #ifdef SWOS_SDL_BUILD
 #include "uniform.h"        /* a kit chosen for this match (UNIFORM screen) */
+#include "indoor.h"         /* INDOOR: a friendly played five a side in a hall */
 #endif
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */
@@ -1039,10 +1040,13 @@ void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
     }
 #endif
     { extern void ModMatch_TieRules(void); ModMatch_TieRules(); }   /* a mod's match's (mod_match.c) */
+    /* OpenSWOS INDOOR: the FRIENDLY screen's switch, for this match only (indoor.h). */
+    Indoor_BeginMatch();
 
     /* d0=1, d1=minSubs, d2=maxSubs, d3=0, d7=-1, a1=team1, a2=team2 */
     InitializeInGameTeamsAndStartGame(1, (int16_t)_minSubstitutes,
         (int16_t)_maxSubstitutes, 0, -1, &team1->team, &team2->team);
+    Indoor_EndMatch();
 
 done:
     _isCareer = 0;

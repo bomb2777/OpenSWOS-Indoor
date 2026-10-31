@@ -229,6 +229,7 @@ extern void FlipOnOff(void);
 extern void FriendlyMenu(void);
 extern void FriendlyMenuInit(void);
 extern void FriendlyMenuReinit(void);
+extern void FriendlyIndoorProc(void);
 extern void FriendlyOK(void);
 extern void FriendlyPitchTypeProc(void);
 extern void GiveFreeTransfer(void);
@@ -492,6 +493,7 @@ extern char _aHighlights_0[];
 extern char _aHyphen[];
 extern char _aImport[];
 extern char _aImportTactics[];
+extern char _aIndoor[];
 extern char _aJobOffer[];
 extern char _aJobOffers[];
 extern char _aJobOffersBeing[];
@@ -531,6 +533,7 @@ extern char _aNationality[];
 extern char _aNewBalance[];
 extern char _aNextMatch[];
 extern char _aNumberOfTeams[];
+extern char _aOff[];
 extern char _aOffers[];
 extern char _aOk[];
 extern char _aOldBalance[];
@@ -3721,13 +3724,13 @@ Menu_FriendlyGame _friendlyGameMenu = {
         MENU_CMD_END
     },
     { -104, 70, 40, 15 },
-    { MENU_CMD_NAV, -1, 6, 4, 8 },
+    { MENU_CMD_NAV, -1, 6, 4, 12 },
     { MENU_CMD_COLORS, 0xD },
     { MENU_CMD_TEXT_NO_PTR, 0x0 },
     { MENU_CMD_ONSELECT_FIRE, MinSubstitutes },
     MENU_CMD_END,
     { -24, 70, 40, 15 },
-    { MENU_CMD_NAV, 5, -1, 4, 8 },
+    { MENU_CMD_NAV, 5, -1, 4, 12 },
     { MENU_CMD_COLORS, 0xD },
     { MENU_CMD_TEXT_NO_PTR, 0x0 },
     { MENU_CMD_ONSELECT_FIRE, MaxSubstitutes },
@@ -3735,7 +3738,7 @@ Menu_FriendlyGame _friendlyGameMenu = {
     { MENU_MARK_START_MENU, 0, 0 },
     {
         { 0, -71, 120, 15 },
-        { MENU_CMD_NAV, -1, 9, 5, -1 },
+        { MENU_CMD_NAV, -1, 9, 12, -1 },
         { MENU_CMD_COLORS, 0xE },
         { MENU_CMD_TEXT_PTR, 0x0, _aChooseTeams },
         { MENU_CMD_ONSELECT_FIRE, ChooseTeamsMenu },
@@ -3743,7 +3746,7 @@ Menu_FriendlyGame _friendlyGameMenu = {
     },
     {
         { 121, -91, 62, 15 },
-        { MENU_CMD_NAV, -1, -1, 5, 9 },
+        { MENU_CMD_NAV, -1, -1, 12, 9 },
         { MENU_CMD_COLORS, 0xE },
         { MENU_CMD_TEXT_PTR, 0x0, _aOk },
         { MENU_CMD_ONSELECT_FIRE, FriendlyOK },
@@ -3761,6 +3764,21 @@ Menu_FriendlyGame _friendlyGameMenu = {
     { MENU_CMD_COLORS, 0x0 },
     { MENU_CMD_TEXT_NO_PTR, 0x0 },
     MENU_CMD_END,
+    { MENU_MARK_START_MENU, 0, 10 },
+    {
+        { 31, 90, 120, 15 },
+        { MENU_CMD_COLORS, 0x9 },
+        { MENU_CMD_TEXT_PTR, 0x0, _aIndoor },
+        MENU_CMD_END
+    },
+    {
+        { -104, 90, 120, 15 },
+        { MENU_CMD_NAV, -1, -1, 5, 8 },
+        { MENU_CMD_COLORS, 0xD },
+        { MENU_CMD_TEXT_PTR, 0x0, _aOff },
+        { MENU_CMD_ONSELECT_FIRE, FriendlyIndoorProc },
+        MENU_CMD_END
+    },
     MENU_MARK_END_MENU
 };
 Menu_EditTeams _editTeamsMenu = {

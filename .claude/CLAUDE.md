@@ -188,6 +188,18 @@ proves a refusal. A raw
 PLAYERS -- SWOS 2020 renumbers custom teams. `--custom-team-selftest` runs all 1,631 database
 teams through the rule and the file; run it after touching either.
 
+**INDOOR** (this fork's own feature, docs/INDOOR.md; branch `indoor`, upstream has none). A
+FRIENDLY can be played five a side in a hall with glass walls (the ball never goes out; goals,
+fouls and half time are the only stoppages), its floor deciding the pitch type (wood/linoleum
+HARD, stone FROZEN, sand MUDDY; only blue linoleum so far). The FRIENDLY screen's INDOOR row
+(entries 11-12, `FriendlyIndoorProc` in `src/menus.c`, SDL only) sets `_gIndoorFriendlyFloor`;
+`Indoor_BeginMatch` (`src/indoor.c`, from `InitAndPlayGame`) makes `_gIndoor` 1 for that match
+only, never for a competition, career, training, arcade or online match. **Match code tests
+`_gIndoor` and nothing else, and with it 0 a match plays exactly as upstream's** -- the career
+golden test (and the replay/rollback/netplay rigs, where `tests/dos` exists) prove it.
+`SWOS_INDOOR=1` forces it for a test. Built in phases (INDOOR.md "Plan"); keep the doc's status
+line current.
+
 **`SWOS_WORLDS`** (default 1; `make SWOS_WORLDS=0`, the same on `Makefile.amiga`): the football worlds
 beyond 96/97 -- World 2026-27 and all it brought (docs/WORLD_2026_27.md: its countries, leagues,
 splits, play-offs, cups, pools, the Coppa D, Europe's league phases). At 0 the game is 96/97 alone, as

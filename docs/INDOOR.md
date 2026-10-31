@@ -51,14 +51,23 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    tables (kick-off, free kicks, penalties, ...) give indoor players 2–5 the places of 3, 4,
    10 and 11 (`Indoor_RestartOrdinal`: two centre backs and the two forwards who kick off),
    and the free-kick wall, which counts on ordinals 2–5, is skipped. During play they still
-   follow the team's (outdoor) tactic slots 0–3 until phase 3. (b) done: the PLAY MATCH
-   screen greys rows 6–11 (they sit the match out; the bench is rows 12–16 as outdoors -- any
-   ten can be chosen by swapping rows) and puts only the five on its little pitch. For that
+   follow the team's (outdoor) tactic slots 0–3 until phase 3. (b) done: a starting five and
+   an ELEVEN-man bench (squad slots 5–15; owner's choice, after trying 6-sit-out). The PLAY
+   MATCH screen lists the first 11 in plain slot order indoors (`Indoor_ListOrder`, where
+   outdoors it is the tactic's role order -- which mixes slots 0–10, all starters outdoors), so
+   rows 1–5 are the five who start, then the gap, then rows 6–16 in the bench colour; swapping
+   a starter with any of them is a starter/bench swap (`Indoor_FirstBenchSlot`). In the match
+   the bench cursor counts 1–11 (`Indoor_BenchSize`, `Indoor_BenchSlot`: cursor 1 is slot 5),
+   the bench draws eleven figures in its column (7 px apart, past the dugout's end), a
+   substitution from a parked sprite's slot swaps the players' data as one from 11–15 does,
+   and the player who comes off is parked in his place. Only the five on the pitch are
+   listed to come off, and the marks menu cannot swap a parked player in. For that
    `Indoor_BeginMatch` now decides at the START of `InitAndPlayGame`, before `SetupPlayers`
    shows the screen; `Indoor_PinPitch` sets the floor's pitch type where the old call was, and
    `Indoor_EndMatch` runs on every way out, EXIT included. (c) done: substitutions in the match
-   never offer a parked player (`Indoor_IsParkedSlot`, in both copies of
-   `isPlayerOkToSubstitute` / `findInitialPlayerToBeSubstituted` in `src/bench_subs.c`).
+   never offer a parked player (`Indoor_IsParkedSlot`). `src/bench_subs.c` has the live static
+   functions and an exported copy of each that nothing calls (from `BenchMenuHandleControls`,
+   unreferenced); the bench changes are in the live ones.
 3. **Indoor tactics** — 2-2, 1-2-1, 3-1, 1-3 on the same 5×7 grid (`TeamTactics`, only
    `positions[0..3]` used), compiled in (the Amiga reads no JSON), swapped into the tactics
    table for the match.

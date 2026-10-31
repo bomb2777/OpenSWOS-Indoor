@@ -70,4 +70,20 @@ int16_t Indoor_RestartOrdinal(int16_t ordinal);
  * offered for substitution. Always 0 outdoors. */
 int16_t Indoor_IsParkedSlot(uint16_t slot);
 
+/* ---- The bench -------------------------------------------------------------------
+ * Outdoors the bench is squad slots 11-15 (5 players); indoors everyone who does not
+ * start is on it: slots 5-15, 11 players. A parked sprite's slot (5-10) holds a bench
+ * player, so a substitution from it swaps with a player on the pitch exactly as one from
+ * 11-15 does, and the player who comes off is parked in his place.
+ * The in-match bench cursor counts 1..Indoor_BenchSize() (0 is the coach). */
+int16_t  Indoor_BenchSize(void);                /* 5 outdoors, 11 indoors */
+uint16_t Indoor_FirstBenchSlot(void);           /* 11 outdoors, 5 indoors */
+uint16_t Indoor_BenchSlot(uint16_t index);      /* bench cursor 1.. -> squad slot */
+
+/* The order a team's first 11 are LISTED in (line-up screen, substitutions menu): the
+ * tactic's role order (_positionsTable, 1-based slots) outdoors. Indoors the plain
+ * slot order instead, so rows 1-5 are exactly the five who start (slots 0-4) -- the
+ * role order mixes slots 0-10, which outdoors are all starters anyway. */
+const uint8_t *Indoor_ListOrder(const uint8_t *rolesOrder);
+
 #endif /* INDOOR_H */

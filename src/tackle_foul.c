@@ -5,6 +5,7 @@
  */
 #include "tweaks.h"   /* [tweaks] cpu_cards */
 #include "tackle_foul.h"
+#include "indoor.h"          /* INDOOR: the court */
 #include "test_rules.h"
 #include "dos_sound.h"
 #include "contest_log.h"    /* how long a slide leaves a player down (ContestLog_Down) */
@@ -532,10 +533,10 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
     }
 
     /* Check victim is on pitch bounds */
-    if (victim->x.s.i < 81 ||
-        victim->y.s.i < 129 ||
-        victim->x.s.i > 590 ||
-        victim->y.s.i > 769)
+    if (victim->x.s.i < INDOOR_X(81) ||           /* INDOOR: the court (indoor.h) */
+        victim->y.s.i < INDOOR_Y(129) ||
+        victim->x.s.i > INDOOR_X(590) ||
+        victim->y.s.i > INDOOR_Y(769))
         return;
 
     /* Slow down tackler */
@@ -586,14 +587,14 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
         int16_t vx = victim->x.s.i;
         int16_t vy = victim->y.s.i;
 
-        if (vx >= 193 && vx <= 478 && vy >= 129 && vy <= 769) {
+        if (vx >= INDOOR_X(193) && vx <= INDOOR_X(478) && vy >= INDOOR_Y(129) && vy <= INDOOR_Y(769)) {
             /* In the main zone -- check penalty area */
             if (team == &_topTeamData) {
-                if (vy <= 216)
+                if (vy <= INDOOR_Y(216))
                     goto maybe_card;
                 /* else fall through to nearest-teammate search */
             } else {
-                if (vy >= 682)
+                if (vy >= INDOOR_Y(682))
                     goto maybe_card;
                 /* else fall through to nearest-teammate search */
             }
@@ -609,9 +610,9 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
             int16_t i;
 
             if (team == &_topTeamData)
-                refY = 129;
+                refY = INDOOR_GY(129);
             else
-                refY = 769;
+                refY = INDOOR_GY(769);
 
             dx = victim->x.s.i - refX;
             dy = victim->y.s.i - refY;
@@ -810,19 +811,19 @@ TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
         _cameraDirection = 0;
 
         /* Check penalty area: y <= 216, 193 <= x <= 478 */
-        if (vy <= 216 && vx >= 193 && vx <= 478) {
+        if (vy <= INDOOR_Y(216) && vx >= INDOOR_X(193) && vx <= INDOOR_X(478)) {
             _gameState = ST_PENALTY;
             _breakCameraMode = -1;
             _playerTurnFlags = 0x83;
             _foulXCoordinate = 336;
-            _foulYCoordinate = 187;
+            _foulYCoordinate = INDOOR_SPOT_Y(187);
             PlayPenalty();
             goto apply_break;
         }
 
         DOS_SOUND(DOS_EV_FOUL, 0);
         /* Free kick band: 216 < y < 331 */
-        if (vy < 216 || vy >= 331)
+        if (vy < INDOOR_Y(216) || vy >= INDOOR_Y(331))
             goto set_foul;
         goto select_fk_quadrant;
     } else {
@@ -830,40 +831,40 @@ TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
         _cameraDirection = 4;
 
         /* Check penalty area: y >= 682, 193 <= x <= 478 */
-        if (vy >= 682 && vx >= 193 && vx <= 478) {
+        if (vy >= INDOOR_Y(682) && vx >= INDOOR_X(193) && vx <= INDOOR_X(478)) {
             _gameState = ST_PENALTY;
             _breakCameraMode = -1;
             _playerTurnFlags = 0x38;
             _foulXCoordinate = 336;
-            _foulYCoordinate = 711;
+            _foulYCoordinate = INDOOR_SPOT_Y(711);
             PlayPenalty();
             goto apply_break;
         }
 
         DOS_SOUND(DOS_EV_FOUL, 0);
         /* Free kick band: 567 <= y <= 682 */
-        if (vy < 567 || vy > 682)
+        if (vy < INDOOR_Y(567) || vy > INDOOR_Y(682))
             goto set_foul;
     }
 
 select_fk_quadrant:
     if (team == &_bottomTeamData) {
         /* Bottom team: mirrored quadrant assignment */
-        if (vx < 153) goto fk_right3;
-        if (vx < 261) goto fk_right2;
-        if (vx < 309) goto fk_right1;
-        if (vx < 362) goto fk_center;
-        if (vx < 410) goto fk_left3;
-        if (vx < 518) goto fk_left2;
+        if (vx < INDOOR_X(153)) goto fk_right3;
+        if (vx < INDOOR_X(261)) goto fk_right2;
+        if (vx < INDOOR_X(309)) goto fk_right1;
+        if (vx < INDOOR_X(362)) goto fk_center;
+        if (vx < INDOOR_X(410)) goto fk_left3;
+        if (vx < INDOOR_X(518)) goto fk_left2;
         goto fk_left1;
     } else {
         /* Top team */
-        if (vx < 153) goto fk_left1;
-        if (vx < 261) goto fk_left2;
-        if (vx < 309) goto fk_left3;
-        if (vx < 362) goto fk_center;
-        if (vx < 410) goto fk_right1;
-        if (vx < 518) goto fk_right2;
+        if (vx < INDOOR_X(153)) goto fk_left1;
+        if (vx < INDOOR_X(261)) goto fk_left2;
+        if (vx < INDOOR_X(309)) goto fk_left3;
+        if (vx < INDOOR_X(362)) goto fk_center;
+        if (vx < INDOOR_X(410)) goto fk_right1;
+        if (vx < INDOOR_X(518)) goto fk_right2;
         goto fk_right3;
     }
 

@@ -7,6 +7,7 @@
 #include "game_types.h"
 #include "display.h"
 #include "dos_mode.h"   /* _gDosGameplay: SIM_CAM_AIM_* */
+#include "indoor.h"     /* INDOOR: the camera on the court */
 
 /* cameraX / cameraY are FixedPoint unions (see game_types.h).
  *   cameraX.raw     = full 32-bit 16.16 fixed-point value
@@ -319,6 +320,21 @@ offset_and_clamp_to_view:
     targetX += (int16_t)_cameraXVelocity;
     targetY += (int16_t)_cameraYVelocity;
 
+    /* INDOOR: the court is narrower than any view -- centred across; along, only as far
+     * as shows the court and 48 px of hall past each goal line (indoor.h). */
+    if (_gIndoor && _trainingGame == 0) {
+        int16_t minY = (int16_t)(INDOOR_TOP - 48);
+        int16_t maxY = (int16_t)(INDOOR_BOTTOM + 48 - _sim_view_height);
+        targetX = SIM_CAMERA_CENTRE_X;
+        if (maxY < minY)
+            targetY = (int16_t)(449 - _sim_view_height / 2);
+        else if (targetY < minY)
+            targetY = minY;
+        else if (targetY > maxY)
+            targetY = maxY;
+        goto clamped_to_view;
+    }
+
     /* Clamp X so the _screen_width-wide view stays on the pitch. */
     {
         /* pitchWidth(0x2A0=672) - viewWidth = how far the camera may pan and keep the
@@ -350,6 +366,7 @@ offset_and_clamp_to_view:
             targetY = SIM_CAMERA_MAX_Y;
     }
 
+clamped_to_view:
     /* ---- Compute fixed-point delta from current camera position ---- */
     {
         int16_t cameraIntX = (int16_t)(_cameraX.raw >> 16);

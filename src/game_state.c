@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "game_state.h"
+#include "indoor.h"          /* INDOOR: the court */
 #include "game_types.h"
 #include "endian_helpers.h"
 #include "display.h"    /* _screen_width, WIDE_MARGIN — center the in-match HUD in widescreen */
@@ -1014,9 +1015,9 @@ last_minute_in_progress:
         int16_t ballY = _ballSprite.y.s.i;
 
         /* Ball must be between penalty areas (216 < y < 682) */
-        if (ballY <= 216)
+        if (ballY <= INDOOR_Y(216))    /* INDOOR: the court's penalty areas */
             goto last_cycle;
-        if (ballY >= 682)
+        if (ballY >= INDOOR_Y(682))
             goto last_cycle;
 
         /* Check which half the ball is in relative to center (449) */

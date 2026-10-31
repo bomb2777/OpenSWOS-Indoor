@@ -284,18 +284,20 @@ void UpdatePlayers(TeamGeneralInfo *team) {
     _ballInLowerPenaltyArea = 0;
     _ballInGoalkeeperArea = 0;
 
-    if (ballX >= 193 && ballX <= 478 && ballY >= 129 && ballY <= 769) {
-        if (ballY <= 216) {
+    /* INDOOR (indoor.h): the penalty area scaled onto the court, the goal area's depth
+     * shifted with the goal; its width (inside the court) as it is. */
+    if (ballX >= INDOOR_X(193) && ballX <= INDOOR_X(478) && ballY >= INDOOR_Y(129) && ballY <= INDOOR_Y(769)) {
+        if (ballY <= INDOOR_Y(216)) {
             _ballInUpperPenaltyArea = 1;
             goto check_gk_area;
-        } else if (ballY >= 682) {
+        } else if (ballY >= INDOOR_Y(682)) {
             _ballInLowerPenaltyArea = 1;
             goto check_gk_area;
         }
         goto not_in_penalty;
     check_gk_area:
         if (ballX >= 273 && ballX <= 398) {
-            if (ballY <= 158 || ballY >= 740)
+            if (ballY <= INDOOR_GY(158) || ballY >= INDOOR_GY(740))
                 _ballInGoalkeeperArea = 1;
         }
     }
@@ -523,10 +525,10 @@ not_in_penalty:
             int16_t ngy = _ballNextYGroundY;
 
             if (team == &_bottomTeamData) {
-                if (ngy < 682 || ngy > 761 || ngx < 193 || ngx > 478)
+                if (ngy < INDOOR_Y(682) || ngy > INDOOR_GY(761) || ngx < INDOOR_X(193) || ngx > INDOOR_X(478))
                     goto ball_standing_in_goalkeeper_area;
             } else {
-                if (ngy < 137 || ngy > 216 || ngx < 193 || ngx > 478)
+                if (ngy < INDOOR_GY(137) || ngy > INDOOR_Y(216) || ngx < INDOOR_X(193) || ngx > INDOOR_X(478))
                     goto ball_standing_in_goalkeeper_area;
             }
 
@@ -593,14 +595,14 @@ not_in_penalty:
 
     compute_dest_y_from_ball:
         if (ball->y.s.i >= 449) {
-            int16_t d = 769 - ball->y.s.i;
+            int16_t d = INDOOR_GY(769) - ball->y.s.i;
             d >>= 1;
             d += ball->y.s.i;
             player->destY = d;
         } else {
-            int16_t d = ball->y.s.i - 129;
+            int16_t d = ball->y.s.i - INDOOR_GY(129);
             d >>= 1;
-            d += 129;
+            d += INDOOR_GY(129);
             player->destY = d;
         }
         {
@@ -672,14 +674,14 @@ not_in_penalty:
             player->destX = dx;
         }
         if (ball->y.s.i >= 449) {
-            int16_t d = 769 - ball->y.s.i;
+            int16_t d = INDOOR_GY(769) - ball->y.s.i;
             d >>= 1;
             d += ball->y.s.i;
             player->destY = d;
         } else {
-            int16_t d = ball->y.s.i - 129;
+            int16_t d = ball->y.s.i - INDOOR_GY(129);
             d >>= 1;
-            d += 129;
+            d += INDOOR_GY(129);
             player->destY = d;
         }
         {
@@ -950,10 +952,10 @@ not_in_penalty:
         GoalkeeperClaimedTheBall(player, ball, team);
 
     clamp_keeper_y_min:
-        if (player->destY < 129)
-            player->destY = 129;
-        if (player->destY > 769)
-            player->destY = 769;
+        if (player->destY < INDOOR_GY(129))
+            player->destY = INDOOR_GY(129);
+        if (player->destY > INDOOR_GY(769))
+            player->destY = INDOOR_GY(769);
         goto finalize;
 
     return_last_player_block:
@@ -1945,10 +1947,10 @@ not_in_penalty:
         }
 
         /* tackle_out_of_pitch_slow_near_goalmouth */
-        if (player->x.s.i < 73 || player->x.s.i > 598)
+        if (player->x.s.i < INDOOR_X(73) || player->x.s.i > INDOOR_X(598))
             goto tackle_edge_slowdown;
 
-        if (player->y.s.i < 129 || player->y.s.i > 769) {
+        if (player->y.s.i < INDOOR_GY(129) || player->y.s.i > INDOOR_GY(769)) {
             /* Out of pitch by Y */
             if (player->x.s.i >= 275 && player->x.s.i <= 396) {
                 /* Near goal — heavy slowdown. FOUR shifts, so /16: the Amiga
@@ -2078,9 +2080,9 @@ not_in_penalty:
         }
 
         /* heading_boundary_checks */
-        if (player->x.s.i < 73 || player->x.s.i > 598)
+        if (player->x.s.i < INDOOR_X(73) || player->x.s.i > INDOOR_X(598))
             goto heading_oob_slowdown;
-        if (player->y.s.i < 132 || player->y.s.i > 766) {
+        if (player->y.s.i < INDOOR_GY(132) || player->y.s.i > INDOOR_GY(766)) {
             /* Near goalmouth check */
             if (player->x.s.i >= 296 && player->x.s.i <= 375) {
                 if (player->x.s.i >= 305 && player->x.s.i <= 366) {
@@ -2092,7 +2094,7 @@ not_in_penalty:
                 goto heading_reset_to_idle;
             }
         heading_goal_line_band_checks:
-            if (player->y.s.i >= 129 && player->y.s.i <= 769)
+            if (player->y.s.i >= INDOOR_GY(129) && player->y.s.i <= INDOOR_GY(769))
                 goto jump_header_try_execute;
             if (player->x.s.i >= 0x122 && player->x.s.i <= 0x17D) {
                 player->speed = 0;
@@ -2193,10 +2195,10 @@ not_in_penalty:
         /* Note: asm uses raw offsets $1E/$22 = sprite offsets 30/34 = x.s.i/y.s.i */
         {
             int16_t rx = player->x.s.i;
-            if (rx < 81 || rx > 590)
+            if (rx < INDOOR_X(81) || rx > INDOOR_X(590))
                 goto clear_pass_state_oob;
             int16_t ry = player->y.s.i;
-            if (ry < 129 || ry > 769)
+            if (ry < INDOOR_Y(129) || ry > INDOOR_Y(769))
                 goto clear_pass_state_oob;
             goto pass_assist_entry_checks;
         }
@@ -2689,8 +2691,8 @@ not_in_penalty:
                                 dx += freeKickDestX_local;
                             } else {
                                 dx += 5;
-                                player->destX = dx + 81;
-                                player->destY = dy + 129;
+                                player->destX = INDOOR_X(dx + 81);     /* INDOOR: onto the court */
+                                player->destY = INDOOR_Y(dy + 129);
                                 goto finalize;
                             }
                             dx += ballX;
@@ -2711,8 +2713,8 @@ not_in_penalty:
                             } else {
                                 dx = 509 - dx - 5;
                                 dy = 640 - dy;
-                                player->destX = dx + 81;
-                                player->destY = dy + 129;
+                                player->destX = INDOOR_X(dx + 81);     /* INDOOR: onto the court */
+                                player->destY = INDOOR_Y(dy + 129);
                                 goto finalize;
                             }
                             dx += ballX;
@@ -2735,14 +2737,17 @@ not_in_penalty:
             int32_t dx = (int32_t)(player->destX - _foulXCoordinate);
             int32_t dy = (int32_t)(player->destY - _foulYCoordinate);
             int32_t dist = dx * dx + dy * dy;
-            if (dist > 4225)
+            /* 65 px (9 m); INDOOR 32 px, futsal's 5 m (a scaled 65 would be 3 m) */
+            int32_t keep = _gIndoor ? INDOOR_FREE_KICK_DISTANCE : 65;
+            if (dist > keep * keep)
                 goto finalize;
             {
                 int16_t fx = _foulXCoordinate;
+                int16_t step = _gIndoor ? INDOOR_FREE_KICK_STEP : 70;
                 if (fx >= 336)
-                    fx -= 70;
+                    fx -= step;
                 else
-                    fx += 70;
+                    fx += step;
                 player->destX = fx;
             }
         }

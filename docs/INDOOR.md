@@ -61,7 +61,10 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    the bench draws eleven figures in its column (7 px apart, past the dugout's end), a
    substitution from a parked sprite's slot swaps the players' data as one from 11–15 does,
    and the player who comes off is parked in his place. Only the five on the pitch are
-   listed to come off, and the marks menu cannot swap a parked player in. For that
+   listed to come off, and the marks menu cannot swap a parked player in. Switching INDOOR on
+   sets SUBSTITUTES to 5 FROM 5 (5 substitutions, and FROM 5 so no bench slot from 11 on is cut
+   off); still changeable, and OFF gives back what it said. Injured players are kept off the
+   bench from slot 5 on indoors (InitInGamePlayer), not only from 11. For that
    `Indoor_BeginMatch` now decides at the START of `InitAndPlayGame`, before `SetupPlayers`
    shows the screen; `Indoor_PinPitch` sets the floor's pitch type where the old call was, and
    `Indoor_EndMatch` runs on every way out, EXIT included. (c) done: substitutions in the match

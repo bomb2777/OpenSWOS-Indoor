@@ -3,6 +3,7 @@
 #include "indoor.h"
 #include "swos_types.h"
 #include "game_types.h"
+#include "menu_system.h"
 #ifdef SWOS_SDL_BUILD
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +52,10 @@ int16_t Indoor_NextFriendlyFloor(int16_t floor)
     return floor == INDOOR_OFF ? INDOOR_LINOLEUM : INDOOR_OFF;
 }
 
-void Indoor_BeginMatch(void)
+static void install_tactics(TeamFileEx *team1, TeamFileEx *team2);
+static void release_tactics(void);
+
+void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
 {
     int16_t floor = _gIndoorFriendlyFloor;
 
@@ -79,6 +83,7 @@ void Indoor_BeginMatch(void)
 
     _gIndoor = 1;
     _gIndoorFloor = floor;
+    install_tactics(team1, team2);
 #ifdef SWOS_SDL_BUILD
     fprintf(stderr, "[indoor] this friendly is played indoors: %s, pitch type %d\n",
             Indoor_FloorName(floor), Indoor_PitchTypeForFloor(floor));
@@ -96,7 +101,77 @@ void Indoor_PinPitch(void)
 
 void Indoor_EndMatch(void)
 {
+    release_tactics();
     _gIndoor = 0;
+}
+
+/* ---- Tactics -------------------------------------------------------------------- */
+
+extern TeamTactics *_teamTacticsTable[];
+extern void        *_tacticsStringTable[];
+extern void        *_sidePitchSurnamePositionsTable[];
+extern char _aIndoor22[], _aIndoor121[], _aIndoor31[], _aIndoor13[];
+
+static int16_t      s_tacticsInstalled;
+static TeamTactics *s_outdoorTactics[INDOOR_TACTICS];
+static void        *s_outdoorNames[INDOOR_TACTICS];
+static void        *s_outdoorSidePitch[INDOOR_TACTICS];
+static TeamFileEx  *s_teams[2];
+static uint8_t      s_teamTactics[2];
+
+static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
+{
+    char *names[INDOOR_TACTICS] = { _aIndoor22, _aIndoor121, _aIndoor31, _aIndoor13 };
+
+    if (s_tacticsInstalled)
+        return;
+    for (int16_t i = 0; i < INDOOR_TACTICS; i++) {
+        s_outdoorTactics[i] = _teamTacticsTable[i];
+        s_outdoorNames[i] = _tacticsStringTable[i];
+        s_outdoorSidePitch[i] = _sidePitchSurnamePositionsTable[i];
+        _teamTacticsTable[i] = &_indoorTactics[i];
+        _tacticsStringTable[i] = names[i];
+        _sidePitchSurnamePositionsTable[i] = _indoorSidePitch[i];
+    }
+    /* A team on a tactic past the four plays 2-2 for this match. */
+    s_teams[0] = team1;
+    s_teams[1] = team2;
+    for (int16_t t = 0; t < 2; t++) {
+        if (!s_teams[t])
+            continue;
+        s_teamTactics[t] = s_teams[t]->team.tactics;
+        if (s_teams[t]->team.tactics >= INDOOR_TACTICS)
+            s_teams[t]->team.tactics = 0;
+    }
+    s_tacticsInstalled = 1;
+}
+
+static void release_tactics(void)
+{
+    if (!s_tacticsInstalled)
+        return;
+    for (int16_t i = 0; i < INDOOR_TACTICS; i++) {
+        _teamTacticsTable[i] = s_outdoorTactics[i];
+        _tacticsStringTable[i] = s_outdoorNames[i];
+        _sidePitchSurnamePositionsTable[i] = s_outdoorSidePitch[i];
+    }
+    for (int16_t t = 0; t < 2; t++)
+        if (s_teams[t])
+            s_teams[t]->team.tactics = s_teamTactics[t];
+    s_tacticsInstalled = 0;
+}
+
+int16_t Indoor_TacticsCount(void)
+{
+    return _gIndoor ? INDOOR_TACTICS : 18;
+}
+
+int16_t Indoor_TakeOutdoorTactic(int16_t slot, TeamTactics *t)
+{
+    if (!s_tacticsInstalled || slot < 0 || slot >= INDOOR_TACTICS)
+        return 0;
+    s_outdoorTactics[slot] = t;
+    return 1;
 }
 
 /* ---- Five a side ---------------------------------------------------------------- */
@@ -167,4 +242,15 @@ const uint8_t *Indoor_ListOrder(const uint8_t *rolesOrder)
 {
     static const uint8_t kSlotOrder[11] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
     return _gIndoor ? kSlotOrder : rolesOrder;
+}
+
+void Indoor_TacticsButtons(struct MenuEntry *first)
+{
+    MenuEntry *e = first;
+    for (int16_t i = 0; i < 18; i++, e++) {
+        if (i < INDOOR_TACTICS)
+            e->fg = (uintptr_t)_tacticsStringTable[i];
+        else
+            e->isInvisible = 1;
+    }
 }

@@ -37,6 +37,11 @@ char _aWood[]         = "WOOD";
 char _aLinoleum[]     = "LINOLEUM";
 char _aStone[]        = "STONE";
 char _aBeachSand[]    = "BEACH SAND";
+/* OpenSWOS INDOOR: the four indoor tactics (indoor_tactics_data.c). */
+char _aIndoor22[]     = "2-2";
+char _aIndoor121[]    = "1-2-1";
+char _aIndoor31[]     = "3-1";
+char _aIndoor13[]     = "1-3";
 char _aDataEurocupTmd[] = "data/eurocup.tmd";
 char _aDataEurocwcTmd[] = "data/eurocwc.tmd";
 char _aDataTeamNnn[] = "data/team.nnn";

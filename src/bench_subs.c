@@ -1539,7 +1539,7 @@ formation_right:
         _selectedFormationEntry = 0;
         return;
     }
-    if (_selectedFormationEntry == 0x11)
+    if (_selectedFormationEntry == (uint16_t)(Indoor_TacticsCount() - 1))  /* 0x11; INDOOR 3 */
         return;
     _selectedFormationEntry++;
     return;
@@ -1547,7 +1547,7 @@ formation_right:
 formation_left:
     _subsBlockDirections = 1;
     if ((int16_t)_selectedFormationEntry < 0) {
-        _selectedFormationEntry = 7;
+        _selectedFormationEntry = (Indoor_TacticsCount() > 7) ? 7 : (uint16_t)(Indoor_TacticsCount() - 1);
         return;
     }
     if (_selectedFormationEntry == 0)
@@ -2463,8 +2463,8 @@ static void drawFormationMenu(void)
 
     d2 += 37;
 
-    /* draw each formation entry */
-    for (d7 = 0; d7 < 18; d7++) {
+    /* draw each formation entry (18; INDOOR the four indoor tactics) */
+    for (d7 = 0; d7 < (uint16_t)Indoor_TacticsCount(); d7++) {
         uint16_t color = _subsMenuBackgroundColor;
         if (d7 == _selectedFormationEntry)
             color = _subsMenuHighlightColor;

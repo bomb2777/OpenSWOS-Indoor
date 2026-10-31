@@ -1182,6 +1182,9 @@ typedef struct Menu_FriendlyGame
   MenuCmd_Colors entry10_colors;
   MenuCmd_TextNoPtr entry10_text;
   MenuCommand entry10_end;
+  MenuMark_StartMenu menu3Start;                        /* OpenSWOS INDOOR (SDL only) */
+  MenuEntry_Byte_Colors_TextPtr entry11;                /* "INDOOR" */
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry12;   /* OFF / LINOLEUM: FriendlyIndoorProc */
   MenuMark markEndMenu;
 } Menu_FriendlyGame;
 #pragma pack(pop)

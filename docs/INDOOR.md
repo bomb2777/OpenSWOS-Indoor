@@ -1,6 +1,6 @@
 # INDOOR.md — five a side in a hall
 
-> **Status (2026-10-31): in progress — phase 1 of 6 done** (the switch). This fork's own
+> **Status (2026-10-31): in progress — phase 1 of 6 done (the switch), phase 2a (five a side in the match).** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -45,8 +45,14 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
 ## Plan
 
 1. **The switch** — done (above).
-2. **Five a side** — ordinals 6–11 parked off the pitch as if sent off; 5 starters on the
-   PLAY MATCH screen, the rest the bench; restart/kick-off positions for 5.
+2. **Five a side** — (a) done: ordinals 6–11 parked beside the pitch every frame
+   (`Indoor_ParkPlayers`, from the frame body before the players are updated) as if sent off
+   (`sentAway`, which the AI, ball control and the kick-off wait already skip); the restart
+   tables (kick-off, free kicks, penalties, ...) give indoor players 2–5 the places of 3, 4,
+   10 and 11 (`Indoor_RestartOrdinal`: two centre backs and the two forwards who kick off),
+   and the free-kick wall, which counts on ordinals 2–5, is skipped. During play they still
+   follow the team's (outdoor) tactic slots 0–3 until phase 3. (b) 5 starters on the PLAY
+   MATCH screen, the rest the bench; (c) substitutions in the match.
 3. **Indoor tactics** — 2-2, 1-2-1, 3-1, 1-3 on the same 5×7 grid (`TeamTactics`, only
    `positions[0..3]` used), compiled in (the Amiga reads no JSON), swapped into the tactics
    table for the match.
@@ -64,8 +70,16 @@ Before each commit:
 
 - `make X86_64=1` and `make -f Makefile.amiga` (the m68k toolchain on PATH, BUILDING.md).
 - On the Amiga, a look in FS-UAE: the change on screen, and nothing else changed.
-- **Off = identical:** `scripts/career_golden_test.sh` must pass unchanged. The replay,
-  rollback and netplay rigs (`replay_v2_test.sh`, `rollback_test.sh`, `netplay_test.sh`,
-  `check_netplay_compat.sh`) need the maintainer's recordings in `tests/dos`, which are not in
-  git: where they exist, they must pass unchanged too.
+- **Off = identical, careers:** `scripts/career_golden_test.sh` must pass unchanged. It does
+  NOT exercise the match engine: the autopilot simulates the career club's matches.
+- **Off = identical, matches:** a live match is deterministic where an offline one is not (an
+  offline match runs on a real-time clock, so even pinned seeds part within a minute). Record
+  one with the build before the change -- `SWOS_ASSETS=~/.swos/assets MATCHES=1 FRAMES=3000
+  scripts/netplay_lobby_test.sh` (two instances through the lobby; the host writes
+  `save/LATEST.SRP`, give it a HOME of its own) -- and replay it with the build after:
+  `bin/SWOS.x86_64 --srp-resim=<file>` must say `every one as recorded`. A live match is
+  never indoor, so this is INDOOR off.
+- The replay, rollback and netplay rigs (`replay_v2_test.sh`, `rollback_test.sh`,
+  `netplay_test.sh`, `check_netplay_compat.sh`) need the maintainer's recordings in
+  `tests/dos`, which are not in git: where they exist, they must pass unchanged too.
 - **On:** a friendly with INDOOR (screen or `SWOS_INDOOR=1`); `SWOS.log`'s `[indoor]` line.

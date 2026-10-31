@@ -2976,6 +2976,8 @@ void SaveDiskFilingMenu(void)
     CommonMenuExit();
 }
 
+static void FriendlyIndoorSubstitutes(void);   /* INDOOR: 5 FROM 5 (below) */
+
 /* ShowFriendlyMenu — init friendly defaults, show menu (SWOS2.s line 50946) */
 __attribute__((used, externally_visible))
 void ShowFriendlyMenu(void)
@@ -3000,6 +3002,8 @@ void ShowFriendlyMenu(void)
     _friendlySeason = SEASON_SEP;
     _minSubstitutes = 2;
     _maxSubstitutes = 5;
+    if (_gIndoorFriendlyFloor != INDOOR_OFF)    /* INDOOR still on from last time */
+        FriendlyIndoorSubstitutes();
     _friendlyOk = 0;
     ShowMenu(_friendlyGameMenu);
     _inFriendlyMenu = 0;
@@ -6042,6 +6046,17 @@ enum { kFriendlyIndoorValue = 12 };    /* 11 is its label, "INDOOR" */
 
 static uint16_t s_outdoorPitchType;
 static uint16_t s_outdoorPitchTypeOrSeason;
+static uint16_t s_outdoorMinSubstitutes, s_outdoorMaxSubstitutes;
+
+/* Indoors a side may make 5 substitutions, from all 11 on its bench (FROM 5: no bench
+ * slot from 11 on is cut off, InitInGamePlayer). Set when INDOOR is switched on, and
+ * when the screen opens with it on; changeable after, as outdoors. */
+#define INDOOR_SUBSTITUTES 5
+static void FriendlyIndoorSubstitutes(void)
+{
+    _minSubstitutes = INDOOR_SUBSTITUTES;
+    _maxSubstitutes = INDOOR_SUBSTITUTES;
+}
 
 static void FriendlyPitchEntriesEnabled(int16_t enabled)
 {
@@ -6081,16 +6096,22 @@ void FriendlyIndoorProc(MenuEntry *entry)
     if (was == INDOOR_OFF) {
         s_outdoorPitchType = _friendlyPitchType;
         s_outdoorPitchTypeOrSeason = _pitchTypeOrSeason;
+        s_outdoorMinSubstitutes = _minSubstitutes;
+        s_outdoorMaxSubstitutes = _maxSubstitutes;
+        FriendlyIndoorSubstitutes();
     } else if (_gIndoorFriendlyFloor == INDOOR_OFF) {
         _friendlyPitchType = s_outdoorPitchType;
         _pitchTypeOrSeason = s_outdoorPitchTypeOrSeason;
+        _minSubstitutes = s_outdoorMinSubstitutes;
+        _maxSubstitutes = s_outdoorMaxSubstitutes;
         SetFriendlyPitchOrSeason();
         /* Only a SEASONAL options setting lets the pitch be chosen here at all
          * (FriendlyMenuReinit), and not once the teams are chosen (DisableEntries). */
         FriendlyPitchEntriesEnabled(_pitchType == SEASONAL && _friendlyOk == 0);
     }
     FriendlyIndoorRefresh();
-    CallDrawMultipleItems(2, &_menuEntries[3]);
+    DrawNumbersOfSubstitutes();
+    CallDrawMultipleItems(4, &_menuEntries[3]);    /* pitch rows 3-4, substitutes 5-6 */
     CallDrawMenuItem(entry);
 }
 

@@ -850,12 +850,12 @@ static void benchMenuHandleControls(void)
         if (_gameState == ST_KEEPER_HOLDS_BALL)
             return;
         _subsBlockDirections = 1;
-        if (_benchPlayerIndex == 5)
+        if (_benchPlayerIndex == Indoor_BenchSize())    /* 5; INDOOR 11 */
             return;
         /* dead code: clr.w benchPlayerIndex; bra exit_rts removed */
         do {
             _benchPlayerIndex++;
-            if (_benchPlayerIndex == 6) goto scan_backward;
+            if (_benchPlayerIndex == Indoor_BenchSize() + 1) goto scan_backward;
             if (isThisPlayerOkToSelect() >= 0) return;
         } while (1);
 
@@ -951,7 +951,7 @@ static int16_t isThisPlayerOkToSelect(void)
 
     /* check player status */
     {
-        uint16_t idx = _benchPlayerIndex + 10;
+        uint16_t idx = Indoor_BenchSlot(_benchPlayerIndex);   /* +10; INDOOR +4 */
         TeamGame *btg = (TeamGame *)_benchTeamGame;
         PlayerInfo *pi = &btg->players[idx];
 
@@ -981,7 +981,8 @@ static void firePressedInSubsMenu(void)
         return;
 
     {
-        uint16_t offset = _ingameTeamPlayerOffsets[d0 + 11];
+        /* d0 + 11 == benchPlayerIndex + 10; INDOOR the bench starts at slot 5 */
+        uint16_t offset = _ingameTeamPlayerOffsets[Indoor_BenchSlot(_benchPlayerIndex)];
         PlayerInfo *pi = piFromOffset((TeamGame *)_benchTeamGame, offset);
 
         if ((int8_t)pi->position < 0)
@@ -993,7 +994,7 @@ static void firePressedInSubsMenu(void)
     _subsState = 1;
     _subsBlockFire = 1;
     _overlayActiveFlag = 1;
-    _plToEnterGameIndex = _benchPlayerIndex + 10;
+    _plToEnterGameIndex = Indoor_BenchSlot(_benchPlayerIndex);
 
     if (_gameMaxSubstitutes > 5 && _plToEnterGameIndex == 11) {
         _plToBeSubstitutedPos = 0;
@@ -1482,15 +1483,17 @@ static void updatePlayerToBeSubstitutedPosition(void)
  * ================================================================ */
 static uint16_t isPlayerOkToSubstitute(void)
 {
+    /* INDOOR: a parked player (slots 5-10) is not on the pitch -- skip. Before the
+     * marks menu's case too: swapping a parked player with one on the pitch there
+     * would be a substitution nobody counted. */
+    if (_plToBeSubstitutedPos != 0xFFFF && Indoor_IsParkedSlot(_plToBeSubstitutedPos))
+        return 1;
+
     if (_subsState == 4) {
         if (_plToBeSubstitutedOrd == 0)
             return 1;   /* skip — position 0 in formation mode */
         return 0;       /* select */
     }
-
-    /* INDOOR: a parked player (slots 5-10) is not on the pitch -- skip */
-    if (Indoor_IsParkedSlot(_plToBeSubstitutedPos))
-        return 1;
 
     {
         TeamGame *btg = (TeamGame *)_benchTeamGame;
@@ -1661,7 +1664,7 @@ static PlayerInfo *getBenchPlayerPointer(uint16_t index, uint16_t *outOrdinal)
     if ((uint16_t)a0->teamNumber != 1)
         tactics = _pl2Tactics;
 
-    formOrder = (uint8_t *)_positionsTable[tactics];
+    formOrder = (uint8_t *)Indoor_ListOrder((uint8_t *)_positionsTable[tactics]);
     d0 = formOrder[index];
     d0--;  /* convert 1-based to 0-based */
 
@@ -2014,15 +2017,15 @@ skip_coach:
     if (_trainingGame != 0)
         d2 += 7;
 
-    /* advance to player 11 (first substitute) */
-    pi = &teamGame->players[11];
+    /* advance to player 11 (first substitute); INDOOR player 5, with 11 on the bench */
+    pi = &teamGame->players[Indoor_FirstBenchSlot()];
 
     if (_trainingGame != 0 && _drawTrainingTopHalfOfTheBench != 0) {
         d2 -= 0x38;
         pi += 4; /* advance by 4 more players = player 15 */
     }
 
-    for (d7 = 1; d7 < 6; d7++) {
+    for (d7 = 1; d7 <= (uint16_t)Indoor_BenchSize(); d7++) {
         /* check if player is valid to draw */
         if (pi->skip != 0)
             goto next_player;
@@ -2035,9 +2038,7 @@ skip_coach:
             goto draw_normal;
 
         if (_substituteInProgress != 0) {
-            d3 = _plToEnterGameIndex;
-            d3 -= 10;
-            if (d3 == d7)
+            if (_plToEnterGameIndex == Indoor_BenchSlot(d7))   /* d3 - 10 == d7 */
                 goto draw_selected;
             goto draw_normal;
         }
@@ -2051,7 +2052,7 @@ skip_coach:
     draw_selected:
         d0 = 0x4B5;
         if (_gameMaxSubstitutes > 5) {
-            if (d7 != 1)
+            if (Indoor_BenchSlot(d7) != 11)     /* the reserve keeper's slot (d7 == 1) */
                 goto sprite_chosen;
             goto use_gk_sprite;
         }
@@ -2064,7 +2065,7 @@ skip_coach:
     draw_normal:
         d0 = 0x4AF;
         if (_gameMaxSubstitutes > 5) {
-            if (d7 != 1)
+            if (Indoor_BenchSlot(d7) != 11)     /* the reserve keeper's slot (d7 == 1) */
                 goto sprite_chosen;
             goto use_gk_normal;
         }
@@ -2199,6 +2200,8 @@ skip_formation_entry:
         uint16_t save_d7 = d7;
 
         getBenchPlayerPointer(d7, &ordinal);
+        if (Indoor_IsParkedSlot(ordinal))   /* INDOOR: only the five on the pitch */
+            continue;
         d7 = ordinal;
 
         d4 = _subsMenuBackgroundColor;

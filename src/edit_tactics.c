@@ -46,6 +46,7 @@
 #include "edit_tactics.h"
 #include "endian_helpers.h"
 #include "menu_system.h"
+#include "indoor.h"         /* INDOOR: the line-up is listed in slot order */
 #include "string_utils.h"
 #include "file_io.h"
 #include "teams.h"
@@ -2073,7 +2074,7 @@ uint8_t *GetPlayerInfoBreakPosition(TeamFileEx *teamPtr, uint16_t requestedSlot,
         int16_t tacticsIdx = (int8_t)teamPtr->team.tactics;
         TeamTactics *tactics = (TeamTactics *)_teamTacticsTable[tacticsIdx];
         int16_t formIdx = (int8_t)tactics->ballOutOfPlayTactics;
-        uint8_t *positions = (uint8_t *)_positionsTable[formIdx];
+        const uint8_t *positions = Indoor_ListOrder((uint8_t *)_positionsTable[formIdx]);
         slot = (uint8_t)(positions[requestedSlot] - 1);
     }
     uint16_t teamNumber = PACK_BE_U16(teamPtr->team.countryNumber, teamPtr->team.teamOrdinal);

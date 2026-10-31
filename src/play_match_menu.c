@@ -945,9 +945,10 @@ void PlayMatchMenuSwapPlayers(TeamFileEx *team, int16_t d3, int16_t d4) {
     int skipPrimary = 0;
     if ((uint16_t)d3 < 16 && (uint16_t)d4 < 16) {
         /* Both < 16: skip primary if same group */
-        if ((uint16_t)d3 < 11 && (uint16_t)d4 < 11)
+        uint16_t firstBench = Indoor_FirstBenchSlot();   /* 11; INDOOR 5 */
+        if ((uint16_t)d3 < firstBench && (uint16_t)d4 < firstBench)
             skipPrimary = 1;  /* both starting 11 */
-        else if ((uint16_t)d3 >= 11 && (uint16_t)d4 >= 11)
+        else if ((uint16_t)d3 >= firstBench && (uint16_t)d4 >= firstBench)
             skipPrimary = 1;  /* both bench */
     }
 
@@ -1248,12 +1249,7 @@ void DrawPlayerEntries(MenuEntry *a5) {
         d7 = d7 - 5 + _maxSubstitutesEntries;
         bgE->bgColor = (bgE->bgColor & 0xFFF0) | BLUE_TO_BLACK_8;
         numE->bgColor = (numE->bgColor & 0xFFF0) | BLUE_TO_BLACK_8;
-    } else if (_gIndoor && d7 >= INDOOR_PLAYERS && d7 < 11) {
-        /* INDOOR: rows 6-11 sit this match out (the bench is rows 12-16, as outdoors);
-         * the colour of a disabled entry. */
-        bgE->bgColor = (bgE->bgColor & 0xFFF0) | PINK_TO_BROWN_9;
-        numE->bgColor = (numE->bgColor & 0xFFF0) | PINK_TO_BROWN_9;
-    } else if (d7 < 11) {
+    } else if (d7 < (int16_t)Indoor_FirstBenchSlot()) {     /* 11; INDOOR 5 starters */
         if (!_showingCpuTeams && !_viewingOpponentTeam) {
             uint16_t c = (d7 == 0) ? YELLOW_GREEN_BLACK_14 : BRIGHT_BLUE_TO_BLUE_13;
             bgE->bgColor = (bgE->bgColor & 0xFFF0) | c;
@@ -1277,6 +1273,11 @@ void DrawPlayerEntries(MenuEntry *a5) {
             numE->bgColor = (numE->bgColor & 0xFFF0) | ORANGE_TO_BROWN_12;
         }
     }
+
+    /* INDOOR: the gap between the starters and the bench (2 px, after row 11) comes
+     * after row 5. Set, not added: this runs on every redraw. */
+    if (_gIndoor && d7 >= INDOOR_PLAYERS && d7 < 11)
+        a5->y = (int16_t)(_menuEntries[13].y + d7 * 9 + 2);
 
     TeamFileEx *team = _playMatchTeam1Ptr;
     if (_viewingOpponentTeam) team = _playMatchTeam2Ptr;
@@ -1313,7 +1314,7 @@ void DrawPlayerEntries(MenuEntry *a5) {
     SetSquadMenuEntryStatusSprite(bgE, (PlayerFile *)player, (uint16_t)_playMatchExcludeFlags);
 
     /* Position change arrows */
-    if (!_viewingOpponentTeam && d4 < 11) {
+    if (!_viewingOpponentTeam && d4 < (int16_t)Indoor_FirstBenchSlot()) {
         uint8_t cur = _playerPositionsArray[d1];
         uint8_t old = _oldPlayerPositionsArray[d1];
         if (cur < old) bgE->fgWord = SPR_CROSS_SMALL;       /* value fell → red cross */

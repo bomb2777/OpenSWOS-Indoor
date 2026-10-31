@@ -28,6 +28,7 @@
 #include "custom_team.h"
 #include "world.h"
 #include "endian_helpers.h"
+#include "indoor.h"          /* INDOOR: never a long bench indoors (match_bench) */
 
 #include <string.h>
 #ifdef SWOS_SDL_BUILD
@@ -173,7 +174,9 @@ static int32_t league_match;            /* LongBench_LeagueMatch: the next kick-
 static int32_t match_bench(const TeamFile *t1, const TeamFile *t2, uint8_t *et)
 {
     *et = 0;
-    if (!world_benches() || _trainingGame || _isNationalSelector)
+    /* (INDOOR, this fork's: the hall's bench is its own -- the game's 16 places, 11 of them on
+     *  the bench, indoor.h -- so an indoor match never has a long one) */
+    if (!world_benches() || _trainingGame || _isNationalSelector || _gIndoor)
         return 0;
     if (_gameType == GAME_TYPE_CAREER) {
         /* the career club's country: its contests by name, its league by division, else its own */

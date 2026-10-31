@@ -21,6 +21,7 @@
 #include "endian_helpers.h"
 #include "menu_system.h"
 #include "game_types.h"
+#include "indoor.h"             /* INDOOR: five a side on the line-up screen */
 #ifdef SWOS_SDL_BUILD
 #include "uniform.h"            /* the UNIFORM button (entry 68) */
 #include "custom_team.h"        /* (CUSTOM) where the country would be named */
@@ -505,6 +506,10 @@ void SetPlayerSurnamesOnSidePitch(void) {
         else
             surname = ExtractSurname((uint8_t *)plPf->playerName, 0x400A);
         StringCopy(surname, (uint8_t *)entry->fg);
+        /* INDOOR: only the five who play are on the little pitch. (Outdoors these
+         * entries are never hidden; the menu is unpacked afresh each time it opens.) */
+        if (_gIndoor)
+            entry->isInvisible = (i >= INDOOR_PLAYERS) ? 1 : 0;
     }
 }
 
@@ -1222,6 +1227,11 @@ void DrawPlayerEntries(MenuEntry *a5) {
         d7 = d7 - 5 + _maxSubstitutesEntries;
         bgE->bgColor = (bgE->bgColor & 0xFFF0) | BLUE_TO_BLACK_8;
         numE->bgColor = (numE->bgColor & 0xFFF0) | BLUE_TO_BLACK_8;
+    } else if (_gIndoor && d7 >= INDOOR_PLAYERS && d7 < 11) {
+        /* INDOOR: rows 6-11 sit this match out (the bench is rows 12-16, as outdoors);
+         * the colour of a disabled entry. */
+        bgE->bgColor = (bgE->bgColor & 0xFFF0) | PINK_TO_BROWN_9;
+        numE->bgColor = (numE->bgColor & 0xFFF0) | PINK_TO_BROWN_9;
     } else if (d7 < 11) {
         if (!_showingCpuTeams && !_viewingOpponentTeam) {
             uint16_t c = (d7 == 0) ? YELLOW_GREEN_BLACK_14 : BRIGHT_BLUE_TO_BLUE_13;

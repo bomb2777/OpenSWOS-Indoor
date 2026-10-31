@@ -1,6 +1,6 @@
 # INDOOR.md — five a side in a hall
 
-> **Status (2026-10-31): in progress — phase 1 of 6 done (the switch), phase 2a (five a side in the match).** This fork's own
+> **Status (2026-10-31): in progress — phase 1 of 6 done (the switch), phase 2 (five a side).** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -51,8 +51,14 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    tables (kick-off, free kicks, penalties, ...) give indoor players 2–5 the places of 3, 4,
    10 and 11 (`Indoor_RestartOrdinal`: two centre backs and the two forwards who kick off),
    and the free-kick wall, which counts on ordinals 2–5, is skipped. During play they still
-   follow the team's (outdoor) tactic slots 0–3 until phase 3. (b) 5 starters on the PLAY
-   MATCH screen, the rest the bench; (c) substitutions in the match.
+   follow the team's (outdoor) tactic slots 0–3 until phase 3. (b) done: the PLAY MATCH
+   screen greys rows 6–11 (they sit the match out; the bench is rows 12–16 as outdoors -- any
+   ten can be chosen by swapping rows) and puts only the five on its little pitch. For that
+   `Indoor_BeginMatch` now decides at the START of `InitAndPlayGame`, before `SetupPlayers`
+   shows the screen; `Indoor_PinPitch` sets the floor's pitch type where the old call was, and
+   `Indoor_EndMatch` runs on every way out, EXIT included. (c) done: substitutions in the match
+   never offer a parked player (`Indoor_IsParkedSlot`, in both copies of
+   `isPlayerOkToSubstitute` / `findInitialPlayerToBeSubstituted` in `src/bench_subs.c`).
 3. **Indoor tactics** — 2-2, 1-2-1, 3-1, 1-3 on the same 5×7 grid (`TeamTactics`, only
    `positions[0..3]` used), compiled in (the Amiga reads no JSON), swapped into the tactics
    table for the match.

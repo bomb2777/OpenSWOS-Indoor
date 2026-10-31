@@ -192,7 +192,7 @@ teams through the rule and the file; run it after touching either.
 FRIENDLY can be played five a side in a hall with glass walls (the ball never goes out; goals,
 fouls and half time are the only stoppages), its floor deciding the pitch type (wood/linoleum
 HARD, stone FROZEN, sand MUDDY; only blue linoleum so far). The FRIENDLY screen's INDOOR row
-(entries 11-12, `FriendlyIndoorProc` in `src/menus.c`, SDL only) sets `_gIndoorFriendlyFloor`;
+(entries 11-12, `FriendlyIndoorProc` in `src/menus.c`, both targets) sets `_gIndoorFriendlyFloor`;
 `Indoor_BeginMatch` (`src/indoor.c`, from `InitAndPlayGame`) makes `_gIndoor` 1 for that match
 only, never for a competition, career, training, arcade or online match. **Match code tests
 `_gIndoor` and nothing else, and with it 0 a match plays exactly as upstream's** -- the career

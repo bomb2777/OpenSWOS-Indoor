@@ -30,8 +30,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
   `bin/data_json/menus/friendlyGameMenu.json`; `FriendlyIndoorProc`, `FriendlyIndoorRefresh`
   in `src/menus.c`). It toggles OFF ⇄ LINOLEUM. While it shows a floor, PITCH TYPE shows that
   floor's type and cannot be changed; OFF gives back what it said before. Like the pitch, it
-  is fixed once the teams are chosen. The Amiga has no row (hidden, its navigation restored):
-  INDOOR is SDL only for now.
+  is fixed once the teams are chosen. **Both targets** have it: INDOOR is shared match code,
+  and only online play (phase 6) is the PC's alone, as netplay is.
 - **The match:** `Indoor_BeginMatch()` (`src/indoor.c`), called by `InitAndPlayGame`
   (`src/game_init.c`) just before kick-off, sets `_gIndoor`/`_gIndoorFloor` and pins
   `_gamePitchType` to the floor's type; `Indoor_EndMatch()` clears it when the match is over.
@@ -48,10 +48,13 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
 2. **Five a side** — ordinals 6–11 parked off the pitch as if sent off; 5 starters on the
    PLAY MATCH screen, the rest the bench; restart/kick-off positions for 5.
 3. **Indoor tactics** — 2-2, 1-2-1, 3-1, 1-3 on the same 5×7 grid (`TeamTactics`, only
-   `positions[0..3]` used), swapped into the tactics table for the match.
+   `positions[0..3]` used), compiled in (the Amiga reads no JSON), swapped into the tactics
+   table for the match.
 4. **The area and the walls** — a futsal-sized play area (start ≈ 150 × 244 px) centred in the
    unchanged 672 × 880 world; the ball rebounds off the walls instead of going out.
-5. **The blue linoleum pitch** — drawn in code, no asset file.
+5. **The blue linoleum pitch** — one pitch file in the Amiga's own tile-map format, made by a
+   script from our own drawing (so it can live in git), loaded by both targets the way the SWOS
+   2020 pitches are.
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 
@@ -59,7 +62,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
 
 Before each commit:
 
-- `make X86_64=1` (and the Amiga build where its toolchain is installed).
+- `make X86_64=1` and `make -f Makefile.amiga` (the m68k toolchain on PATH, BUILDING.md).
+- On the Amiga, a look in FS-UAE: the change on screen, and nothing else changed.
 - **Off = identical:** `scripts/career_golden_test.sh` must pass unchanged. The replay,
   rollback and netplay rigs (`replay_v2_test.sh`, `rollback_test.sh`, `netplay_test.sh`,
   `check_netplay_compat.sh`) need the maintainer's recordings in `tests/dos`, which are not in

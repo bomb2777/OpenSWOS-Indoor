@@ -477,8 +477,9 @@ void InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
     /* Substituted flag */
     pi->skip = 0;  /* not substituted */
 
-    /* Check if player is injured/unavailable (bench slots 11+) */
-    if (playerSlot >= 11) {
+    /* Check if player is injured/unavailable (bench slots 11+; INDOOR 5+, the bench
+     * there is slots 5-15 -- the FROM cut-off below stays at 11 + maxSubs) */
+    if (playerSlot >= Indoor_FirstBenchSlot()) {
         int16_t mode = (int16_t)_plgD3Param;
         uint16_t injured = IsPlayerInjured((PlayerFile *)playerBase, mode);
         if (injured != 0) {

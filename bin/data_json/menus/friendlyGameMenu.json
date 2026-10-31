@@ -155,7 +155,7 @@
           "left": -1,
           "right": 6,
           "up": 4,
-          "down": 8
+          "down": 12
         },
         {
           "op": "colors",
@@ -186,7 +186,7 @@
           "left": 5,
           "right": -1,
           "up": 4,
-          "down": 8
+          "down": 12
         },
         {
           "op": "colors",
@@ -221,7 +221,7 @@
           "op": "nav",
           "left": -1,
           "right": 9,
-          "up": 5,
+          "up": 12,
           "down": -1
         },
         {
@@ -253,7 +253,7 @@
           "op": "nav",
           "left": -1,
           "right": -1,
-          "up": 5,
+          "up": 12,
           "down": 9
         },
         {
@@ -321,6 +321,64 @@
         {
           "op": "text_no_ptr",
           "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 10
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 31,
+        "y": 90,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aIndoor"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 90,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 5,
+          "down": 8
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aOff"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "FriendlyIndoorProc"
         }
       ]
     }

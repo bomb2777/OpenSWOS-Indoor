@@ -998,7 +998,7 @@ __attribute__((used, externally_visible))
 void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
     /* OpenSWOS INDOOR: the FRIENDLY screen's switch, for this match only (indoor.h);
      * before SetupPlayers, whose line-up screen shows five a side indoors. */
-    Indoor_BeginMatch();
+    Indoor_BeginMatch(team1, team2);
 
     /* SetupPlayers: mode=0, maxSubs=_maxSubstitutes, excludeFlags=1, allowSquadChanges=1 */
     SetupPlayers(team1, team2, (int16_t)_maxSubstitutes, 1, 1, 0);

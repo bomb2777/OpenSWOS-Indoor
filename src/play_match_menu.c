@@ -478,6 +478,8 @@ void SetUpTacticsButtons(void) {
         e->bgColor = c;
         e->isDisabled = (_showingCpuTeams || _viewingOpponentTeam) ? 1 : 0;
     }
+    if (_gIndoor)
+        Indoor_TacticsButtons(&_menuEntries[38]);
 }
 
 /* ================================================================ */
@@ -714,6 +716,7 @@ void SetVariableButtons(void) {
         _menuEntries[10].isInvisible = 0;
         if (_showingCpuTeams) _menuEntries[10].isInvisible = 1;
         if (_is_A_team) _menuEntries[10].isInvisible = 1;
+        if (_gIndoor) _menuEntries[10].isInvisible = 1;     /* INDOOR: no EDIT TACTICS yet */
 
         _menuEntries[7].isInvisible = 0;
         _menuEntries[11].isInvisible = 1;

@@ -13,7 +13,7 @@
 #ifndef INDOOR_H
 #define INDOOR_H
 
-#include <stdint.h>
+#include "swos_types.h"   /* not <stdint.h>: the Amiga toolchain has none */
 
 /* The floor of the hall. It decides the pitch type: the ball rolls and bounces as
  * on that kind of SWOS pitch. Only LINOLEUM is drawn so far. */

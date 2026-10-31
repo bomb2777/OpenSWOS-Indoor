@@ -215,6 +215,7 @@ extern void ExitPlayerMarketMenu(void);
 extern void ExitSelectTeams(void);
 extern void FillManagementRecordInfo(void);
 extern void FlipOnOff(void);
+extern void FriendlyIndoorProc(void);
 extern void FriendlyMenu(void);
 extern void FriendlyMenuInit(void);
 extern void FriendlyMenuReinit(void);
@@ -499,6 +500,7 @@ extern char _aHighlights_0[];
 extern char _aHyphen[];
 extern char _aImport[];
 extern char _aImportTactics[];
+extern char _aIndoor[];
 extern char _aJobOffer[];
 extern char _aJobOffers[];
 extern char _aJobOffersBeing[];
@@ -532,6 +534,7 @@ extern char _aNewBalance[];
 extern char _aNextMatch[];
 extern char _aNextPage[];
 extern char _aNumberOfTeams[];
+extern char _aOff[];
 extern char _aOffers[];
 extern char _aOk[];
 extern char _aOldBalance[];
@@ -925,6 +928,7 @@ const MenuSymbol _menuSymbols[] = {
     { "ExitSelectTeams", (void*)ExitSelectTeams, SYM_FUNC },
     { "FillManagementRecordInfo", (void*)FillManagementRecordInfo, SYM_FUNC },
     { "FlipOnOff", (void*)FlipOnOff, SYM_FUNC },
+    { "FriendlyIndoorProc", (void*)FriendlyIndoorProc, SYM_FUNC },
     { "FriendlyMenu", (void*)FriendlyMenu, SYM_FUNC },
     { "FriendlyMenuInit", (void*)FriendlyMenuInit, SYM_FUNC },
     { "FriendlyMenuReinit", (void*)FriendlyMenuReinit, SYM_FUNC },
@@ -1206,6 +1210,7 @@ const MenuSymbol _menuSymbols[] = {
     { "_aHyphen", (void*)_aHyphen, SYM_STRING },
     { "_aImport", (void*)_aImport, SYM_STRING },
     { "_aImportTactics", (void*)_aImportTactics, SYM_STRING },
+    { "_aIndoor", (void*)_aIndoor, SYM_STRING },
     { "_aJobOffer", (void*)_aJobOffer, SYM_STRING },
     { "_aJobOffers", (void*)_aJobOffers, SYM_STRING },
     { "_aJobOffersBeing", (void*)_aJobOffersBeing, SYM_STRING },
@@ -1239,6 +1244,7 @@ const MenuSymbol _menuSymbols[] = {
     { "_aNextMatch", (void*)_aNextMatch, SYM_STRING },
     { "_aNextPage", (void*)_aNextPage, SYM_STRING },
     { "_aNumberOfTeams", (void*)_aNumberOfTeams, SYM_STRING },
+    { "_aOff", (void*)_aOff, SYM_STRING },
     { "_aOffers", (void*)_aOffers, SYM_STRING },
     { "_aOk", (void*)_aOk, SYM_STRING },
     { "_aOldBalance", (void*)_aOldBalance, SYM_STRING },

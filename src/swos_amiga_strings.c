@@ -31,6 +31,12 @@ char _aMultiplayer[]  = "MULTIPLAYER";
 char _aCredits[]      = "CREDITS";
 /* OpenSWOS: the PLAY MATCH screen's UNIFORM button (UniformSelected). */
 char _aUniform[]      = "UNIFORM";
+/* OpenSWOS INDOOR: the FRIENDLY screen's INDOOR row and the hall's floors (indoor.c). */
+char _aIndoor[]       = "INDOOR";
+char _aWood[]         = "WOOD";
+char _aLinoleum[]     = "LINOLEUM";
+char _aStone[]        = "STONE";
+char _aBeachSand[]    = "BEACH SAND";
 char _aDataEurocupTmd[] = "data/eurocup.tmd";
 char _aDataEurocwcTmd[] = "data/eurocwc.tmd";
 char _aDataTeamNnn[] = "data/team.nnn";

@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "goalkeeper.h"
+#include "indoor.h"          /* INDOOR: the penalty spot */
 #include "dos_mode.h"       /* _gDosGameplay: the dive-index expression differs */
 #include "game_types.h"
 #include "player_anim.h"
@@ -385,7 +386,7 @@ setup_next:
     _cameraDirection = 0;          /* north */
     _playerTurnFlags = 0x83;       /* NW, N, NE */
     _foulXCoordinate = 336;        /* upper white spot */
-    _foulYCoordinate = 187;
+    _foulYCoordinate = INDOOR_SPOT_Y(187);     /* INDOOR: futsal's 6 m (indoor.h) */
     _gameStatePl = ST_STOPPED;
     _gameNotInProgressCounterWriteOnly = 0;
 

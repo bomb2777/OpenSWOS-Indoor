@@ -1,6 +1,6 @@
 # INDOOR.md — five a side in a hall
 
-> **Status (2026-10-31): in progress — phase 1 of 6 done (the switch), phase 2 (five a side), phase 3 (tactics).** This fork's own
+> **Status (2026-10-31): in progress — phase 1 of 6 done (the switch), phase 2 (five a side), phase 3 (tactics), phase 4 (court and walls).** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -84,8 +84,25 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    installed (`Indoor_TakeOutdoorTactic`). The line-up screen shows four tactic buttons
    (`Indoor_TacticsButtons`) and no EDIT TACTICS; the in-match formation menu lists four
    (`Indoor_TacticsCount`).
-4. **The area and the walls** — a futsal-sized play area (start ≈ 150 × 244 px) centred in the
-   unchanged 672 × 880 world; the ball rebounds off the walls instead of going out.
+4. **The court and the walls** — done (tuning open). The court is 150 × 244 px (x 261–411, y
+   327–571; `INDOOR_HALF_WIDTH/LENGTH` in `include/indoor.h`), centred in the unchanged 672 × 880
+   world. Outdoor code keeps its numbers and wraps them: `INDOOR_X`/`INDOOR_Y` map a
+   pitch-proportional position linearly onto the court (touchlines, penalty area 294–378 ×
+   33 deep, the tactics grid, the AI's bands, the free-kick bands), `INDOOR_GY` SHIFTS a
+   position tied to a goal (net, posts, crossbar, the keeper's lines, the goal area's depth),
+   `INDOOR_DX/DY` scale a distance; outdoors each is the number itself. The goals keep their
+   size and their x (the court is centred like the pitch): only their y moves, goal sprites
+   included. Own values: the penalty spot at futsal's 6 m (37 px, `INDOOR_SPOT_Y`), the
+   free-kick distance 5 m (32 px). At kick-off `Indoor_BeginMatch` maps the tactics grid's
+   coordinate tables and the ball's sector limits onto the court (`install_court`, given back
+   at the end). The ball: no out of play -- `Indoor_BallAtWall` (from `UpdateBall`) mirrors its
+   destination off the glass and keeps 3/4 of its speed; only a ball crossing a goal line in the
+   mouth and under the bar goes to `CheckIfBallOutOfPlay`, i.e. a goal. The players:
+   `Indoor_KeepPlayersInside` (frame body, after `MovePlayers`) while the ball is in play. The
+   camera: centred across, along only as far as the court and 48 px of hall past each goal
+   line. `src/indoor.c` is compiled `-Os` (the m68k compiler made it 5 KB at -O2); the phase
+   costs SWOS2 6.8 KB. Open: the goal is outdoor-sized on a small court -- a CPU match scores
+   ~15 goals; tune the court, the goal or the keeper by playing.
 5. **The blue linoleum pitch** — one pitch file in the Amiga's own tile-map format, made by a
    script from our own drawing (so it can live in git), loaded by both targets the way the SWOS
    2020 pitches are.

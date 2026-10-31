@@ -51,6 +51,7 @@
 #include "career_status.h"
 #include "chairman_memo.h"
 #include "play_match_menu.h"
+#include "indoor.h"          /* the FRIENDLY screen's INDOOR row */
 
 /* ---- Constants ---- */
 #define GAME_TYPE_NO_GAME 0
@@ -6080,6 +6081,83 @@ void FriendlyMenuInit(void)
     FriendlyMenuReinit();
 }
 
+/* ---- OpenSWOS INDOOR: the FRIENDLY screen's INDOOR row (entries 11-12) ----
+ * docs/INDOOR.md. A floor fixes the pitch type, so while the row says a floor the
+ * PITCH TYPE row shows that type and cannot be changed; OFF gives back what it said.
+ * The Amiga does not have the row (its pitch is SDL-drawn), and gets its navigation
+ * back as the original had it. */
+enum { kFriendlyIndoorLabel = 11, kFriendlyIndoorValue = 12 };
+#define FRIENDLY_ENTRY_BACK_COLOR 13    /* entries 3-4's background, as the JSON has it */
+
+static uint16_t s_outdoorPitchType;
+static uint16_t s_outdoorPitchTypeOrSeason;
+
+static void FriendlyPitchEntriesEnabled(int16_t enabled)
+{
+    for (int16_t i = 3; i <= 4; i++) {
+        MenuEntry *e = &_menuEntries[i];
+        e->bgColor = (uint16_t)((e->bgColor & 0xFFF0) +
+                                (enabled ? FRIENDLY_ENTRY_BACK_COLOR : PINK_TO_BROWN_9));
+        e->isDisabled = enabled ? 0 : 1;
+    }
+}
+
+/* Puts the INDOOR row and the PITCH TYPE row in step with _gIndoorFriendlyFloor. */
+static void FriendlyIndoorRefresh(void)
+{
+    MenuEntry *label = &_menuEntries[kFriendlyIndoorLabel];
+    MenuEntry *value = &_menuEntries[kFriendlyIndoorValue];
+#ifndef SWOS_SDL_BUILD
+    label->isInvisible = 1;
+    value->isInvisible = 1;
+    _menuEntries[5].downEntry = 8;
+    _menuEntries[6].downEntry = 8;
+    _menuEntries[7].upEntry = 5;
+    _menuEntries[8].upEntry = 5;
+    _gIndoorFriendlyFloor = INDOOR_OFF;
+#else
+    (void)label;
+    value->fg = (uintptr_t)Indoor_FloorName(_gIndoorFriendlyFloor);
+    if (_gIndoorFriendlyFloor != INDOOR_OFF) {
+        _pitchTypeOrSeason = 0;
+        _friendlyPitchType = (uint16_t)Indoor_PitchTypeForFloor(_gIndoorFriendlyFloor);
+        SetFriendlyPitchOrSeason();
+        FriendlyPitchEntriesEnabled(0);
+    }
+    /* Fixed, like the pitch, once the teams are chosen (DisableEntries). */
+    if (_friendlyOk != 0) {
+        value->bgColor = (uint16_t)((value->bgColor & 0xFFF0) + PINK_TO_BROWN_9);
+        value->isDisabled = 1;
+    }
+#endif
+}
+
+/* The INDOOR button: OFF -> a floor -> OFF. */
+__attribute__((used, externally_visible))
+void FriendlyIndoorProc(MenuEntry *entry)
+{
+#ifdef SWOS_SDL_BUILD
+    int16_t was = _gIndoorFriendlyFloor;
+    _gIndoorFriendlyFloor = Indoor_NextFriendlyFloor(was);
+    if (was == INDOOR_OFF) {
+        s_outdoorPitchType = _friendlyPitchType;
+        s_outdoorPitchTypeOrSeason = _pitchTypeOrSeason;
+    } else if (_gIndoorFriendlyFloor == INDOOR_OFF) {
+        _friendlyPitchType = s_outdoorPitchType;
+        _pitchTypeOrSeason = s_outdoorPitchTypeOrSeason;
+        SetFriendlyPitchOrSeason();
+        /* Only a SEASONAL options setting lets the pitch be chosen here at all
+         * (FriendlyMenuReinit), and not once the teams are chosen (DisableEntries). */
+        FriendlyPitchEntriesEnabled(_pitchType == SEASONAL && _friendlyOk == 0);
+    }
+    FriendlyIndoorRefresh();
+    CallDrawMultipleItems(2, &_menuEntries[3]);
+    CallDrawMenuItem(entry);
+#else
+    (void)entry;
+#endif
+}
+
 /* FriendlyMenuReinit: update pitch/season display state and menu entry visibility. */
 __attribute__((used, externally_visible))
 void FriendlyMenuReinit(void)
@@ -6102,6 +6180,7 @@ void FriendlyMenuReinit(void)
     }
 
     DrawNumbersOfSubstitutes();
+    FriendlyIndoorRefresh();
 
     if (_friendlyOk == 0) {
         _menuEntries[7].isInvisible = 1;   /* 0x188/56=7 */

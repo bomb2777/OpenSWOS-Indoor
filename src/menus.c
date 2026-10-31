@@ -6036,9 +6036,8 @@ void FriendlyMenuInit(void)
 /* ---- OpenSWOS INDOOR: the FRIENDLY screen's INDOOR row (entries 11-12) ----
  * docs/INDOOR.md. A floor fixes the pitch type, so while the row says a floor the
  * PITCH TYPE row shows that type and cannot be changed; OFF gives back what it said.
- * The Amiga does not have the row (its pitch is SDL-drawn), and gets its navigation
- * back as the original had it. */
-enum { kFriendlyIndoorLabel = 11, kFriendlyIndoorValue = 12 };
+ * Both targets have it. */
+enum { kFriendlyIndoorValue = 12 };    /* 11 is its label, "INDOOR" */
 #define FRIENDLY_ENTRY_BACK_COLOR 13    /* entries 3-4's background, as the JSON has it */
 
 static uint16_t s_outdoorPitchType;
@@ -6057,18 +6056,8 @@ static void FriendlyPitchEntriesEnabled(int16_t enabled)
 /* Puts the INDOOR row and the PITCH TYPE row in step with _gIndoorFriendlyFloor. */
 static void FriendlyIndoorRefresh(void)
 {
-    MenuEntry *label = &_menuEntries[kFriendlyIndoorLabel];
     MenuEntry *value = &_menuEntries[kFriendlyIndoorValue];
-#ifndef SWOS_SDL_BUILD
-    label->isInvisible = 1;
-    value->isInvisible = 1;
-    _menuEntries[5].downEntry = 8;
-    _menuEntries[6].downEntry = 8;
-    _menuEntries[7].upEntry = 5;
-    _menuEntries[8].upEntry = 5;
-    _gIndoorFriendlyFloor = INDOOR_OFF;
-#else
-    (void)label;
+
     value->fg = (uintptr_t)Indoor_FloorName(_gIndoorFriendlyFloor);
     if (_gIndoorFriendlyFloor != INDOOR_OFF) {
         _pitchTypeOrSeason = 0;
@@ -6081,14 +6070,12 @@ static void FriendlyIndoorRefresh(void)
         value->bgColor = (uint16_t)((value->bgColor & 0xFFF0) + PINK_TO_BROWN_9);
         value->isDisabled = 1;
     }
-#endif
 }
 
 /* The INDOOR button: OFF -> a floor -> OFF. */
 __attribute__((used, externally_visible))
 void FriendlyIndoorProc(MenuEntry *entry)
 {
-#ifdef SWOS_SDL_BUILD
     int16_t was = _gIndoorFriendlyFloor;
     _gIndoorFriendlyFloor = Indoor_NextFriendlyFloor(was);
     if (was == INDOOR_OFF) {
@@ -6105,9 +6092,6 @@ void FriendlyIndoorProc(MenuEntry *entry)
     FriendlyIndoorRefresh();
     CallDrawMultipleItems(2, &_menuEntries[3]);
     CallDrawMenuItem(entry);
-#else
-    (void)entry;
-#endif
 }
 
 /* FriendlyMenuReinit: update pitch/season display state and menu entry visibility. */

@@ -14,9 +14,9 @@
 #include "game_types.h"
 #include "play_match_menu.h"
 #include "string_utils.h"
+#include "indoor.h"         /* INDOOR: a friendly played five a side in a hall */
 #ifdef SWOS_SDL_BUILD
 #include "uniform.h"        /* a kit chosen for this match (UNIFORM screen) */
-#include "indoor.h"         /* INDOOR: a friendly played five a side in a hall */
 #endif
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */

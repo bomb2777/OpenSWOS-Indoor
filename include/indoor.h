@@ -38,12 +38,16 @@ const char *Indoor_FloorName(int16_t floor);
 /* The FRIENDLY screen's choice, as the next press of its INDOOR button makes it. */
 int16_t Indoor_NextFriendlyFloor(int16_t floor);
 
-/* InitAndPlayGame, before kick-off: make this match indoor if it is a friendly and the
- * FRIENDLY screen (or SWOS_INDOOR=1, for a test) says so, and pin its pitch type to the
- * floor's. Anything else leaves _gIndoor 0. */
+/* InitAndPlayGame, first thing: make this match indoor if it is a friendly and the
+ * FRIENDLY screen (or SWOS_INDOOR=1, for a test) says so; anything else leaves
+ * _gIndoor 0. First, so the line-up screen (SetupPlayers) shows five a side. */
 void Indoor_BeginMatch(void);
 
-/* InitAndPlayGame, once the match is over. */
+/* InitAndPlayGame, once it has set the match's pitch from the FRIENDLY screen: the
+ * floor's pitch type instead, indoors. */
+void Indoor_PinPitch(void);
+
+/* InitAndPlayGame, once the match is over -- or the line-up screen was left. */
 void Indoor_EndMatch(void);
 
 /* ---- Five a side ----------------------------------------------------------------
@@ -61,5 +65,9 @@ void Indoor_ParkPlayers(void);
  * free kick, penalty, ...): 2 and 3 the centre backs', 4 and 5 the forwards' (so the
  * kick-off has its two at the centre circle). Outdoors, the ordinal itself. */
 int16_t Indoor_RestartOrdinal(int16_t ordinal);
+
+/* Whether the player in this slot of a side (0 = the keeper .. 10) is parked: never
+ * offered for substitution. Always 0 outdoors. */
+int16_t Indoor_IsParkedSlot(uint16_t slot);
 
 #endif /* INDOOR_H */

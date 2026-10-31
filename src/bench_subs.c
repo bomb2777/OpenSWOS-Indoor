@@ -28,6 +28,7 @@
 #include "bench_subs.h"
 #include "dos_sound.h"
 #include "game_types.h"
+#include "indoor.h"     /* INDOOR: parked players are never substituted */
 #include "game_state.h"
 #include "goalkeeper.h"
 #include "match_sim.h"
@@ -1487,6 +1488,10 @@ static uint16_t isPlayerOkToSubstitute(void)
         return 0;       /* select */
     }
 
+    /* INDOOR: a parked player (slots 5-10) is not on the pitch -- skip */
+    if (Indoor_IsParkedSlot(_plToBeSubstitutedPos))
+        return 1;
+
     {
         TeamGame *btg = (TeamGame *)_benchTeamGame;
         uint16_t off = _ingameTeamPlayerOffsets[_plToBeSubstitutedPos];
@@ -1561,6 +1566,8 @@ static void findInitialPlayerToBeSubstituted(void)
         uint16_t ordinal;
         PlayerInfo *pi = getBenchPlayerPointer((uint16_t)d1, &ordinal);
 
+        if (Indoor_IsParkedSlot(ordinal))       /* INDOOR: not on the pitch */
+            goto next_player;
         if ((uint8_t)pi->numYellowCards >= 2)
             goto next_player;
 
@@ -2577,6 +2584,10 @@ uint16_t IsPlayerOkToSubstitute(void)
         return 0;
     }
 
+    /* INDOOR: a parked player (slots 5-10) is not on the pitch -- skip */
+    if (Indoor_IsParkedSlot(_plToBeSubstitutedPos))
+        return 1;
+
     /* Check candidate player's status */
     uint16_t offset = _ingameTeamPlayerOffsets[_plToBeSubstitutedPos];
     PlayerInfo *pi = piFromOffset((TeamGame *)_benchTeamGame, offset);
@@ -2615,7 +2626,8 @@ void FindInitialPlayerToBeSubstituted(void)
     int16_t groupMatch = -1;       /* d4 */
 
     for (uint16_t i = 0; i < 11; i++) {
-        GetBenchPlayerPointer(i);
+        if (Indoor_IsParkedSlot(GetBenchPlayerPointer(i)))     /* INDOOR: not on the pitch */
+            continue;
         PlayerInfo *pi = (PlayerInfo *)(_benchPlayerResultA0 + TEAMGAME_PLAYERS_OFFSET);
 
         /* Skip red-carded players */

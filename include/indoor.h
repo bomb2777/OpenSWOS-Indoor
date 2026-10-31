@@ -46,4 +46,20 @@ void Indoor_BeginMatch(void);
 /* InitAndPlayGame, once the match is over. */
 void Indoor_EndMatch(void);
 
+/* ---- Five a side ----------------------------------------------------------------
+ * A side keeps its 11 sprites; ordinals 1..INDOOR_PLAYERS play (1 the keeper), the
+ * rest are PARKED beside the pitch for the whole match, as a sent-off player is
+ * (sentAway), which the AI, ball control and the kick-off wait already skip. */
+#define INDOOR_PLAYERS 5
+
+/* Every frame, before the players are updated: puts the parked ones back where they
+ * belong, whatever reset them (the walk-on, half time, a penalty, a substitution).
+ * Does nothing outdoors. */
+void Indoor_ParkPlayers(void);
+
+/* The ordinal whose place an indoor player takes in the restart tables (kick-off,
+ * free kick, penalty, ...): 2 and 3 the centre backs', 4 and 5 the forwards' (so the
+ * kick-off has its two at the centre circle). Outdoors, the ordinal itself. */
+int16_t Indoor_RestartOrdinal(int16_t ordinal);
+
 #endif /* INDOOR_H */

@@ -23,6 +23,7 @@ extern int16_t _gsThrowInHideResult; /* GS_55_50 throw-in UI gate — dos_gamepl
 #include "panic.h"
 #include "sfx_crowd.h"
 #include "highlight.h"
+#include "indoor.h"           /* INDOOR: the restart roles of a five-a-side team */
 
 /* ==================================================================
  * Chunk 55 — UpdatePlayers (~2,690 lines asm → C)
@@ -2630,7 +2631,8 @@ not_in_penalty:
 
                 /* Free kick spacing for defenders */
                 freeKickDestX_local = 0;
-                if (team != _lastTeamPlayedBeforeBreak &&
+                if (!_gIndoor &&        /* the wall counts on ordinals 2-5; indoor has 4 players */
+                    team != _lastTeamPlayedBeforeBreak &&
                     gs >= ST_FREE_KICK_LEFT1 && gs <= ST_FREE_KICK_RIGHT3 &&
                     gs != ST_FREE_KICK_LEFT1 && gs != ST_FREE_KICK_RIGHT3) {
                     if (player->playerOrdinal >= 2 && player->playerOrdinal <= 5) {
@@ -2664,7 +2666,7 @@ not_in_penalty:
                     }
                 }
 
-                ordinal = player->playerOrdinal;
+                ordinal = Indoor_RestartOrdinal(player->playerOrdinal);
 
             index_restart:
                 {

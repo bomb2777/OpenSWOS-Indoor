@@ -14,6 +14,7 @@
 #include "game_types.h"
 #include "display.h"
 #include "deterministic.h"
+#include "indoor.h"           /* INDOOR: players 6-11 parked every frame */
 
 /* ---- Extern globals (data section, exported from asm/Data.c) ---- */
 extern uint16_t _gameCanceled;
@@ -786,6 +787,7 @@ GameFrameResult GameLoop_Frame(void)
     { extern void ModMatch_Frame(void); ModMatch_Frame(); }   /* (the mods: include/mod_api.h) */
     /* nullsub_8 — no-op */
     RASTER(RASTER_SIM);
+    Indoor_ParkPlayers();       /* INDOOR: players 6-11 stay parked (no-op outdoors) */
     UpdateAndApplyTeamControls();
     UpdateBall();
     MovePlayers();

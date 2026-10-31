@@ -2,6 +2,7 @@
  * docs/INDOOR.md). */
 #include "indoor.h"
 #include "swos_types.h"
+#include "game_types.h"
 #ifdef SWOS_SDL_BUILD
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,4 +91,48 @@ void Indoor_BeginMatch(void)
 void Indoor_EndMatch(void)
 {
     _gIndoor = 0;
+}
+
+/* ---- Five a side ---------------------------------------------------------------- */
+
+extern Sprite **_team1SpritesTable;
+extern Sprite **_team2SpritesTable;
+
+/* Where the parked players stand: beside the left touchline, as far out as a
+ * sent-off player walks (SendPlayerAway: -20) and then some, so not even a sprite's
+ * edge shows at the camera's leftmost position. */
+enum { kParkX = -40, kParkY = 449 };
+
+static void park(Sprite *s)
+{
+    s->sentAway = 1;
+    s->x.s.i = kParkX;
+    s->x.s.frac = 0;
+    s->y.s.i = kParkY;
+    s->y.s.frac = 0;
+    s->z.raw = 0;
+    s->destX = kParkX;
+    s->destY = kParkY;
+    s->speed = 0;
+    s->deltaX.raw = 0;
+    s->deltaY.raw = 0;
+    s->deltaZ.raw = 0;
+}
+
+void Indoor_ParkPlayers(void)
+{
+    if (!_gIndoor)
+        return;
+    for (int16_t i = INDOOR_PLAYERS; i < 11; i++) {
+        park(_team1SpritesTable[i]);
+        park(_team2SpritesTable[i]);
+    }
+}
+
+int16_t Indoor_RestartOrdinal(int16_t ordinal)
+{
+    static const int16_t kRole[INDOOR_PLAYERS + 1] = { 0, 1, 3, 4, 10, 11 };
+    if (!_gIndoor || ordinal < 1 || ordinal > INDOOR_PLAYERS)
+        return ordinal;
+    return kRole[ordinal];
 }

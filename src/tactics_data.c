@@ -10,6 +10,7 @@
  */
 #include "tactics_data.h"
 #include "swos_sections.h"  /* SWOS_CHIP_BSS */
+#include "indoor.h"         /* INDOOR: slots 0-3 lent to the indoor tactics */
 
 #if TACTICS_DATA_C
 
@@ -572,7 +573,8 @@ void TacticsData_SelectRelease(int dos)
 #endif
 
     for (i = 0; i < 4; i++)
-        _teamTacticsTable[(int)slot[i]] = set[i];
+        if (!Indoor_TakeOutdoorTactic(slot[i], set[i]))  /* INDOOR: slots 0-3 are lent out */
+            _teamTacticsTable[(int)slot[i]] = set[i];
 
     /* Re-apply the startup copy to whichever set is now in the table. */
     {

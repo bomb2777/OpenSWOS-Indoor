@@ -1722,15 +1722,7 @@ static void draw_bench_occupants_only(void)
     _benchXLimit     = BENCH_X_LIMIT_PLAY;
     _benchY          = topY;
     _opponentBenchY  = botY;
-    /* Team 1's bench: _topTeamPtr is team 1's TeamGame (the activation block takes it
-     * for teamNumber 1), and its TeamGeneralInfo is whichever of _topTeamData /
-     * _bottomTeamData has teamNumber 1 -- the TOP one only while team 1 plays up
-     * (InitTeamsData, again at half time). Pairing _topTeamData with it drew each
-     * bench in the other team's colours for a whole half; seen right after a
-     * substitution, when the menu's own drawing (which pairs them correctly) hands
-     * over to this one with the bench still in view. */
-    _benchTeam       = (uintptr_t)((_topTeamData.teamNumber == 1) ? &_topTeamData
-                                                                 : &_bottomTeamData);
+    _benchTeam       = (uintptr_t)&_topTeamData;
     _benchTeamGame   = (uintptr_t)_topTeamPtr;
     _initialSubsState = 0;      /* idle: neutral coach frames, no selection */
 

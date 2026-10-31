@@ -13,6 +13,7 @@
  */
 
 #include "ai.h"
+#include "indoor.h"          /* INDOOR: the court */
 #include "dos_mode.h"       /* _gDosGameplay: the DOS build has no position gate here */
 #include "game_types.h"
 #include "math68k.h"
@@ -384,9 +385,9 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
 
     /* Compute goal coordinates and squared distance */
     if (team == &_bottomTeamData)
-        goalY = 129;    /* upper goal line (bottom team attacks up) */
+        goalY = INDOOR_GY(129);    /* upper goal line (bottom team attacks up); INDOOR: the court's */
     else
-        goalY = 769;    /* lower goal line (top team attacks down) */
+        goalY = INDOOR_GY(769);    /* lower goal line (top team attacks down) */
 
     ballX = _ballSprite.x.s.i;
     ballY = _ballSprite.y.s.i;
@@ -547,10 +548,10 @@ theres_a_player_near:
     if (a5->direction == 2 || a5->direction == 6) {
         /* horizontal_dir_half_gate */
         if (team == &_topTeamData) {
-            if (_ballSprite.y.s.i >= 740)
+            if (_ballSprite.y.s.i >= INDOOR_GY(740))
                 goto no_fire_fallback_flow;
         } else {
-            if (_ballSprite.y.s.i <= 158)
+            if (_ballSprite.y.s.i <= INDOOR_GY(158))
                 goto no_fire_fallback_flow;
         }
         goto distance_and_random_fire_gate;
@@ -749,10 +750,10 @@ setup_resume_play_and_turn_bias:
 
     /* adjust_turn_by_ball_motion */
     if (_ballSprite.deltaY.raw < 0) {
-        if (_ballSprite.y.s.i < 342)
+        if (_ballSprite.y.s.i < INDOOR_Y(342))
             goto commit_turn_to_ai_state;
     } else {
-        if (_ballSprite.y.s.i > 555)
+        if (_ballSprite.y.s.i > INDOOR_Y(555))
             goto commit_turn_to_ai_state;
     }
 
@@ -763,7 +764,7 @@ setup_resume_play_and_turn_bias:
 
         /* `cmpi.w #478,ballX / bcs mid_right_x_gate` (SWOS2.s:32277) is an
          * unsigned LOWER test, so x == 478 belongs to the midfield band. */
-        if (bx >= 193 && bx < 478) {
+        if (bx >= INDOOR_X(193) && bx < INDOOR_X(478)) {
             /* mid_right_x_gate */
             if (timeBucket == 0)
                 goto set_zero_turn;
@@ -771,7 +772,7 @@ setup_resume_play_and_turn_bias:
                 goto commit_turn_to_ai_state;
             goto invert_turn;
         }
-        if (bx >= 118 && bx <= 553) {
+        if (bx >= INDOOR_X(118) && bx <= INDOOR_X(553)) {
             /* midfield_x_gate */
             if (timeBucket == 0)
                 goto invert_turn;
@@ -965,10 +966,10 @@ apply_dir_and_normal_fire:
 
     if (_gameState == ST_FOUL) {
         if (team == &_topTeamData) {
-            if (a2->y.s.i >= 682)
+            if (a2->y.s.i >= INDOOR_Y(682))
                 goto apply_turn_and_return;
         } else {
-            if (a2->y.s.i <= 216)
+            if (a2->y.s.i <= INDOOR_Y(216))
                 goto apply_turn_and_return;
         }
     }
@@ -1041,7 +1042,7 @@ noone_near:
          * corpus means that one coach-mode recording. */
         if (!_gDosGameplay &&
             a5->x.s.i >= 273 && a5->x.s.i <= 398 &&
-            (a5->y.s.i <= 158 || a5->y.s.i >= 740)) {
+            (a5->y.s.i <= INDOOR_GY(158) || a5->y.s.i >= INDOOR_GY(740))) {
             /* loc_118040: leave the direction unforced */
             team->currentAllowedDirection = d0;
             return;

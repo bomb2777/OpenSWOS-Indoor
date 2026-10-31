@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "player_positioning.h"
+#include "indoor.h"          /* INDOOR: the court */
 
 /* ==================================================================
  * Chunk 53 — Player Tactical Positioning
@@ -64,22 +65,24 @@ SetPlayerWithNoBallDestination(Sprite *player, TeamGeneralInfo *team,
 
     if (d0 < 0) {
         /* Goalkeeper: proportional positioning */
-        int16_t leftX = 285;
-        int16_t rightX = 387;
+        /* INDOOR: the keeper's band and the pitch it is proportional to, on the
+         * court (indoor.h) */
+        int16_t leftX = INDOOR_X(285);
+        int16_t rightX = INDOOR_X(387);
         int16_t xRange = rightX - leftX + 1; /* 103 */
-        uint16_t xRel = (uint16_t)(ballX - 81);
-        uint16_t destXCalc = (uint16_t)(((uint32_t)xRel * (uint32_t)xRange) / 510u);
+        uint16_t xRel = (uint16_t)(ballX - INDOOR_X(81));
+        uint16_t destXCalc = (uint16_t)(((uint32_t)xRel * (uint32_t)xRange) / (uint16_t)INDOOR_DX(510));
         player->destX = (int16_t)(leftX + destXCalc);
 
-        int16_t topY = 135;
-        int16_t botY = 161;
+        int16_t topY = INDOOR_GY(135);
+        int16_t botY = INDOOR_GY(161);
         if (team != &_topTeamData) {
-            topY = 737;
-            botY = 763;
+            topY = INDOOR_GY(737);
+            botY = INDOOR_GY(763);
         }
         int16_t yRange = botY - topY + 1;
-        uint16_t yRel = (uint16_t)(ballY - 129);
-        uint16_t destYCalc = (uint16_t)(((uint32_t)yRel * (uint32_t)(uint16_t)yRange) / 641u);
+        uint16_t yRel = (uint16_t)(ballY - INDOOR_Y(129));
+        uint16_t destYCalc = (uint16_t)(((uint32_t)yRel * (uint32_t)(uint16_t)yRange) / (uint16_t)INDOOR_DY(641));
         player->destY = (int16_t)(topY + destYCalc);
         return;
     }
@@ -113,10 +116,10 @@ SetPlayerWithNoBallDestination(Sprite *player, TeamGeneralInfo *team,
         d3 += 8; /* net +4 for bottom team */
 
     /* Clamp to pitch bounds */
-    if (d3 < 81) d3 = 81;
-    if (d3 > 590) d3 = 590;
-    if (d4 < 129) d4 = 129;
-    if (d4 > 769) d4 = 769;
+    if (d3 < INDOOR_X(81)) d3 = INDOOR_X(81);
+    if (d3 > INDOOR_X(590)) d3 = INDOOR_X(590);
+    if (d4 < INDOOR_Y(129)) d4 = INDOOR_Y(129);
+    if (d4 > INDOOR_Y(769)) d4 = INDOOR_Y(769);
 
     player->destX = d3;
     player->destY = d4;

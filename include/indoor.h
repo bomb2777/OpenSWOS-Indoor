@@ -114,4 +114,58 @@ int16_t Indoor_TacticsCount(void);
  * write the table itself. */
 int16_t Indoor_TakeOutdoorTactic(int16_t slot, TeamTactics *t);
 
+/* ---- The court (phase 4) -----------------------------------------------------------
+ * The 672x880 world, the camera and the centre spot (336, 449) stay; the indoor court is
+ * a smaller rectangle centred in it, futsal-sized at SWOS's scale (40 x 20 m: the outdoor
+ * pitch is 509 x 640 for about 68 x 105 m). Tunable here.
+ *
+ * Code written for the outdoor pitch keeps its numbers and wraps them, so outdoors it is
+ * unchanged and indoors it lands on the court:
+ *   INDOOR_X(x), INDOOR_Y(y)   a position proportional to the pitch -- linear inside the
+ *                              lines (81..590 -> left..right, 129..769 -> top..bottom),
+ *                              shifted beyond them. Touchlines, the penalty area, the
+ *                              spots, the tactics grid, the AI's bands.
+ *   INDOOR_GY(y)               a position tied to a GOAL: shifted, not scaled, as the goal
+ *                              sprite is not (net, posts, crossbar, the keeper's lines).
+ *   INDOOR_DX(d), INDOOR_DY(d) a distance, scaled.
+ * The goal's x (the mouth 302..366, the posts) needs none: the court is centred on 336
+ * like the pitch, so the goals stay where they are across. */
+#define INDOOR_HALF_WIDTH   75      /* 336 +- 75: 261..411 */
+#define INDOOR_HALF_LENGTH  122     /* 449 +- 122: 327..571 */
+#define INDOOR_FREE_KICK_DISTANCE 32 /* futsal's 5 m; outdoors 65 px (9.15 m) */
+#define INDOOR_FREE_KICK_STEP     35 /* sideways out of it; outdoors 70 */
+#define INDOOR_LEFT    (336 - INDOOR_HALF_WIDTH)
+#define INDOOR_RIGHT   (336 + INDOOR_HALF_WIDTH)
+#define INDOOR_TOP     (449 - INDOOR_HALF_LENGTH)
+#define INDOOR_BOTTOM  (449 + INDOOR_HALF_LENGTH)
+
+/* Out of line on purpose: inlined at the ~60 places that wrap a number, they cost the
+ * m68k binary 11 KB. */
+int16_t Indoor_MapX(int16_t x);
+int16_t Indoor_MapY(int16_t y);
+int16_t Indoor_GoalY(int16_t y);
+
+/* The penalty spot (outdoors 187 / 711, 11 m): futsal's 6 m, 37 px off the goal line. */
+#define INDOOR_PENALTY_SPOT 37
+#define INDOOR_SPOT_Y(y) (_gIndoor ? (int16_t)((y) <= 449 ? INDOOR_TOP + INDOOR_PENALTY_SPOT \
+                                                         : INDOOR_BOTTOM - INDOOR_PENALTY_SPOT) \
+                                   : (int16_t)(y))
+
+#define INDOOR_X(x)   (_gIndoor ? Indoor_MapX((int16_t)(x))  : (int16_t)(x))
+#define INDOOR_Y(y)   (_gIndoor ? Indoor_MapY((int16_t)(y))  : (int16_t)(y))
+#define INDOOR_GY(y)  (_gIndoor ? Indoor_GoalY((int16_t)(y)) : (int16_t)(y))
+#define INDOOR_DX(d)  (_gIndoor ? (int16_t)((int32_t)(d) * (INDOOR_RIGHT - INDOOR_LEFT) / (590 - 81)) : (int16_t)(d))
+#define INDOOR_DY(d)  (_gIndoor ? (int16_t)((int32_t)(d) * (INDOOR_BOTTOM - INDOOR_TOP) / (769 - 129)) : (int16_t)(d))
+
+/* Every frame, after the players have moved, while the ball is in play: the players on
+ * the court kept inside its walls (the parked ones stay parked). Indoor_BeginMatch has
+ * already mapped the tactics grid's coordinate tables and the ball's sector limits onto
+ * the court and moved the goal sprites to its ends (Indoor_EndMatch gives them back). */
+void Indoor_KeepPlayersInside(void);
+
+/* UpdateBall, instead of the outdoor "out of play": the ball off a wall, unless it is
+ * going into a goal (in the mouth, under the bar), which is left to the goal code.
+ * Returns 1 if it was a goal-mouth crossing CheckIfBallOutOfPlay must decide. */
+int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY);
+
 #endif /* INDOOR_H */

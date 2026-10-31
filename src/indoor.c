@@ -147,3 +147,24 @@ int16_t Indoor_IsParkedSlot(uint16_t slot)
 {
     return (_gIndoor && slot >= INDOOR_PLAYERS && slot < 11) ? 1 : 0;
 }
+
+int16_t Indoor_BenchSize(void)
+{
+    return _gIndoor ? (int16_t)(16 - INDOOR_PLAYERS) : 5;
+}
+
+uint16_t Indoor_FirstBenchSlot(void)
+{
+    return _gIndoor ? INDOOR_PLAYERS : 11;
+}
+
+uint16_t Indoor_BenchSlot(uint16_t index)
+{
+    return (uint16_t)(index - 1 + Indoor_FirstBenchSlot());
+}
+
+const uint8_t *Indoor_ListOrder(const uint8_t *rolesOrder)
+{
+    static const uint8_t kSlotOrder[11] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+    return _gIndoor ? kSlotOrder : rolesOrder;
+}

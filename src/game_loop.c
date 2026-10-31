@@ -794,6 +794,7 @@ GameFrameResult GameLoop_Frame(void)
     UpdateAndApplyTeamControls();
     UpdateBall();
     MovePlayers();
+    Indoor_KeepPlayersInside(); /* INDOOR: the court's walls (no-op outdoors) */
     UpdateReferee();
     InjuryUpdateTickGuard();
     UpdateCornerFlagSprite();

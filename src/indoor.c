@@ -1,5 +1,8 @@
 /* indoor.c -- INDOOR: a friendly played five a side in a hall (include/indoor.h,
  * docs/INDOOR.md). */
+/* Size over speed: nothing here is hot (kick-off and two tiny per-frame loops), and at
+ * -O2 the m68k compiler unrolled and inlined it to over 5 KB. */
+#pragma GCC optimize ("Os")
 #include "indoor.h"
 #include "swos_types.h"
 #include "game_types.h"
@@ -54,6 +57,8 @@ int16_t Indoor_NextFriendlyFloor(int16_t floor)
 
 static void install_tactics(TeamFileEx *team1, TeamFileEx *team2);
 static void release_tactics(void);
+static void install_court(void);
+static void release_court(void);
 
 void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
 {
@@ -84,6 +89,7 @@ void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
     _gIndoor = 1;
     _gIndoorFloor = floor;
     install_tactics(team1, team2);
+    install_court();
 #ifdef SWOS_SDL_BUILD
     fprintf(stderr, "[indoor] this friendly is played indoors: %s, pitch type %d\n",
             Indoor_FloorName(floor), Indoor_PitchTypeForFloor(floor));
@@ -101,6 +107,7 @@ void Indoor_PinPitch(void)
 
 void Indoor_EndMatch(void)
 {
+    release_court();
     release_tactics();
     _gIndoor = 0;
 }
@@ -252,5 +259,143 @@ void Indoor_TacticsButtons(struct MenuEntry *first)
             e->fg = (uintptr_t)_tacticsStringTable[i];
         else
             e->isInvisible = 1;
+    }
+}
+
+/* ---- The court (phase 4) ------------------------------------------------------------ */
+
+__attribute__((noinline)) int16_t Indoor_MapX(int16_t x)
+{
+    if (x < 81)  return (int16_t)(x + (INDOOR_LEFT - 81));
+    if (x > 590) return (int16_t)(x - (590 - INDOOR_RIGHT));
+    return (int16_t)(INDOOR_LEFT + (int32_t)(x - 81) * (INDOOR_RIGHT - INDOOR_LEFT) / (590 - 81));
+}
+__attribute__((noinline)) int16_t Indoor_MapY(int16_t y)
+{
+    if (y < 129) return (int16_t)(y + (INDOOR_TOP - 129));
+    if (y > 769) return (int16_t)(y - (769 - INDOOR_BOTTOM));
+    return (int16_t)(INDOOR_TOP + (int32_t)(y - 129) * (INDOOR_BOTTOM - INDOOR_TOP) / (769 - 129));
+}
+__attribute__((noinline)) int16_t Indoor_GoalY(int16_t y)
+{
+    return (int16_t)(y <= 449 ? y + (INDOOR_TOP - 129) : y - (769 - INDOOR_BOTTOM));
+}
+
+
+extern void ResetBothTeamSpinTimers(void);
+
+/* How much of its speed the ball keeps off the glass: 3/4 (a post keeps 3/4 too). */
+#define INDOOR_WALL_KEEP_SHIFT 2
+
+static void mirror_dest(int16_t *dest, int32_t saved)
+{
+    int16_t at = (int16_t)(saved >> 16);
+    *dest = (int16_t)(at - (*dest - at));
+}
+
+int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY)
+{
+    int16_t bx = ball->x.s.i;
+    int16_t by = ball->y.s.i;
+    int16_t hit = 0;
+
+    if (by < INDOOR_TOP || by > INDOOR_BOTTOM) {
+        /* Into the goal: in the mouth (UpdateBall's posts test x - 1 against 302..366,
+         * as CheckIfBallOutOfPlay does) and under the bar. The goal code decides. */
+        if (bx - 1 >= 302 && bx - 1 <= 366 && ball->z.s.i <= 15 &&
+            bx >= INDOOR_LEFT && bx <= INDOOR_RIGHT)
+            return 1;
+        mirror_dest(&ball->destY, savedY);
+        hit = 1;
+    }
+    if (bx < INDOOR_LEFT || bx > INDOOR_RIGHT) {
+        mirror_dest(&ball->destX, savedX);
+        hit = 1;
+    }
+    if (hit) {
+        ball->x.raw = savedX;
+        ball->y.raw = savedY;
+        ball->speed = (int16_t)(ball->speed - (ball->speed >> INDOOR_WALL_KEEP_SHIFT));
+        ResetBothTeamSpinTimers();
+    }
+    return 0;
+}
+
+/* The tactics grid's target coordinates (a tactic's position byte indexes them) and the
+ * ball's sector limits (which of the 5x7 sectors the ball is in), mapped onto the court
+ * for the match: then every tactic, outdoor or indoor, means the same on it. [4] of the
+ * X limits is the Y sectors' leading bound (129), read as such by UpdateBall. */
+extern uint16_t _playerXQuadrantsCoordinates[15];
+extern uint16_t _playerYQuadrantCoordinates[16];
+extern uint16_t _ballXQuadrantLimits[5];
+extern uint16_t _ballYQuadrantLimits[6];
+extern Sprite   _goal1TopSprite, _goal2BottomSprite;
+
+static int16_t  s_courtInstalled;
+static uint16_t s_playerX[15], s_playerY[16], s_ballX[5], s_ballY[6];
+static int32_t  s_goal1Y, s_goal2Y;
+
+static void install_court(void)
+{
+    int16_t i;
+    if (s_courtInstalled)
+        return;
+    for (i = 0; i < 15; i++) {
+        s_playerX[i] = _playerXQuadrantsCoordinates[i];
+        _playerXQuadrantsCoordinates[i] = (uint16_t)Indoor_MapX((int16_t)s_playerX[i]);
+    }
+    for (i = 0; i < 16; i++) {
+        s_playerY[i] = _playerYQuadrantCoordinates[i];
+        _playerYQuadrantCoordinates[i] = (uint16_t)Indoor_MapY((int16_t)s_playerY[i]);
+    }
+    for (i = 0; i < 4; i++) {
+        s_ballX[i] = _ballXQuadrantLimits[i];
+        _ballXQuadrantLimits[i] = (uint16_t)Indoor_MapX((int16_t)s_ballX[i]);
+    }
+    s_ballX[4] = _ballXQuadrantLimits[4];
+    _ballXQuadrantLimits[4] = (uint16_t)Indoor_MapY((int16_t)s_ballX[4]);
+    for (i = 0; i < 6; i++) {
+        s_ballY[i] = _ballYQuadrantLimits[i];
+        _ballYQuadrantLimits[i] = (uint16_t)Indoor_MapY((int16_t)s_ballY[i]);
+    }
+    /* The goals: shifted, as the goal frame in UpdateBall is (INDOOR_GY). */
+    s_goal1Y = _goal1TopSprite.y.raw;
+    s_goal2Y = _goal2BottomSprite.y.raw;
+    _goal1TopSprite.y.s.i = Indoor_GoalY(_goal1TopSprite.y.s.i);
+    _goal2BottomSprite.y.s.i = Indoor_GoalY(_goal2BottomSprite.y.s.i);
+    s_courtInstalled = 1;
+}
+
+static void release_court(void)
+{
+    int16_t i;
+    if (!s_courtInstalled)
+        return;
+    for (i = 0; i < 15; i++) _playerXQuadrantsCoordinates[i] = s_playerX[i];
+    for (i = 0; i < 16; i++) _playerYQuadrantCoordinates[i] = s_playerY[i];
+    for (i = 0; i < 5; i++)  _ballXQuadrantLimits[i] = s_ballX[i];
+    for (i = 0; i < 6; i++)  _ballYQuadrantLimits[i] = s_ballY[i];
+    _goal1TopSprite.y.raw = s_goal1Y;
+    _goal2BottomSprite.y.raw = s_goal2Y;
+    s_courtInstalled = 0;
+}
+
+extern uint16_t _gameStatePl;
+
+static void keep_inside(Sprite *s)
+{
+    if (s->x.s.i < INDOOR_LEFT)   { s->x.s.i = INDOOR_LEFT;   s->x.s.frac = 0; }
+    if (s->x.s.i > INDOOR_RIGHT)  { s->x.s.i = INDOOR_RIGHT;  s->x.s.frac = 0; }
+    if (s->y.s.i < INDOOR_TOP)    { s->y.s.i = INDOOR_TOP;    s->y.s.frac = 0; }
+    if (s->y.s.i > INDOOR_BOTTOM) { s->y.s.i = INDOOR_BOTTOM; s->y.s.frac = 0; }
+}
+
+void Indoor_KeepPlayersInside(void)
+{
+    if (!_gIndoor || _gameStatePl != ST_GAME_IN_PROGRESS)
+        return;
+    for (int16_t i = 0; i < INDOOR_PLAYERS; i++) {
+        keep_inside(_team1SpritesTable[i]);
+        keep_inside(_team2SpritesTable[i]);
     }
 }

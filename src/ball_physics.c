@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "dos_mode.h"       /* _gDosGameplay: the diving-keeper ball straddle */
+#include "indoor.h"          /* INDOOR: the court, its walls and goals */
 #include "ball_physics.h"
 #include "dos_sound.h"
 #include "math68k.h"       /* CalculateDeltaXAndY: uint16_t, 0xFFFF = no movement */
@@ -727,7 +728,7 @@ has_picture:
     if (_gameStatePl != ST_GAME_IN_PROGRESS) {
         /* X boundary */
         int16_t bx = ball->x.s.i;
-        if (bx < 53 || bx > 618) {
+        if (bx < INDOOR_X(53) || bx > INDOOR_X(618)) {     /* INDOOR: the hall's */
             int16_t destX = ball->destX;
             int16_t delta = destX - bx;
             ball->destX = bx - delta;
@@ -740,7 +741,7 @@ has_picture:
 
         /* Y boundary */
         int16_t by = ball->y.s.i;
-        if (by < 100 || by > 799) {
+        if (by < INDOOR_Y(100) || by > INDOOR_Y(799)) {
             int16_t destY = ball->destY;
             int16_t delta = destY - by;
             ball->destY = by - delta;
@@ -758,17 +759,19 @@ has_picture:
         int16_t by = ball->y.s.i;
         int16_t bz = ball->z.s.i;
 
-        if (by >= 129 && by <= 769)
+        /* INDOOR: the goals at the court's ends -- INDOOR_GY shifts, the frame keeps
+         * its size; its x needs nothing, the court is centred like the pitch. */
+        if (by >= INDOOR_GY(129) && by <= INDOOR_GY(769))
             goto skip_goal_collision;
 
         /* Upper goal area (Y <= 128) */
-        if (by <= 128) {
-            if (by <= 112)
+        if (by <= INDOOR_GY(128)) {
+            if (by <= INDOOR_GY(112))
                 goto check_upper_goal_inner;
             /* Y in 113..128 */
             if (bz > 19) goto skip_goal_collision;
             if (bx <= 295 || bx > 372) goto skip_goal_collision;
-            if (by > 123) {
+            if (by > INDOOR_GY(123)) {
                 if (bz > 15) goto upper_crossbar;
             } else {
                 /* Y in 113..123 */
@@ -776,7 +779,7 @@ has_picture:
             }
             /* Ball inside upper goal */
             if (bx < 302 || bx > 366) goto side_post_bounce;
-            if (by < 119) goto back_net_bounce;
+            if (by < INDOOR_GY(119)) goto back_net_bounce;
             goto skip_goal_collision;
 
         check_upper_goal_inner:
@@ -784,14 +787,14 @@ has_picture:
         }
 
         /* Lower goal area (Y >= 770) */
-        if (by < 770) goto skip_goal_collision;
-        if (by >= 785) goto skip_goal_collision;
+        if (by < INDOOR_GY(770)) goto skip_goal_collision;
+        if (by >= INDOOR_GY(785)) goto skip_goal_collision;
         /* Y in 770..784 */
         if (bz > 19) goto skip_goal_collision;
         if (bx <= 295 || bx > 372) goto skip_goal_collision;
         if (bz > 15) goto lower_crossbar;
         if (bx < 302 || bx > 366) goto side_post_bounce;
-        if (by > 778) goto back_net_bounce;
+        if (by > INDOOR_GY(778)) goto back_net_bounce;
         goto skip_goal_collision;
 
     upper_crossbar:
@@ -874,9 +877,9 @@ skip_goal_collision:
         int32_t deltaY;
 
         /* Near a goal line: Y 129..132 or 766..769 (SWOS2.s:14807). */
-        if (by > 128 && by <= 132)
+        if (by > INDOOR_GY(128) && by <= INDOOR_GY(132))
             goto goalline_check;
-        if (by >= 766 && by < 770)
+        if (by >= INDOOR_GY(766) && by < INDOOR_GY(770))
             goto goalline_check;
         goto after_goalpost;
 
@@ -971,7 +974,11 @@ after_goalpost:
     if (_gameStatePl == ST_GAME_IN_PROGRESS) {
         int16_t bx = ball->x.s.i;
         int16_t by = ball->y.s.i;
-        if (bx < 81 || bx > 590 || by < 129 || by > 769) {
+        if (_gIndoor) {
+            /* INDOOR: no out of play -- glass walls, but for a goal */
+            if (Indoor_BallAtWall(ball, savedX, savedY))
+                CheckIfBallOutOfPlay();
+        } else if (bx < 81 || bx > 590 || by < 129 || by > 769) {
             CheckIfBallOutOfPlay();
         }
     }
@@ -1027,14 +1034,14 @@ after_goalpost:
                 d3++;
             }
             if (i == 0)
-                xRefLimit = 81; /* pad_111202 data: dc.b 0,81 -> word 0x0051 */
+                xRefLimit = INDOOR_X(81); /* pad_111202 data: dc.b 0,81 -> word 0x0051 */
             else if (i == 4)
                 xRefLimit = _ballXQuadrantLimits[3]; /* lea 2(a1),a1 then -4(a1) */
             else
                 xRefLimit = _ballXQuadrantLimits[i - 1];
         }
         _ballXQuadrantDead = xQuad;
-        _playerXQuadrantOffset = (int16_t)(((int16_t)(qx - xRefLimit - 51) * 5) / 15);
+        _playerXQuadrantOffset = (int16_t)(((int16_t)(qx - xRefLimit - INDOOR_DX(51)) * 5) / 15);
 
         /* Y quadrant: 6 thresholds -> quadrant 0..6, d3 increments by 5 each */
         int16_t yQuad = 0;
@@ -1065,7 +1072,7 @@ after_goalpost:
                 yRefLimit = _ballYQuadrantLimits[i - 1];
         }
         _ballYQuadrantDead = yQuad;
-        _playerYQuadrantOffset = (int16_t)(((int16_t)(qy - yRefLimit - 45) * 5) / 15);
+        _playerYQuadrantOffset = (int16_t)(((int16_t)(qy - yRefLimit - INDOOR_DY(45)) * 5) / 15);
         _ballQuadrantIndex = d3;
     }
 }
@@ -1138,7 +1145,7 @@ ball_moving_toward_top_goal:
     }
 
     /* check_above_135px_window */
-    d2 -= (int32_t)0x870000; /* subtract 135.0 */
+    d2 -= ((int32_t)INDOOR_GY(135) << 16); /* subtract 135.0 */
     if (d2 >= 0) {
         /* integrate_to_135px_ahead */
         do {
@@ -1149,7 +1156,7 @@ ball_moving_toward_top_goal:
         } while (d2 >= 0);
         d1 -= d4;
         d3 -= d6;
-        d2 = (int32_t)0x870000; /* set to 135.0 */
+        d2 = ((int32_t)INDOOR_GY(135) << 16); /* set to 135.0 */
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
             _ballNotHighX = (int16_t)((uint32_t)d1 >> 16);
@@ -1162,11 +1169,11 @@ ball_moving_toward_top_goal:
         _ballNotHighX = _ballDefensiveX;
         _ballNotHighY = _ballDefensiveY;
         _ballNotHighZ = _ballDefensiveZ;
-        d2 += (int32_t)0x870000;
+        d2 += ((int32_t)INDOOR_GY(135) << 16);
     }
 
     /* keeper_attempt_static_header_catch: check 129px window */
-    d2 -= (int32_t)0x810000; /* subtract 129.0 */
+    d2 -= ((int32_t)INDOOR_GY(129) << 16); /* subtract 129.0 */
     if (d2 >= 0) {
         /* integrate_to_129px_ahead */
         do {
@@ -1177,7 +1184,7 @@ ball_moving_toward_top_goal:
         } while (d2 >= 0);
         d1 -= d4;
         d3 -= d6;
-        d2 = (int32_t)0x810000;
+        d2 = ((int32_t)INDOOR_GY(129) << 16);
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
             _strikeDestX = (int16_t)((uint32_t)d1 >> 16);
@@ -1224,7 +1231,7 @@ ball_moving_toward_bottom_goal:
     }
 
     /* check_plus_498px_threshold: 763.0 */
-    d2 -= (int32_t)0x2FB0000; /* subtract 763.0 */
+    d2 -= ((int32_t)INDOOR_GY(763) << 16); /* subtract 763.0 */
     if (d2 < 0) {
         /* integrate_to_plus_498px */
         do {
@@ -1235,7 +1242,7 @@ ball_moving_toward_bottom_goal:
         } while (d2 < 0);
         d1 -= d4;
         d3 -= d6;
-        d2 = (int32_t)0x2FB0000; /* set to 763.0 */
+        d2 = ((int32_t)INDOOR_GY(763) << 16); /* set to 763.0 */
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
             _ballNotHighX = (int16_t)((uint32_t)d1 >> 16);
@@ -1248,11 +1255,11 @@ ball_moving_toward_bottom_goal:
         _ballNotHighX = _ballDefensiveX;
         _ballNotHighY = _ballDefensiveY;
         _ballNotHighZ = _ballDefensiveZ;
-        d2 += (int32_t)0x2FB0000;
+        d2 += ((int32_t)INDOOR_GY(763) << 16);
     }
 
     /* check_between_plus_497_plus_505px_window: 769.0 */
-    d2 -= (int32_t)0x3010000; /* subtract 769.0 */
+    d2 -= ((int32_t)INDOOR_GY(769) << 16); /* subtract 769.0 */
     if (d2 < 0) {
         /* integrate_to_plus_505px */
         do {
@@ -1263,7 +1270,7 @@ ball_moving_toward_bottom_goal:
         } while (d2 < 0);
         d1 -= d4;
         d3 -= d6;
-        d2 = (int32_t)0x3010000;
+        d2 = ((int32_t)INDOOR_GY(769) << 16);
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
             _strikeDestX = (int16_t)((uint32_t)d1 >> 16);

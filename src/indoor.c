@@ -264,18 +264,32 @@ void Indoor_TacticsButtons(struct MenuEntry *first)
 
 /* ---- The court (phase 4) ------------------------------------------------------------ */
 
+/* Linear between two fixed points (a0 -> b0, a1 -> b1). */
+static int16_t lerp_seg(int16_t v, int16_t a0, int16_t a1, int16_t b0, int16_t b1)
+{
+    return (int16_t)(b0 + (int32_t)(v - a0) * (b1 - b0) / (a1 - a0));
+}
+
 __attribute__((noinline)) int16_t Indoor_MapX(int16_t x)
 {
-    if (x < 81)  return (int16_t)(x + (INDOOR_LEFT - 81));
-    if (x > 590) return (int16_t)(x - (590 - INDOOR_RIGHT));
-    return (int16_t)(INDOOR_LEFT + (int32_t)(x - 81) * (INDOOR_RIGHT - INDOOR_LEFT) / (590 - 81));
+    const int16_t boxL = 336 - INDOOR_BOX_HALF_WIDTH, boxR = 336 + INDOOR_BOX_HALF_WIDTH;
+    if (x < 81)   return (int16_t)(x + (INDOOR_LEFT - 81));
+    if (x > 590)  return (int16_t)(x - (590 - INDOOR_RIGHT));
+    if (x < 193)  return lerp_seg(x, 81, 193, INDOOR_LEFT, boxL);
+    if (x <= 478) return lerp_seg(x, 193, 478, boxL, boxR);
+    return lerp_seg(x, 478, 590, boxR, INDOOR_RIGHT);
 }
+
 __attribute__((noinline)) int16_t Indoor_MapY(int16_t y)
 {
-    if (y < 129) return (int16_t)(y + (INDOOR_TOP - 129));
-    if (y > 769) return (int16_t)(y - (769 - INDOOR_BOTTOM));
-    return (int16_t)(INDOOR_TOP + (int32_t)(y - 129) * (INDOOR_BOTTOM - INDOOR_TOP) / (769 - 129));
+    const int16_t boxT = INDOOR_TOP + INDOOR_BOX_DEPTH, boxB = INDOOR_BOTTOM - INDOOR_BOX_DEPTH;
+    if (y < 129)  return (int16_t)(y + (INDOOR_TOP - 129));
+    if (y > 769)  return (int16_t)(y - (769 - INDOOR_BOTTOM));
+    if (y < 216)  return lerp_seg(y, 129, 216, INDOOR_TOP, boxT);
+    if (y <= 682) return lerp_seg(y, 216, 682, boxT, boxB);
+    return lerp_seg(y, 682, 769, boxB, INDOOR_BOTTOM);
 }
+
 __attribute__((noinline)) int16_t Indoor_GoalY(int16_t y)
 {
     return (int16_t)(y <= 449 ? y + (INDOOR_TOP - 129) : y - (769 - INDOOR_BOTTOM));

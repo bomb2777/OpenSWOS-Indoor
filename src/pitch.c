@@ -404,6 +404,77 @@ static int32_t loadPitchMap2020(uint16_t mapIndex)
 #endif
 
 /* ================================================================
+ * INDOOR: the stands' fans (indoor.h, phase 5b)
+ *
+ * Tiles 1..INDOOR_CROWD_TILES of every SWOS pitch bank are the crowd -- the same tiles,
+ * at the same numbers, in the Amiga maps and the PC banks (measured: SWCPICH1-3 and
+ * PITCH1, byte for byte once decoded). LINO.MAP keeps blanks there, so the hall shows the
+ * crowd of the pitch this match would have been played on, from the player's own game
+ * data. Taken before the hall's map is loaded (both use the pitch buffer), as 8-plane
+ * tiles, the hall map's format.
+ * ================================================================ */
+#define INDOOR_TILE_BYTES 256u          /* 16 rows x 8 planes x 2 bytes */
+static uint8_t s_indoorCrowd[INDOOR_CROWD_TILES][INDOOR_TILE_BYTES];
+
+static void indoorTileToPlanar(const uint8_t *chunky, uint8_t *planar)
+{
+    int16_t row, pl, x;
+    for (row = 0; row < 16; row++) {
+        for (pl = 0; pl < 8; pl++) {
+            uint16_t w = 0;
+            for (x = 0; x < 16; x++)
+                if ((chunky[row * 16 + x] >> pl) & 1)
+                    w |= (uint16_t)(1u << (15 - x));
+            BE_WRITE_U16(planar + row * 16 + pl * 2, w);
+        }
+    }
+}
+
+static void indoorTakeCrowd(uint16_t mapIndex)
+{
+    int16_t t;
+#ifdef SWOS_SDL_BUILD
+    if (_gDosGraphics) {
+        /* The PC bank the pitch would come from (dos_load_pitch): chunky tiles. */
+        char name[320];
+        uint32_t blkSize = 0;
+        snprintf(name, sizeof name, "%s/PITCH%d.BLK", _gDosGraphicsDir, (int)mapIndex + 1);
+        CAssetSys_DispatchGetSize(DOS_ASSET_OP_INIT_SOURCE0, 0, name, _pitchChunkyBuffer, &blkSize);
+        if (blkSize < (uint32_t)(INDOOR_CROWD_TILES + 1) * DOS_TILE_BYTES) {
+            _panicReasonCode = 3;       /* no crowd in it: not a pitch bank */
+            PanicHaltLoop();
+        }
+        for (t = 0; t < INDOOR_CROWD_TILES; t++)
+            indoorTileToPlanar(_pitchChunkyBuffer + (uint32_t)(t + 1) * DOS_TILE_BYTES,
+                               s_indoorCrowd[t]);
+        return;
+    }
+#endif
+    {
+        /* The Amiga map the pitch would come from: 8 planes (grafs_aga), or 4 (OCS
+         * grafs/), which tile 1's offset tells -- row 0's third cell is tile 1. */
+        uint32_t fileSize = 0, stride;
+        const uint8_t *tiles = _pitchDatBuffer + PITCH_POINTER_COUNT * 4;
+        LoadFileEx((uint8_t *)_swcPitchMapFiles[mapIndex], _pitchDatBuffer, &fileSize);
+        stride = BE_READ_U32(_pitchDatBuffer + 2 * 4);
+        if ((stride != 256u && stride != 128u) || fileSize > PITCHFILE_MAX_SIZE ||
+            fileSize < PITCH_POINTER_COUNT * 4u + (INDOOR_CROWD_TILES + 1) * stride) {
+            _panicReasonCode = 3;       /* not a pitch map as every SWOS pitch is */
+            PanicHaltLoop();
+        }
+        for (t = 0; t < INDOOR_CROWD_TILES; t++) {
+            const uint8_t *src = tiles + (uint32_t)(t + 1) * stride;
+            uint8_t *dst = s_indoorCrowd[t];
+            int16_t row, b;
+            for (row = 0; row < 16; row++)
+                for (b = 0; b < 16; b++)    /* a 4-plane row: its 8 bytes, then planes 4-7 empty */
+                    dst[row * 16 + b] = (uint8_t)((uint32_t)b < stride / 16u
+                                                  ? src[row * (stride / 16u) + b] : 0);
+        }
+    }
+}
+
+/* ================================================================
  * LoadPitchMap  (SWOS2.s line 5557)
  *
  * Loads a pitch map file by index into pitchDatBuffer.
@@ -421,10 +492,19 @@ void LoadPitchMap(uint16_t mapIndex)
      * pitches, in palette entries the Amiga and the DOS palette share. */
     if (_gIndoor) {
         uint32_t fileSize = 0;
+        int16_t t;
+        indoorTakeCrowd(mapIndex);          /* the stands' fans, before the buffer is the hall's */
         LoadFileEx((uint8_t *)INDOOR_HALL_MAP, _pitchDatBuffer, &fileSize);
-        if (fileSize <= PITCH_POINTER_COUNT * 4u || fileSize > PITCHFILE_MAX_SIZE) {
+        if (fileSize < PITCH_POINTER_COUNT * 4u + (INDOOR_CROWD_TILES + 1) * INDOOR_TILE_BYTES ||
+            fileSize > PITCHFILE_MAX_SIZE) {
             _panicReasonCode = 3;           /* missing or not a map: as a map that does not fit */
             PanicHaltLoop();
+        }
+        for (t = 0; t < INDOOR_CROWD_TILES; t++) {
+            uint8_t *dst = _pitchDatBuffer + PITCH_POINTER_COUNT * 4 + (uint32_t)(t + 1) * INDOOR_TILE_BYTES;
+            uint32_t k;
+            for (k = 0; k < INDOOR_TILE_BYTES; k++)
+                dst[k] = s_indoorCrowd[t][k];
         }
 #ifdef SWOS_SDL_BUILD
         s_pitchFileSize = fileSize;

@@ -1,6 +1,6 @@
 # INDOOR.md — five a side in a hall
 
-> **Status (2026-10-31): in progress — phase 1 of 6 done (the switch), phase 2 (five a side), phase 3 (tactics), phase 4 (court and walls), phase 5a (the hall's floor).** This fork's own
+> **Status (2026-11-01): in progress — phase 1 of 6 done (the switch), phase 2 (five a side), phase 3 (tactics), phase 4 (court and walls), phase 5 (the hall: floor, goal, crowd).** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -103,8 +103,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    (from `UpdateBall`) mirrors its destination off the glass and keeps 3/4 of its speed; only a
    ball crossing a goal line in the mouth and under the bar goes to `CheckIfBallOutOfPlay`, i.e.
    a goal. The players: `Indoor_KeepPlayersInside` (frame body, after `MovePlayers`) while the
-   ball is in play. The camera: centred across, along only as far as the court and 48 px of hall
-   past each goal line -- except while the bench is called (menu open, closing, a substitute
+   ball is in play. The camera: centred across, along only as far as the stands behind the goals
+   (`INDOOR_VIEW_TOP`/`_BOTTOM`, phase 5b) -- except while the bench is called (menu open, closing, a substitute
    walking on), when it goes to the bench as outdoors. `src/indoor.c` is compiled `-Os` (the m68k
    compiler made it 5 KB at -O2); the phase costs SWOS2 about 7 KB.
 5. **The hall's floor** — (a) done: `bin/grafs_indoor/LINO.MAP`, the project's own file (tracked,
@@ -113,14 +113,24 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    (`playground_v2.png`, his own art): its court blues, white lines and a 32 × 32 patch of its
    parquet, the court REDRAWN at the game's geometry (`include/indoor.h`; keep the script's
    constants in step) rather than scaled, so every line is where the match code has it. An
-   8-bitplane pitch map like SWOS 2020's `P2020_n.MAP`: 53 tiles, 28 KB. Colours are game-palette
+   8-bitplane pitch map like SWOS 2020's `P2020_n.MAP`: 62 tiles, 32 KB. Colours are game-palette
    entries (the AGA palette, the DOS one index for index, so one map serves both) chosen by
    nearest match, never the pitch condition's nine, the crowd's kit pair 10/11, the replay R
-   (112–127) or the kit block (240–255); the first 23 tiles are blanks, as tiles 0–22 are the
-   crowd's that the fan animation swaps. `LoadPitchMap` loads it for an indoor match on both
+   (112–127) or the kit block (240–255). `LoadPitchMap` loads it for an indoor match on both
    targets whatever the pitch number or graphics style, and `FixupAndColorPitchFile` decodes it as
-   an Amiga map even with DOS graphics on. (b) open: the crowd next to the boards -- the fan
-   animation only works in map rows 1–3 / 51–53, which the indoor camera never shows.
+   an Amiga map even with DOS graphics on. The TOP GOAL's frame and net are drawn in the map too
+   (our own drawing, in the goal greys 50–59): a stadium paints both goals into its pitch, and the
+   goal sprites only add what goes over the players -- the bottom goal's front, the top goal's
+   strip of net 18–23 px behind the line; without it the top goal was that strip alone.
+   (b) done: **the crowd**, three rows behind each goal past a strip of floor (`indoor.h`
+   `INDOOR_CROWD_*`: map rows 12–14 and 41–43), laid out as a stadium's rows 1–3 / 51–53, with
+   map row 0 listing the crowd tiles as every pitch's does (the kit recolouring goes through it).
+   Tiles 1–26 are the crowd in every SWOS pitch bank -- the same tiles at the same numbers in the
+   Amiga maps and the PC banks -- so the map holds BLANKS there and `LoadPitchMap` fills them from
+   the pitch the match would have been played on (`indoorTakeCrowd`: `SWCPICHn.MAP`, or
+   `PITCHn.BLK` with DOS graphics), before it loads the hall: no original art is in the file. The
+   fan animation (`animated_patterns.c`) and the camera follow the rows (`INDOOR_OR`: the outdoor
+   number outdoors). The sides of the court stay floor: the animation only works in rows.
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 

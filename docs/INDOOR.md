@@ -86,17 +86,18 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    (`Indoor_TacticsCount`).
 4. **The court and the walls** — done (tuning open). The court is the owner's SWIS hall
    (libgdx-swis-2022, `hall/playground_v2.png`; its sprites are SWOS's at x3, so a third of its
-   units): 318 × 466 px (x 177–495, y 216–682), penalty area 146 × 73 (x 263–409), centred in
-   the unchanged 672 × 880 world (`include/indoor.h`). A first futsal-sized 150 × 244 left no
-   room to run, dribble or pass (~15 goals a CPU match; now a handful). Outdoor code keeps its
+   units) would be 318 × 466 px; the court is between that (too big, the owner) and a first
+   futsal-sized 150 × 244 (no room to run, dribble or pass; ~15 goals a CPU match): 234 × 354
+   (x 219–453, y 272–626), penalty area 108 × 55 (x 282–390), the hall's proportions kept,
+   centred in the unchanged 672 × 880 world (`include/indoor.h`). Outdoor code keeps its
    numbers and wraps them: `INDOOR_X`/`INDOOR_Y` map a pitch-proportional position onto the
    court, piecewise linear through the lines and the penalty area's edges (81/193/478/590
    across, 129/216/682/769 along) so those land exactly on the court's; `INDOOR_GY` SHIFTS a
    position tied to a goal (net, posts, crossbar, the keeper's lines, the goal area's depth),
    `INDOOR_DX/DY` scale a distance; outdoors each is the number itself. The goals keep their
    size and their x (the court is centred like the pitch): only their y moves, goal sprites
-   included. Own values: the penalty spot at futsal's 6 m (70 px, the area's edge,
-   `INDOOR_SPOT_Y`), the free-kick distance 5 m (58 px). At kick-off `Indoor_BeginMatch` maps the
+   included. Own values: the penalty spot at futsal's 6 m (53 px, the area's edge,
+   `INDOOR_SPOT_Y`), the free-kick distance 5 m (44 px). At kick-off `Indoor_BeginMatch` maps the
    tactics grid's coordinate tables and the ball's sector limits onto the court
    (`install_court`, given back at the end). The ball: no out of play -- `Indoor_BallAtWall`
    (from `UpdateBall`) mirrors its destination off the glass and keeps 3/4 of its speed; only a
@@ -106,9 +107,9 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    past each goal line -- except while the bench is called (menu open, closing, a substitute
    walking on), when it goes to the bench as outdoors. `src/indoor.c` is compiled `-Os` (the m68k
    compiler made it 5 KB at -O2); the phase costs SWOS2 about 7 KB.
-5. **The hall's floor** — the owner's `playground_v2.png` scaled by a third (433 × 667),
+5. **The hall's floor** — the owner's `playground_v2.png` scaled to the court,
    reduced to the pitch's palette slots and cut into 16 × 16 tiles, in a pitch format both
-   targets load; the crowd's tiles (from the original pitch, i.e. the player's own game data)
+   targets load (scaled to the court: 955 x 1398 there -> 234 x 354, x 0.245); the crowd's tiles (from the original pitch, i.e. the player's own game data)
    placed next to the boards. First: the pitch's colour and tile limits, the Amiga's above all.
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.

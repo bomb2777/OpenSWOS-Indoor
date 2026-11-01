@@ -20,10 +20,17 @@
 #include "animated_patterns.h"
 #include "game_types.h"
 #include "display.h"
+#include "indoor.h"      /* INDOOR: the stands behind the goals */
 #ifdef SWOS_SDL_BUILD
 #include "mod_api.h"
 #include "mod_hooks.h"
 #endif
+
+/* INDOOR: the camera tops at which a stand is in view -- the top one's last row above
+ * the camera's top edge (outdoors rows 1-3: 64), the bottom one's first row less 272
+ * (outdoors row 51: 816 - 272 = 544). */
+#define INDOOR_FANS_TOP_SEEN     ((INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS) * 16)
+#define INDOOR_FANS_BOTTOM_SEEN  (INDOOR_CROWD_BOTTOM_ROW * 16 - (816 - 544))
 
 /* ---- external asm globals ---- */
 extern uint16_t _replayState;
@@ -348,11 +355,14 @@ ResetAnimatedPatternsForBothTeams(void)
     if (_trainingGame != 0)
         return;
 
-    /* top fans section: offset 0xA8 bytes = 42 longs, 126 entries */
-    resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer + 0xA8), 125);
+    /* top fans section: offset 0xA8 bytes = 42 longs, 126 entries
+     * (INDOOR: the stands' rows, indoor.h -- 0xA8 is row 1 x 42 x 4) */
+    resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer +
+                                       INDOOR_OR(0xA8, INDOOR_CROWD_TOP_ROW * 42 * 4)), 125);
 
-    /* bottom fans section: offset 0x2178 bytes = 2142 longs, 126 entries */
-    resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer + 0x2178), 125);
+    /* bottom fans section: offset 0x2178 bytes = 2142 longs, 126 entries (row 51) */
+    resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer +
+                                       INDOOR_OR(0x2178, INDOOR_CROWD_BOTTOM_ROW * 42 * 4)), 125);
 }
 
 #ifdef SWOS_SDL_BUILD
@@ -509,7 +519,8 @@ DrawAnimatedPatterns(void)
 
         {
             TeamGame *scoredTeamPtr = _teamScoredGamePtr;
-            if ((int16_t)_cameraY.s.i > 440) {
+            /* INDOOR: halfway between the two stands' thresholds below */
+            if ((int16_t)_cameraY.s.i > INDOOR_OR(440, (INDOOR_FANS_TOP_SEEN + INDOOR_FANS_BOTTOM_SEEN) / 2)) {
                 /* bottom of pitch */
                 if (_fansSidesSwapped != 0)
                     goto check_top_team;
@@ -661,7 +672,7 @@ pattern_loop:
                 _animPatternsIndex = 0;
 
             /* check camera Y to determine which fan section */
-            if ((int16_t)_cameraY.s.i < 64) {
+            if ((int16_t)_cameraY.s.i < INDOOR_OR(64, INDOOR_FANS_TOP_SEEN)) {
                 /* top of pitch: sprite range 21..83 */
                 swapTwoRandomIndicesFromAnimPatternsTable();
                 randomVal = (int8_t)_animPatternsRandomTable[_animPatternsIndex];
@@ -670,12 +681,12 @@ pattern_loop:
                 if (_otherTeamScored != 0 && randomVal >= 21 && randomVal < 42)
                     d4 = 0;
 
-                spriteIdx = randomVal + 21;
-            } else if ((int16_t)_cameraY.s.i >= 544) {
+                spriteIdx = randomVal + INDOOR_OR(21, INDOOR_CROWD_TOP_ROW * 21);
+            } else if ((int16_t)_cameraY.s.i >= INDOOR_OR(544, INDOOR_FANS_BOTTOM_SEEN)) {
                 /* bottom of pitch: sprite range 1071..1133 */
                 swapTwoRandomIndicesFromAnimPatternsTable();
                 randomVal = (int8_t)_animPatternsRandomTable[_animPatternsIndex];
-                spriteIdx = randomVal + 1071;
+                spriteIdx = randomVal + INDOOR_OR(1071, INDOOR_CROWD_BOTTOM_ROW * 21);
             } else {
                 /* middle of pitch: fans not visible, skip */
                 continue;

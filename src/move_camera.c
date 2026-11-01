@@ -321,13 +321,13 @@ offset_and_clamp_to_view:
     targetY += (int16_t)_cameraYVelocity;
 
     /* INDOOR: the court is narrower than any view -- centred across; along, only as far
-     * as shows the court and 48 px of hall past each goal line (indoor.h). */
+     * as shows the court and the stands behind each goal (indoor.h, INDOOR_VIEW_*). */
     /* ... but not while the bench is called: then the camera goes to the bench, as
      * outdoors, or the substitutes menu (drawn there) cannot be seen. */
     if (_gIndoor && _trainingGame == 0 &&
         _inSubstitutesMenu == 0 && _leavingSubsMenu == 0 && _waitForPlayerToGoInTimer == 0) {
-        int16_t minY = (int16_t)(INDOOR_TOP - 48);
-        int16_t maxY = (int16_t)(INDOOR_BOTTOM + 48 - _sim_view_height);
+        int16_t minY = (int16_t)INDOOR_VIEW_TOP;
+        int16_t maxY = (int16_t)(INDOOR_VIEW_BOTTOM - _sim_view_height);
         targetX = SIM_CAMERA_CENTRE_X;
         if (maxY < minY)
             targetY = (int16_t)(449 - _sim_view_height / 2);

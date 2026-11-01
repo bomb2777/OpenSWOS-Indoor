@@ -27,8 +27,12 @@ which is the DOS one index for index, so one map is right in both. Never used:
   112-127                     the replay "R" (docs/PALETTE_V2.md)
   240-255                     the kit block
 
-and the first 23 tiles are blanks nobody uses: tiles 0-22 are the crowd's, which the fan
-animation swaps in pairs wherever map rows 1-3 / 51-53 show them (animated_patterns.c).
+The first 27 tiles are blanks: tiles 1-26 are the crowd's in every SWOS pitch bank, and
+the game fills them at load from the player's own pitch (pitch.c, indoorTakeCrowd), so no
+original art is in this file. The stands are three rows behind each goal (indoor.h
+INDOOR_CROWD_*), laid out as a stadium's (map rows 1-3 / 51-53), and row 0 lists the crowd
+tiles as every pitch's does -- the kit recolouring reads it (FixupAndColorPitchFile); the
+camera never shows it.
 """
 import argparse
 import os
@@ -42,6 +46,8 @@ OUT = os.path.join(REPO, "bin", "grafs_indoor", "LINO.MAP")
 
 # include/indoor.h -- keep in step.
 HALF_W, HALF_L = 117, 177
+CROWD_TOP_ROW = (449 - HALF_L) // 16 - 5        # INDOOR_CROWD_TOP_ROW: 12
+CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 41
 BOX_HALF_W, BOX_DEPTH = 54, 55
 PENALTY_SPOT = 53
 CX, CY = 336, 449
@@ -55,7 +61,25 @@ SCALE = (2 * HALF_W) / SWIS_COURT_W
 WORLD_W, WORLD_H = 672, 880
 COLS, ROWS = 42, 55
 RESERVED = {0, 7, 9, 78, 79, 80, 81, 106, 107, 10, 11} | set(range(112, 128)) | set(range(240, 256))
-FAN_TILES = 23
+FAN_TILES = 27      # tile 0 and the crowd's 1-26, blank
+
+# The crowd's cells, as every SWOS pitch lays them out (tile numbers of the bank): row 0 the
+# list the kit colours are applied through (cells 0-20 one team's, 21-41 the other's), the
+# top stand (stadium rows 1-3, nearest the pitch last) and the bottom one (rows 51-53,
+# nearest first; the front row's aisle is tile 25, which a stadium has from the end of
+# its bank). Odd tiles are fans sitting, the next even one the same fans jumping.
+ROW0 = [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 25, 26, 26, 0, 0, 0]
+TOP_STAND = [
+    [1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 9, 3, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 9, 3, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3],
+    [5, 7, 5, 7, 5, 7, 5, 7, 5, 7, 5, 7, 11, 5, 7, 5, 7, 5, 7, 5, 7, 5, 7, 5, 7, 5, 7, 5, 7, 11, 5, 7, 5, 7, 5, 7, 5, 7, 5, 7, 5, 7],
+    [1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 9, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 9, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1],
+]
+BOTTOM_STAND = [
+    [13, 15, 13, 15, 13, 15, 13, 15, 13, 15, 13, 15, 25, 13, 15, 13, 15, 13, 15, 13, 15, 13, 15, 13, 15, 13, 15, 13, 15, 25, 13, 15, 13, 15, 13, 15, 13, 15, 13, 15, 13, 15],
+    [17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 25, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 25, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19],
+    [23, 21, 23, 21, 23, 21, 23, 21, 23, 21, 23, 21, 26, 23, 21, 23, 21, 23, 21, 23, 21, 23, 21, 23, 21, 23, 21, 23, 21, 26, 23, 21, 23, 21, 23, 21, 23, 21, 23, 21, 23, 21],
+]
 
 
 def game_palette():
@@ -83,6 +107,8 @@ def main():
     ap.add_argument("--preview", help="also write the floor as a PNG (in the game's colours)")
     args = ap.parse_args()
 
+    pal = game_palette()
+    pal_rgb = pal
     src = Image.open(args.src).convert("RGB")
     # The court's colours, sampled where the SWIS hall has them (image y is down:
     # 2000 - libgdx y).
@@ -90,6 +116,7 @@ def main():
     box = src.getpixel((650, 1900 - 1550))  # the penalty area, top
     circle = src.getpixel((650, 1000))      # inside the centre circle
     line = (255, 255, 255)
+    court_shadow = (17, 17, 136)             # the net's inside at the line: a dark floor blue
     # The parquet: a patch from the hall's margin, scaled like the court, repeated.
     patch_src = src.crop((10, 10, 10 + round(32 / SCALE), 10 + round(32 / SCALE)))
     patch = patch_src.resize((32, 32), Image.LANCZOS)
@@ -110,7 +137,31 @@ def main():
     for y in (CY, TOP + PENALTY_SPOT, BOTTOM - PENALTY_SPOT):
         d.rectangle([CX - 1, y - 1, CX, y], fill=line)
 
-    pal = game_palette()
+    # The top goal's frame and net, behind the goal line. A stadium paints its goals into
+    # the pitch; the goal SPRITES only add what must be drawn over the players -- the
+    # bottom goal's front, the top goal's strip of net 18-23 px behind the line. So this
+    # draws the rest of the top one: the crossbar, the posts, the net falling to the line,
+    # its inside in shadow. Our own drawing, in the goal sprites' greys (palette 50-59).
+    grey = lambda i: pal_rgb[i]
+    gx0, gx1 = CX - 36, CX + 36              # the frame, outside to outside (300..372)
+    d.line([gx0, TOP - 18, gx1, TOP - 18], fill=grey(59))       # crossbar
+    d.line([gx0 + 1, TOP - 17, gx1, TOP - 17], fill=grey(50))
+    shades = [54, 53, 52, 52, 52, 51, 51, 50]
+    for i in range(16):                      # the net, light at the top to dark at the line
+        y = TOP - 16 + i
+        c = grey(shades[i]) if i < len(shades) else court_shadow
+        d.line([gx0 + 2, y, gx1 - 1, y], fill=c)
+        if i % 2 == 0 and i < len(shades):   # its mesh
+            for x in range(gx0 + 2 + (i // 2) % 2, gx1 - 1, 2):
+                d.point((x, y), fill=grey(55))
+    for i in range(18):                      # the posts, white in the light
+        y = TOP - 17 + i
+        c = grey([59, 58, 57, 56, 55][min(i // 4, 4)])
+        d.point((gx0, y), fill=c)
+        d.point((gx1 - 1, y), fill=c)
+        d.point((gx0 + 1, y), fill=grey(50))
+        d.point((gx1, y), fill=grey(50))
+
     cache = {}
     idx = [[0] * WORLD_W for _ in range(WORLD_H)]
     for y in range(WORLD_H):
@@ -131,6 +182,15 @@ def main():
                 seen[t] = len(tiles)
                 tiles.append(t)
             cells.append(seen[t])
+
+    # The crowd's cells over the floor drawn there.
+    def put(r, row):
+        cells[r * COLS:(r + 1) * COLS] = row
+    put(0, ROW0)
+    for i, row in enumerate(TOP_STAND):
+        put(CROWD_TOP_ROW + i, row)
+    for i, row in enumerate(BOTTOM_STAND):
+        put(CROWD_BOTTOM_ROW + i, row)
 
     def planar(t):
         out = bytearray()

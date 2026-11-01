@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "pitch.h"
+#include "indoor.h"          /* INDOOR: the hall's floor */
 #include "game_types.h"
 #include "display.h"
 #include "endian_helpers.h"
@@ -414,6 +415,27 @@ void LoadPitchMap(uint16_t mapIndex)
 #ifdef SWOS_SDL_BUILD
     ModHooks_PitchDropped();        /* until a mod's picture is loaded for this pitch */
     AnimatedPatterns_ClearOwnCells();   /* (Pitch_ApplyCrowdLayout marks them again) */
+#endif
+    /* INDOOR: the hall's floor, whatever the pitch number and the graphics style
+     * (docs/INDOOR.md, scripts/make_indoor_hall.py). An 8-plane map like the 2020
+     * pitches, in palette entries the Amiga and the DOS palette share. */
+    if (_gIndoor) {
+        uint32_t fileSize = 0;
+        LoadFileEx((uint8_t *)INDOOR_HALL_MAP, _pitchDatBuffer, &fileSize);
+        if (fileSize <= PITCH_POINTER_COUNT * 4u || fileSize > PITCHFILE_MAX_SIZE) {
+            _panicReasonCode = 3;           /* missing or not a map: as a map that does not fit */
+            PanicHaltLoop();
+        }
+#ifdef SWOS_SDL_BUILD
+        s_pitchFileSize = fileSize;
+#endif
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        s_pitchTileBytes = fileSize - PITCH_POINTER_COUNT * 4u;
+        g_pitchTilesFastDelta = 0;
+#endif
+        return;
+    }
+#ifdef SWOS_SDL_BUILD
     if (_gDosGraphics) {
         dos_load_pitch(mapIndex);
         return;
@@ -486,7 +508,7 @@ void FixupAndColorPitchFile(void)
      * graphics not getting colored correctly"; measured against his screenshot
      * every one of the seven palette indices matched the artwork histogram, so
      * the crowd was not partly wrong, it was entirely unrecoloured. */
-    const int dosPitch = (_gDosGraphics != 0);
+    const int dosPitch = (_gDosGraphics != 0 && !_gIndoor);   /* INDOOR: always its own map */
     memset(s_fanTileKit, 0, sizeof s_fanTileKit);
 #else
     const int dosPitch = 0;

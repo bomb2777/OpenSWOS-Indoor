@@ -118,8 +118,10 @@ int16_t Indoor_TakeOutdoorTactic(int16_t slot, TeamTactics *t);
  * The 672x880 world, the camera and the centre spot (336, 449) stay; the indoor court is
  * a smaller rectangle centred in it. Its size is the owner's SWIS hall
  * (libgdx-swis-2022, hall/playground_v2.png): court 955 x 1398, penalty area 438 x 220
- * there, in units of a third of a SWOS pixel (its player sprites are SWOS's at x3) --
- * 318 x 466 and 146 x 73 here. (A futsal-sized 150 x 244 left no room to run.)
+ * there, in units of a third of a SWOS pixel (its player sprites are SWOS's at x3), would
+ * be 318 x 466 and 146 x 73 here. A futsal-sized 150 x 244 left no room to run, the full
+ * 318 x 466 was too big (the owner, playing both): the court is between the two, 234 x 354,
+ * the hall's proportions kept and everything in it scaled with it (x 0.74).
  *
  * Code written for the outdoor pitch keeps its numbers and wraps them, so outdoors it is
  * unchanged and indoors it lands on the court:
@@ -133,12 +135,12 @@ int16_t Indoor_TakeOutdoorTactic(int16_t slot, TeamTactics *t);
  *   INDOOR_DX(d), INDOOR_DY(d) a distance, scaled.
  * The goal's x (the mouth 302..366, the posts) needs none: the court is centred on 336
  * like the pitch, so the goals stay where they are across. */
-#define INDOOR_HALF_WIDTH   159     /* 336 +- 159: 177..495 */
-#define INDOOR_HALF_LENGTH  233     /* 449 +- 233: 216..682 */
-#define INDOOR_BOX_HALF_WIDTH 73    /* the penalty area: 263..409 */
-#define INDOOR_BOX_DEPTH      73    /* ... 73 deep: to 289 / from 609 */
-#define INDOOR_FREE_KICK_DISTANCE 58 /* futsal's 5 m at the court's scale; outdoors 65 px (9.15 m) */
-#define INDOOR_FREE_KICK_STEP     62 /* sideways out of it; outdoors 70 */
+#define INDOOR_HALF_WIDTH   117     /* 336 +- 117: 219..453 */
+#define INDOOR_HALF_LENGTH  177     /* 449 +- 177: 272..626 */
+#define INDOOR_BOX_HALF_WIDTH 54    /* the penalty area: 282..390 */
+#define INDOOR_BOX_DEPTH      55    /* ... 55 deep: to 327 / from 571 */
+#define INDOOR_FREE_KICK_DISTANCE 44 /* futsal's 5 m at the court's scale; outdoors 65 px (9.15 m) */
+#define INDOOR_FREE_KICK_STEP     48 /* sideways out of it; outdoors 70 */
 #define INDOOR_LEFT    (336 - INDOOR_HALF_WIDTH)
 #define INDOOR_RIGHT   (336 + INDOOR_HALF_WIDTH)
 #define INDOOR_TOP     (449 - INDOOR_HALF_LENGTH)
@@ -151,7 +153,7 @@ int16_t Indoor_MapY(int16_t y);
 int16_t Indoor_GoalY(int16_t y);
 
 /* The penalty spot (outdoors 187 / 711, 11 m): futsal's 6 m, at the edge of the area. */
-#define INDOOR_PENALTY_SPOT 70
+#define INDOOR_PENALTY_SPOT 53
 #define INDOOR_SPOT_Y(y) (_gIndoor ? (int16_t)((y) <= 449 ? INDOOR_TOP + INDOOR_PENALTY_SPOT \
                                                          : INDOOR_BOTTOM - INDOOR_PENALTY_SPOT) \
                                    : (int16_t)(y))

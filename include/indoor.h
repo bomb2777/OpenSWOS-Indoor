@@ -121,9 +121,9 @@ int16_t Indoor_TakeOutdoorTactic(int16_t slot, TeamTactics *t);
  * (libgdx-swis-2022, hall/playground_v2.png): court 955 x 1398, penalty area 438 x 220
  * there, in units of a third of a SWOS pixel (its player sprites are SWOS's at x3), would
  * be 318 x 466 and 146 x 73 here. A futsal-sized 150 x 244 left no room to run, the full
- * 318 x 466 was too big (the owner, playing both); 234 x 354 was the first compromise, and
- * for six a side (phase 5.1) the court is 276 x 418, the hall's proportions kept and
- * everything in it scaled with it (x 0.87).
+ * 318 x 466 was too big (the owner, playing both); 234 x 354 was the first compromise,
+ * 276 x 418 the one for six a side (phase 5.1), and after playing that the court is 15 %
+ * bigger again (phase 5.2): 318 x 482, everything in it scaled with it.
  *
  * Code written for the outdoor pitch keeps its numbers and wraps them, so outdoors it is
  * unchanged and indoors it lands on the court:
@@ -137,12 +137,12 @@ int16_t Indoor_TakeOutdoorTactic(int16_t slot, TeamTactics *t);
  *   INDOOR_DX(d), INDOOR_DY(d) a distance, scaled.
  * The goal's x (the mouth 302..366, the posts) needs none: the court is centred on 336
  * like the pitch, so the goals stay where they are across. */
-#define INDOOR_HALF_WIDTH   138     /* 336 +- 138: 198..474 */
-#define INDOOR_HALF_LENGTH  209     /* 449 +- 209: 240..658 */
-#define INDOOR_BOX_HALF_WIDTH 64    /* the penalty area: 272..400 */
-#define INDOOR_BOX_DEPTH      65    /* ... 65 deep: to 305 / from 593 */
-#define INDOOR_FREE_KICK_DISTANCE 52 /* futsal's 5 m at the court's scale; outdoors 65 px (9.15 m) */
-#define INDOOR_FREE_KICK_STEP     57 /* sideways out of it; outdoors 70 */
+#define INDOOR_HALF_WIDTH   159     /* 336 +- 159: 177..495 */
+#define INDOOR_HALF_LENGTH  241     /* 449 +- 241: 208..690 */
+#define INDOOR_BOX_HALF_WIDTH 74    /* the penalty area: 262..410 */
+#define INDOOR_BOX_DEPTH      75    /* ... 75 deep: to 283 / from 615 */
+#define INDOOR_FREE_KICK_DISTANCE 60 /* futsal's 5 m at the court's scale; outdoors 65 px (9.15 m) */
+#define INDOOR_FREE_KICK_STEP     66 /* sideways out of it; outdoors 70 */
 #define INDOOR_LEFT    (336 - INDOOR_HALF_WIDTH)
 #define INDOOR_RIGHT   (336 + INDOOR_HALF_WIDTH)
 #define INDOOR_TOP     (449 - INDOOR_HALF_LENGTH)
@@ -155,7 +155,7 @@ int16_t Indoor_MapY(int16_t y);
 int16_t Indoor_GoalY(int16_t y);
 
 /* The penalty spot (outdoors 187 / 711, 11 m): futsal's 6 m, at the edge of the area. */
-#define INDOOR_PENALTY_SPOT 62
+#define INDOOR_PENALTY_SPOT 71
 #define INDOOR_SPOT_Y(y) (_gIndoor ? (int16_t)((y) <= 449 ? INDOOR_TOP + INDOOR_PENALTY_SPOT \
                                                          : INDOOR_BOTTOM - INDOOR_PENALTY_SPOT) \
                                    : (int16_t)(y))
@@ -179,8 +179,8 @@ int16_t Indoor_GoalY(int16_t y);
  * is in the file. Map row 0 lists them as a pitch does, for the kit colours.
  * The fan animation (animated_patterns.c) and the camera (move_camera.c) follow the rows.
  * Kept in step with scripts/make_indoor_hall.py. */
-#define INDOOR_CROWD_TOP_ROW     (INDOOR_TOP / 16 - 5)          /* 10: y 160..207 */
-#define INDOOR_CROWD_BOTTOM_ROW  ((INDOOR_BOTTOM + 16) / 16 + 1) /* 43: y 688..735 */
+#define INDOOR_CROWD_TOP_ROW     (INDOOR_TOP / 16 - 5)          /* 8: y 128..175 */
+#define INDOOR_CROWD_BOTTOM_ROW  ((INDOOR_BOTTOM + 16) / 16 + 1) /* 45: y 720..767 */
 #define INDOOR_CROWD_ROWS        3
 #define INDOOR_CROWD_TILES       26     /* tiles 1..26 of a pitch bank */
 
@@ -188,20 +188,20 @@ int16_t Indoor_GoalY(int16_t y);
 #define INDOOR_VIEW_TOP     (INDOOR_CROWD_TOP_ROW * 16)
 #define INDOOR_VIEW_BOTTOM  ((INDOOR_CROWD_BOTTOM_ROW + INDOOR_CROWD_ROWS) * 16)
 
-/* ---- The sides of the hall (phase 5.1) ---------------------------------------------
- * Across, left to right: the left stand (2 columns, the top team's crowd tiles), floor,
+/* ---- The sides of the hall (phase 5.1; the stands three times as wide since 5.2) -----
+ * Across, left to right: the left stand (6 columns, the top team's crowd tiles), floor,
  * the bench's dugouts (drawn in LINO.MAP at the outdoor ones' y, their right edge at
  * INDOOR_BENCH_X), floor, the court, floor, the right stand (the bottom team's tiles).
  * The side stands run between the end stands; the fan animation picks cells in them too.
  * The camera follows the ball across as outdoors, clamped to INDOOR_HALL_LEFT..RIGHT:
  * laid out for the 4:3 view (336) and the Amiga's (320) -- no widescreen (the owner) --
  * so the view pans, and the bench is seen while play is on the left. */
-#define INDOOR_BENCH_X           (INDOOR_LEFT - 24)  /* the bench (its sprites), 174 */
-#define INDOOR_SIDE_COLS         2
-#define INDOOR_SIDE_LEFT_COL     ((INDOOR_BENCH_X - 16 - 14) / 16 - INDOOR_SIDE_COLS)  /* 7: x 112..143 */
-#define INDOOR_SIDE_RIGHT_COL    ((INDOOR_RIGHT + 16 + 15) / 16)                        /* 31: x 496..527 */
-#define INDOOR_SIDE_FIRST_ROW    (INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS)             /* 13 */
-#define INDOOR_SIDE_ROWS         (INDOOR_CROWD_BOTTOM_ROW - INDOOR_SIDE_FIRST_ROW)      /* 30: to row 42 */
+#define INDOOR_BENCH_X           (INDOOR_LEFT - 24)  /* the bench (its sprites), 153 */
+#define INDOOR_SIDE_COLS         6
+#define INDOOR_SIDE_LEFT_COL     ((INDOOR_BENCH_X - 16 - 14) / 16 - INDOOR_SIDE_COLS)  /* 1: x 16..111 */
+#define INDOOR_SIDE_RIGHT_COL    ((INDOOR_RIGHT + 16 + 15) / 16)                        /* 32: x 512..607 */
+#define INDOOR_SIDE_FIRST_ROW    (INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS)             /* 11 */
+#define INDOOR_SIDE_ROWS         (INDOOR_CROWD_BOTTOM_ROW - INDOOR_SIDE_FIRST_ROW)      /* 34: to row 44 */
 #define INDOOR_HALL_LEFT         (INDOOR_SIDE_LEFT_COL * 16)
 #define INDOOR_HALL_RIGHT        ((INDOOR_SIDE_RIGHT_COL + INDOOR_SIDE_COLS) * 16)
 /* The bench's world positions are the outdoor ones (_benchXLimit 27, the subs menu at

@@ -141,13 +141,32 @@ static int16_t position_group(const TeamFileEx *t, uint8_t fileIndex)
     return 3;
 }
 
-/* The indoor line-up (the owner's, from his SWIS: TeamTacticScreen
- * getStartingFiveAccordingToTactic): the tactic's places filled in order -- the keeper,
- * then its outfield places back to front -- each by the first player in the team's own
- * order who plays that position (the team's own order puts its regular eleven first, so
- * that is its best there), or failing one the first outfield player left; then the bench,
- * everyone else, by position (keepers, defence, midfield, attack), each in the team's
- * own order. Given back at the end of the match (release_tactics). */
+/* The indoor line-up (phase 5.3; by value since the owner's correction): the tactic's
+ * places filled in order -- the keeper, then its outfield places back to front -- each by
+ * the BEST player left who plays that position (his SWIS's rule, getStartingFiveAccording-
+ * ToTactic, picked the first in the team's order; that left Germany's Sammer and Moller
+ * out), best meaning the highest market value (PlayerFile.price, which SWOS derives from
+ * the skills), the team's own order deciding a tie; failing one of that position, the best
+ * outfield player left. Then the bench, everyone else, by position (keepers, defence,
+ * midfield, attack) and within one by value. Given back at the end of the match
+ * (release_tactics). */
+static int16_t best_left(const TeamFileEx *t, const uint8_t *used, int16_t group, int16_t anyOutfield)
+{
+    int16_t i, best = -1, bestPrice = -1;
+    for (i = 0; i < 16; i++) {
+        uint8_t f = t->team.playerNumbers[i];
+        int16_t g = position_group(t, f);
+        int16_t price = (int16_t)(uint8_t)t->players[f].price;
+        if (used[i] || (anyOutfield ? g == 0 : g != group))
+            continue;
+        if (price > bestPrice) {
+            bestPrice = price;
+            best = i;
+        }
+    }
+    return best;
+}
+
 static void sort_line_up(TeamFileEx *t)
 {
     /* The outfield places of each indoor tactic, ordinals 2-6 (make_indoor_tactics.py's
@@ -166,26 +185,23 @@ static void sort_line_up(TeamFileEx *t)
     for (i = 0; i < 16; i++)
         used[i] = 0;
     for (k = 0; k < INDOOR_PLAYERS; k++) {
-        int16_t want = k == 0 ? 0 : kPlaces[tactic][k - 1], pick = -1;
-        for (i = 0; i < 16 && pick < 0; i++)
-            if (!used[i] && position_group(t, t->team.playerNumbers[i]) == want)
-                pick = i;
-        for (i = 0; i < 16 && pick < 0; i++)     /* none of that position left */
-            if (!used[i] && (k == 0 || position_group(t, t->team.playerNumbers[i]) != 0))
-                pick = i;
+        int16_t want = k == 0 ? 0 : kPlaces[tactic][k - 1];
+        int16_t pick = best_left(t, used, want, 0);
         if (pick < 0)
-            pick = 0;
-        while (used[pick])
-            pick++;
+            pick = best_left(t, used, 0, 1);    /* none of that position left */
+        if (pick < 0)
+            for (pick = 0; used[pick]; pick++)
+                ;
         used[pick] = 1;
         order[n++] = t->team.playerNumbers[pick];
     }
-    for (g = 0; g <= 3; g++)
-        for (i = 0; i < 16; i++)
-            if (!used[i] && position_group(t, t->team.playerNumbers[i]) == g) {
-                used[i] = 1;
-                order[n++] = t->team.playerNumbers[i];
-            }
+    for (g = 0; g <= 3; g++) {
+        int16_t pick;
+        while ((pick = best_left(t, used, g, 0)) >= 0) {
+            used[pick] = 1;
+            order[n++] = t->team.playerNumbers[pick];
+        }
+    }
     for (i = 0; i < 16; i++)
         t->team.playerNumbers[i] = order[i];
     t->team.playerValuesDirty = TEAM_VALUES_DIRTY;  /* as the line-up screen's swap does */
@@ -735,3 +751,81 @@ int16_t Indoor_TestRed(void)
     return 0;
 #endif
 }
+
+/* ---- The glass at the ends, drawn over each frame (PC; phase 5.3) -------------------- */
+
+#ifdef SWOS_SDL_BUILD
+#include "display.h"
+extern void Platform_PaletteRGB(uint8_t rgb[768]);
+extern volatile uintptr_t _frontbufferBasePtr;
+
+static uint8_t  s_glassLut[256];     /* a colour -> that colour seen through the glass */
+static uint8_t  s_glassRim;          /* the glass's top edge */
+static uint32_t s_glassPalHash;      /* the palette the table was built for (0 = none) */
+
+static int32_t nearest_colour(const uint8_t *rgb, int32_t r, int32_t g, int32_t b)
+{
+    int32_t best = 0, bestD = 0x7FFFFFFF;
+    for (int32_t i = 0; i < 256; i++) {
+        int32_t dr = rgb[i * 3] - r, dg = rgb[i * 3 + 1] - g, db = rgb[i * 3 + 2] - b;
+        int32_t dd = dr * dr + dg * dg + db * db;
+        if (dd < bestD) { bestD = dd; best = i; }
+    }
+    return best;
+}
+
+/* The table from the palette on screen, rebuilt when it changes (a fade, the pitch
+ * condition's colours): 60 % of the glass's grey over each colour, as LINO.MAP's glass. */
+static void glass_table(void)
+{
+    uint8_t rgb[768];
+    uint32_t h = 2166136261u;
+    Platform_PaletteRGB(rgb);
+    for (int32_t i = 0; i < 768; i++)
+        h = (h ^ rgb[i]) * 16777619u;
+    h |= 1;
+    if (h == s_glassPalHash)
+        return;
+    s_glassPalHash = h;
+    for (int32_t i = 0; i < 256; i++)
+        s_glassLut[i] = (uint8_t)nearest_colour(rgb, (rgb[i * 3] * 4 + 98 * 6) / 10,
+                                                (rgb[i * 3 + 1] * 4 + 98 * 6) / 10,
+                                                (rgb[i * 3 + 2] * 4 + 98 * 6) / 10);
+    s_glassRim = (uint8_t)nearest_colour(rgb, 187, 187, 187);
+}
+
+/* World rectangle x0..x1, y0..y1 through the glass, its top row the rim. */
+static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
+{
+    int16_t camX = Render_CameraX(), camY = Render_CameraY();
+    uint8_t *fb = (uint8_t *)_frontbufferBasePtr;
+    for (int16_t y = y0; y <= y1; y++) {
+        int16_t sy = (int16_t)(y - camY);
+        uint8_t *row;
+        if (sy < 0 || sy >= _screen_height)
+            continue;
+        row = fb + (size_t)sy * FRONTBUFFER_ROW_STRIDE_BYTES;
+        for (int16_t x = x0; x <= x1; x++) {
+            int16_t sx = (int16_t)(x - camX);
+            if (sx < 0 || sx >= _screen_width)
+                continue;
+            row[sx] = y == y0 ? s_glassRim : s_glassLut[row[sx]];
+        }
+    }
+}
+
+void Indoor_DrawGlass(void)
+{
+    if (!_gIndoor)
+        return;
+    glass_table();
+    /* The top wall: from the three nearest rows of fans down to the goal line. */
+    glass_band(INDOOR_GLASS_X0, INDOOR_GLASS_TOP_Y0, INDOOR_GLASS_X1, INDOOR_TOP - 1);
+    /* The bottom wall: the court's last rows, up from the goal line. */
+    glass_band(INDOOR_LEFT, (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_BOTTOM_H), INDOOR_RIGHT, INDOOR_BOTTOM);
+}
+#else
+void Indoor_DrawGlass(void)
+{
+}
+#endif

@@ -361,6 +361,11 @@ ResetAnimatedPatternsForBothTeams(void)
     /* bottom fans section: offset 0x2178 bytes = 2142 longs, 126 entries (row 51) */
     resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer +
                                        INDOOR_OR(0x2178, INDOOR_CROWD_BOTTOM_ROW * 42 * 4)), 125);
+
+    /* INDOOR: the side stands, every row between the end stands */
+    if (_gIndoor)
+        resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer + INDOOR_SIDE_FIRST_ROW * 42 * 4),
+                              INDOOR_SIDE_ROWS * 42 - 1);
 }
 
 #ifdef SWOS_SDL_BUILD
@@ -669,6 +674,23 @@ pattern_loop:
             if (_animPatternsIndex >= 64)
                 _animPatternsIndex = 0;
 
+            /* INDOOR: every other pick is a cell of the side stands, in the rows on
+             * screen: the random value's row within the view (17 rows) and which of
+             * the four side columns. */
+            if (_gIndoor && (_animPatternsIndex & 1)) {
+                swapTwoRandomIndicesFromAnimPatternsTable();
+                randomVal = (int8_t)_animPatternsRandomTable[_animPatternsIndex];
+                row = (int16_t)(((int16_t)_cameraY.s.i >> 4) + randomVal % 17);
+                if (row < INDOOR_SIDE_FIRST_ROW || row >= INDOOR_SIDE_FIRST_ROW + INDOOR_SIDE_ROWS)
+                    continue;
+                col = (int16_t)((randomVal / 17) & 3);
+                col = (int16_t)(col < INDOOR_SIDE_COLS ? INDOOR_SIDE_LEFT_COL + col
+                                                       : INDOOR_SIDE_RIGHT_COL + col - INDOOR_SIDE_COLS);
+                pitchIdx = (int16_t)(row * 42 + col);
+                d3 = pitchIdx;
+                goto have_pattern_cell;
+            }
+
             /* check camera Y to determine which fan section */
             if ((int16_t)_cameraY.s.i < INDOOR_OR(64, INDOOR_FANS_TOP_SEEN)) {
                 /* top of pitch: sprite range 21..83 */
@@ -699,6 +721,8 @@ pattern_loop:
              * drew different random numbers from frame 19. */
             pitchIdx = row * 42 + col + (Sim_DrawCameraX() >> 4);
             d3 = pitchIdx;
+
+        have_pattern_cell:
 
             /* bounds check: tileEntryPtr must be within the 9240-byte
              * pitch pointer table. The original asm used `currentMenu`

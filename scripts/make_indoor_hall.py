@@ -10,7 +10,7 @@ both targets load in place of the pitch for an indoor match (pitch.c LoadPitchMa
 The look is the owner's SWIS hall (libgdx-swis-2022, core/assets/images/swis/hall/
 playground_v2.png, its author's own art): the court's blues and white lines and the
 parquet are taken from it, but the court is REDRAWN at the game's geometry
-(include/indoor.h: 276 x 418, penalty area 128 x 65, ...) rather than scaled, so every line
+(include/indoor.h: 318 x 482, penalty area 148 x 75, ...) rather than scaled, so every line
 is sharp and exactly where the match code has it. The parquet is a 32 x 32 patch of the
 hall's, scaled like the court and repeated: a parquet that never repeats would be ~2300
 unique tiles, more than the Amiga's pitch buffer holds; repeated it is four.
@@ -46,19 +46,19 @@ SWIS = os.path.expanduser("~/zz_max/projects/libgdx-swis-2022/core/assets/images
 OUT = os.path.join(REPO, "bin", "grafs_indoor", "LINO.MAP")
 
 # include/indoor.h -- keep in step.
-HALF_W, HALF_L = 138, 209
-CROWD_TOP_ROW = (449 - HALF_L) // 16 - 5        # INDOOR_CROWD_TOP_ROW: 10
-CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 43
-BOX_HALF_W, BOX_DEPTH = 64, 65
+HALF_W, HALF_L = 159, 241
+CROWD_TOP_ROW = (449 - HALF_L) // 16 - 5        # INDOOR_CROWD_TOP_ROW: 8
+CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 45
+BOX_HALF_W, BOX_DEPTH = 74, 75
 # The sides of the hall (indoor.h, phase 5.1): the bench's right edge, the side stands.
-BENCH_X = 336 - HALF_W - 24                       # INDOOR_BENCH_X: 174
-SIDE_COLS = 2
-SIDE_LEFT_COL = (BENCH_X - 16 - 14) // 16 - SIDE_COLS   # 7
-SIDE_RIGHT_COL = (336 + HALF_W + 16 + 15) // 16         # 31
-SIDE_FIRST_ROW = CROWD_TOP_ROW + 3                      # 13
-SIDE_ROWS = CROWD_BOTTOM_ROW - SIDE_FIRST_ROW           # 30
+BENCH_X = 336 - HALF_W - 24                       # INDOOR_BENCH_X: 153
+SIDE_COLS = 6
+SIDE_LEFT_COL = (BENCH_X - 16 - 14) // 16 - SIDE_COLS   # 1
+SIDE_RIGHT_COL = (336 + HALF_W + 16 + 15) // 16         # 32
+SIDE_FIRST_ROW = CROWD_TOP_ROW + 3                      # 11
+SIDE_ROWS = CROWD_BOTTOM_ROW - SIDE_FIRST_ROW           # 34
 DUGOUTS_Y = [(368, 430), (464, 526)]                    # the outdoor dugouts' (bench_subs.c 389/485)
-PENALTY_SPOT = 62
+PENALTY_SPOT = 71
 CX, CY = 336, 449
 LEFT, RIGHT, TOP, BOTTOM = CX - HALF_W, CX + HALF_W, CY - HALF_L, CY + HALF_L
 
@@ -219,11 +219,9 @@ def main():
     for i in range(SIDE_ROWS):
         r = SIDE_FIRST_ROW + i
         aisle = i % 10 == 5
-        left = [9, 9] if aisle else [(1, 3)[i % 2], (3, 1)[i % 2]]
-        right = [25, 25] if aisle else [(17, 19)[i % 2], (19, 17)[i % 2]]
         for k in range(SIDE_COLS):
-            cells[r * COLS + SIDE_LEFT_COL + k] = left[k]
-            cells[r * COLS + SIDE_RIGHT_COL + k] = right[k]
+            cells[r * COLS + SIDE_LEFT_COL + k] = 9 if aisle else (1, 3)[(i + k) % 2]
+            cells[r * COLS + SIDE_RIGHT_COL + k] = 25 if aisle else (17, 19)[(i + k) % 2]
 
     def planar(t):
         out = bytearray()

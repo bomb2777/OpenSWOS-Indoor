@@ -675,15 +675,15 @@ pattern_loop:
                 _animPatternsIndex = 0;
 
             /* INDOOR: every other pick is a cell of the side stands, in the rows on
-             * screen: the random value's row within the view (17 rows) and which of
-             * the four side columns. */
+             * screen: the random value's row within the view (17 rows), and one of the
+             * side columns (both stands' together) from the value and the pick's index. */
             if (_gIndoor && (_animPatternsIndex & 1)) {
                 swapTwoRandomIndicesFromAnimPatternsTable();
                 randomVal = (int8_t)_animPatternsRandomTable[_animPatternsIndex];
                 row = (int16_t)(((int16_t)_cameraY.s.i >> 4) + randomVal % 17);
                 if (row < INDOOR_SIDE_FIRST_ROW || row >= INDOOR_SIDE_FIRST_ROW + INDOOR_SIDE_ROWS)
                     continue;
-                col = (int16_t)((randomVal / 17) & 3);
+                col = (int16_t)((randomVal + _animPatternsIndex) % (2 * INDOOR_SIDE_COLS));
                 col = (int16_t)(col < INDOOR_SIDE_COLS ? INDOOR_SIDE_LEFT_COL + col
                                                        : INDOOR_SIDE_RIGHT_COL + col - INDOOR_SIDE_COLS);
                 pitchIdx = (int16_t)(row * 42 + col);

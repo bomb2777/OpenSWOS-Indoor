@@ -343,6 +343,10 @@ offset_and_clamp_to_view:
             targetY = minY;
         else if (targetY > maxY)
             targetY = maxY;
+        /* A camera outside the hall's view (whatever put it there) jumps to its target
+         * instead of gliding in over the floor and the map's hidden row 0. */
+        if (_cameraY.s.i < minY - 16 || _cameraY.s.i > maxY + 16)
+            SetCameraCoordinates(targetX, targetY);
         goto clamped_to_view;
     }
 

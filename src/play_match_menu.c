@@ -506,6 +506,7 @@ void SetUpTacticsButtons(void) {
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void SetPlayerSurnamesOnSidePitch(void) {
+    Indoor_SidePitchColours();      /* INDOOR: the little pitch a blue court */
     MenuEntry *entry = &_menuEntries[57];
     TeamFileEx *team = _playMatchTeam1Ptr;
     if (_viewingOpponentTeam) team = _playMatchTeam2Ptr;

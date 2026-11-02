@@ -10,7 +10,7 @@ both targets load in place of the pitch for an indoor match (pitch.c LoadPitchMa
 The look is the owner's SWIS hall (libgdx-swis-2022, core/assets/images/swis/hall/
 playground_v2.png, its author's own art): the court's blues and white lines and the
 parquet are taken from it, but the court is REDRAWN at the game's geometry
-(include/indoor.h: 234 x 354, penalty area 108 x 55, ...) rather than scaled, so every line
+(include/indoor.h: 276 x 418, penalty area 128 x 65, ...) rather than scaled, so every line
 is sharp and exactly where the match code has it. The parquet is a 32 x 32 patch of the
 hall's, scaled like the court and repeated: a parquet that never repeats would be ~2300
 unique tiles, more than the Amiga's pitch buffer holds; repeated it is four.
@@ -45,11 +45,11 @@ SWIS = os.path.expanduser("~/zz_max/projects/libgdx-swis-2022/core/assets/images
 OUT = os.path.join(REPO, "bin", "grafs_indoor", "LINO.MAP")
 
 # include/indoor.h -- keep in step.
-HALF_W, HALF_L = 117, 177
-CROWD_TOP_ROW = (449 - HALF_L) // 16 - 5        # INDOOR_CROWD_TOP_ROW: 12
-CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 41
-BOX_HALF_W, BOX_DEPTH = 54, 55
-PENALTY_SPOT = 53
+HALF_W, HALF_L = 138, 209
+CROWD_TOP_ROW = (449 - HALF_L) // 16 - 5        # INDOOR_CROWD_TOP_ROW: 10
+CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 43
+BOX_HALF_W, BOX_DEPTH = 64, 65
+PENALTY_SPOT = 62
 CX, CY = 336, 449
 LEFT, RIGHT, TOP, BOTTOM = CX - HALF_W, CX + HALF_W, CY - HALF_L, CY + HALF_L
 

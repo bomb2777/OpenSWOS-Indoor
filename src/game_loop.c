@@ -826,6 +826,7 @@ GameFrameResult GameLoop_Frame(void)
     DrawAnimatedPatterns();   /* also ticks _showFansCounter / goal-celebration state */
     RASTER(RASTER_SPRITES);
     DrawSprites();
+    Indoor_DrawGlass();         /* INDOOR: the glass at the ends over the frame (PC) */
 #ifdef SWOS_SDL_BUILD
     { extern void ReplayRec_CaptureSprites(void); ReplayRec_CaptureSprites(); }
 #endif

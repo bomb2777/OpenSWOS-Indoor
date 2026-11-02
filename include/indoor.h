@@ -216,4 +216,15 @@ void Indoor_KeeperReleased(Sprite *player, TeamGeneralInfo *team);
 #define INDOOR_KEEPER_PASSES()  (_gIndoor && _gameState == ST_KEEPER_HOLDS_BALL)
 void Indoor_KeeperRuleCheck(const Sprite *ball);
 
+/* ---- The time penalty (phase 5.1) --------------------------------------------------
+ * Indoors a red card -- straight or a second yellow -- sends the player to the bench
+ * for INDOOR_PENALTY_MINUTES of the indoor clock; his side plays one short meanwhile,
+ * then he comes back on, booked. SendPlayerAway calls Indoor_TimePenalty; the return is
+ * Indoor_ParkPlayers' (every frame). SWOS_INDOOR_TEST_RED=1 makes every card a red, to
+ * see it in a computer match (Indoor_TestRed, tackle_foul.c). */
+#define INDOOR_PENALTY_MINUTES 5
+#define INDOOR_BENCH_X  (INDOOR_LEFT - 24)  /* where the bench sits, beside the court */
+void    Indoor_TimePenalty(Sprite *player, TeamGeneralInfo *team);
+int16_t Indoor_TestRed(void);
+
 #endif /* INDOOR_H */

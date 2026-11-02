@@ -128,6 +128,68 @@ static void        *s_outdoorNames[INDOOR_TACTICS];
 static void        *s_outdoorSidePitch[INDOOR_TACTICS];
 static TeamFileEx  *s_teams[2];
 static uint8_t      s_teamTactics[2];
+static uint8_t      s_outdoorOrder[2][16];  /* each team's line-up before the indoor one */
+
+/* A player's place on the pitch from his position in the team file: 0 keeper, 1 defence
+ * (RB LB CD), 2 midfield (RW LW MF), 3 attack (ST). */
+static int16_t position_group(const TeamFileEx *t, uint8_t fileIndex)
+{
+    int16_t pos = (int16_t)((t->players[fileIndex].positionAndFace & PF_POSITION_MASK) >> PF_POSITION_SHIFT);
+    if (pos == 0) return 0;
+    if (pos <= 3) return 1;
+    if (pos <= 6) return 2;
+    return 3;
+}
+
+/* The indoor line-up (the owner's, from his SWIS: TeamTacticScreen
+ * getStartingFiveAccordingToTactic): the tactic's places filled in order -- the keeper,
+ * then its outfield places back to front -- each by the first player in the team's own
+ * order who plays that position (the team's own order puts its regular eleven first, so
+ * that is its best there), or failing one the first outfield player left; then the bench,
+ * everyone else, by position (keepers, defence, midfield, attack), each in the team's
+ * own order. Given back at the end of the match (release_tactics). */
+static void sort_line_up(TeamFileEx *t)
+{
+    /* The outfield places of each indoor tactic, ordinals 2-6 (make_indoor_tactics.py's
+     * ROLES): 1 defence, 2 midfield, 3 attack. */
+    static const uint8_t kPlaces[INDOOR_TACTICS][INDOOR_PLAYERS - 1] = {
+        { 1, 1, 2, 2, 3 },      /* 2-2-1 */
+        { 1, 1, 2, 3, 3 },      /* 2-1-2 */
+        { 1, 2, 2, 3, 3 },      /* 1-2-2 */
+        { 1, 1, 1, 2, 3 },      /* 3-1-1 */
+        { 1, 2, 2, 2, 3 },      /* 1-3-1 */
+    };
+    uint8_t order[16], used[16];
+    int16_t n = 0, i, k, g;
+    uint8_t tactic = t->team.tactics < INDOOR_TACTICS ? t->team.tactics : 0;
+
+    for (i = 0; i < 16; i++)
+        used[i] = 0;
+    for (k = 0; k < INDOOR_PLAYERS; k++) {
+        int16_t want = k == 0 ? 0 : kPlaces[tactic][k - 1], pick = -1;
+        for (i = 0; i < 16 && pick < 0; i++)
+            if (!used[i] && position_group(t, t->team.playerNumbers[i]) == want)
+                pick = i;
+        for (i = 0; i < 16 && pick < 0; i++)     /* none of that position left */
+            if (!used[i] && (k == 0 || position_group(t, t->team.playerNumbers[i]) != 0))
+                pick = i;
+        if (pick < 0)
+            pick = 0;
+        while (used[pick])
+            pick++;
+        used[pick] = 1;
+        order[n++] = t->team.playerNumbers[pick];
+    }
+    for (g = 0; g <= 3; g++)
+        for (i = 0; i < 16; i++)
+            if (!used[i] && position_group(t, t->team.playerNumbers[i]) == g) {
+                used[i] = 1;
+                order[n++] = t->team.playerNumbers[i];
+            }
+    for (i = 0; i < 16; i++)
+        t->team.playerNumbers[i] = order[i];
+    t->team.playerValuesDirty = TEAM_VALUES_DIRTY;  /* as the line-up screen's swap does */
+}
 
 static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
 {
@@ -152,6 +214,9 @@ static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
         s_teamTactics[t] = s_teams[t]->team.tactics;
         if (s_teams[t]->team.tactics >= INDOOR_TACTICS)
             s_teams[t]->team.tactics = 0;
+        for (int16_t i = 0; i < 16; i++)
+            s_outdoorOrder[t][i] = s_teams[t]->team.playerNumbers[i];
+        sort_line_up(s_teams[t]);
     }
     s_tacticsInstalled = 1;
 }
@@ -166,8 +231,11 @@ static void release_tactics(void)
         _sidePitchSurnamePositionsTable[i] = s_outdoorSidePitch[i];
     }
     for (int16_t t = 0; t < 2; t++)
-        if (s_teams[t])
+        if (s_teams[t]) {
             s_teams[t]->team.tactics = s_teamTactics[t];
+            for (int16_t i = 0; i < 16; i++)
+                s_teams[t]->team.playerNumbers[i] = s_outdoorOrder[t][i];
+        }
     s_tacticsInstalled = 0;
 }
 
@@ -289,6 +357,30 @@ void Indoor_StadiumRows(struct MenuEntry *first)
         e[54 + k].isInvisible = 1;
     }
 }
+
+extern void ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable);
+#define SPR_SIDE_PITCH 225              /* the line-up screen's little pitch */
+
+static int16_t s_sidePitchBlue;         /* sprite 225 has its colours swapped */
+
+void Indoor_SidePitchColours(void)
+{
+    static uint16_t swap[16];
+    if (s_sidePitchBlue == (_gIndoor != 0))
+        return;
+    for (int16_t i = 0; i < 16; i++)
+        swap[i] = (uint16_t)i;
+    swap[14] = 11;                      /* grass -> blue */
+    swap[11] = 14;                      /* (and back) */
+    ConvertSpriteColors(SPR_SIDE_PITCH, swap);
+    s_sidePitchBlue = (_gIndoor != 0);
+}
+
+void Indoor_MenuSpritesReloaded(void)
+{
+    s_sidePitchBlue = 0;
+}
+
 
 /* ---- The court (phase 4) ------------------------------------------------------------ */
 
@@ -432,9 +524,18 @@ static void keep_inside(Sprite *s)
     if (s->y.s.i > INDOOR_BOTTOM) { s->y.s.i = INDOOR_BOTTOM; s->y.s.frac = 0; }
 }
 
+extern int16_t _gameState;
+extern int16_t _substituteInProgress;
+
 void Indoor_KeepPlayersInside(void)
 {
-    if (!_gIndoor || _gameStatePl != ST_GAME_IN_PROGRESS)
+    if (!_gIndoor)
+        return;
+    /* In play and at every stoppage -- a slide or a dive the whistle stops goes on, and
+     * used to go on through the glass (phase 5.3) -- but not while the teams walk on or
+     * off (kick-off, half time, the end) nor while a substitute walks to or from the bench. */
+    if (_gameStatePl != ST_GAME_IN_PROGRESS &&
+        ((_gameState >= ST_STARTING_GAME && _gameState <= ST_GAME_ENDED) || _substituteInProgress))
         return;
     for (int16_t i = 0; i < INDOOR_PLAYERS; i++) {
         keep_inside(_team1SpritesTable[i]);
@@ -444,7 +545,6 @@ void Indoor_KeepPlayersInside(void)
 
 /* ---- The keeper's throw (phase 5.1) ------------------------------------------------ */
 
-extern int16_t  _gameState;
 extern Sprite  *_lastPlayerPlayed;
 extern int16_t  _breakCameraMode;
 extern uint8_t  _playerTurnFlags;

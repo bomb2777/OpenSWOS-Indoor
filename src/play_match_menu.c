@@ -21,7 +21,7 @@
 #include "endian_helpers.h"
 #include "menu_system.h"
 #include "game_types.h"
-#include "indoor.h"             /* INDOOR: five a side on the line-up screen */
+#include "indoor.h"             /* INDOOR: six a side on the line-up screen */
 #ifdef SWOS_SDL_BUILD
 #include "uniform.h"            /* the UNIFORM button (entry 68) */
 #include "custom_team.h"        /* (CUSTOM) where the country would be named */
@@ -529,7 +529,7 @@ void SetPlayerSurnamesOnSidePitch(void) {
         else
             surname = ExtractSurname((uint8_t *)plPf->playerName, 0x400A);
         StringCopy(surname, (uint8_t *)entry->fg);
-        /* INDOOR: only the five who play are on the little pitch. (Outdoors these
+        /* INDOOR: only the six who play are on the little pitch. (Outdoors these
          * entries are never hidden; the menu is unpacked afresh each time it opens.) */
         if (_gIndoor)
             entry->isInvisible = (i >= INDOOR_PLAYERS) ? 1 : 0;
@@ -1290,7 +1290,7 @@ void DrawPlayerEntries(MenuEntry *a5) {
     }
 
     /* INDOOR: the gap between the starters and the bench (2 px, after row 11) comes
-     * after row 5. Set, not added: this runs on every redraw. */
+     * after row INDOOR_PLAYERS. Set, not added: this runs on every redraw. */
     if (_gIndoor && d7 >= INDOOR_PLAYERS && d7 < 11)
         a5->y = (int16_t)(_menuEntries[13].y + d7 * 9 + 2);
 

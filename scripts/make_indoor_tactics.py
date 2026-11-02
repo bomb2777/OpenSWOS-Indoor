@@ -1,28 +1,31 @@
 #!/usr/bin/env python3
-"""make_indoor_tactics.py -- the four INDOOR tactics, derived from the outdoor presets.
+"""make_indoor_tactics.py -- the five INDOOR tactics, derived from the outdoor presets.
 
     python3 scripts/make_indoor_tactics.py          # writes src/indoor_tactics_data.c
 
-docs/INDOOR.md, phase 3. An indoor side has four outfield players (ordinals 2-5), so
-an indoor tactic fills TeamTactics.positions[0..3] and leaves [4..9] empty. Rather than
-inventing 4 x 35 positions per tactic, each indoor player TAKES OVER an outdoor
-formation's player, sector by sector -- or the middle of two of them, for a central
-role (the 4-4-2's two centre backs averaged are one central defender). The source
-roles were read off each preset's average position over the 35 ball sectors (x 0-14
-left to right, y 0-15 from the team's own goal):
+docs/INDOOR.md, phases 3 and 5.1. An indoor side has five outfield players (ordinals
+2-6), so an indoor tactic fills TeamTactics.positions[0..4] and leaves [5..9] empty.
+Rather than inventing 5 x 35 positions per tactic, each indoor player TAKES OVER an
+outdoor formation's player, sector by sector -- or the middle of two of them (the
+4-4-2's left winger and left centre midfielder averaged are one left-centre midfielder).
+The source roles were read off each preset's average position over the 35 ball sectors
+(x 0-14 left to right, y 0-15 from the team's own goal):
 
-    2-2    4-4-2's centre backs 3 and 4, its strikers 10 and 11
-    1-2-1  3-4-3's central defender 3, its wide midfielders 6 and 9, centre forward 11
-    3-1    5-3-2's back three 2, 3 and 5; 3-4-3's centre forward 11 (the 5-3-2's own
-           forwards, 10 and 11, are overwritten at start-up by InitUserTactics)
-    1-3    3-4-3's central defender 3, its forwards 10, 8 and 11
+    2-2-1  4-4-2's centre backs 3 and 4; the middles of its 6+7 and 8+9; 4-2-4's
+           centre forward 11
+    2-1-2  4-4-2's centre backs 3 and 4; 5-4-1's central midfielder 8; 4-4-2's
+           strikers 10 and 11
+    1-2-2  3-4-3's central defender 3; the 4-4-2's midfield middles as in 2-2-1; its
+           strikers 10 and 11
+    3-1-1  5-3-2's back three 2, 3 and 5 (its forwards 10 and 11 are overwritten at
+           start-up by InitUserTactics); 5-4-1's 8; 4-2-4's 11
+    1-3-1  3-4-3's central defender 3, its midfield 6, 7 and 9, its centre forward 11
 
 The positions are on the tactics grid, which phase 4 maps onto the indoor area. A
 starting point to tune by playing: edit the ROLES below, rerun, rebuild.
 
-Ordinals 2 and 3 should be the defending pair and 4 and 5 the attacking one where the
-tactic has them: the restart tables give indoor 2-5 the places of outdoor 3, 4, 10 and
-11 (Indoor_RestartOrdinal), so the kick-off is taken by 4 and 5.
+The restart tables give indoor 2-6 the places of outdoor 3, 4, 8, 10 and 11
+(Indoor_RestartOrdinal): 2 and 3 a back pair, 4 the middle, 5 and 6 take the kick-off.
 
 The little pitch on the line-up screen (SIDE_PITCH) is drawn by hand: (x, y, flags) per
 slot, keeper first, in the layout _sidePitchPositions* use (src/player_data.c).
@@ -36,18 +39,20 @@ OUT = os.path.join(REPO, "src", "indoor_tactics_data.c")
 
 # name, then for ordinals 2..5: (preset, ordinal) or a tuple of them to average.
 ROLES = [
-    ("2-2",   [("442", 3), ("442", 4), ("442", 10), ("442", 11)]),
-    ("1-2-1", [("343", 3), ("343", 6), ("343", 9), ("343", 11)]),
-    ("3-1",   [("532", 2), ("532", 3), ("532", 5), ("343", 11)]),
-    ("1-3",   [("343", 3), ("343", 10), ("343", 8), ("343", 11)]),
+    ("2-2-1", [("442", 3), ("442", 4), (("442", 6), ("442", 7)), (("442", 8), ("442", 9)), ("424", 11)]),
+    ("2-1-2", [("442", 3), ("442", 4), ("541", 8), ("442", 10), ("442", 11)]),
+    ("1-2-2", [("343", 3), (("442", 6), ("442", 7)), (("442", 8), ("442", 9)), ("442", 10), ("442", 11)]),
+    ("3-1-1", [("532", 2), ("532", 3), ("532", 5), ("541", 8), ("424", 11)]),
+    ("1-3-1", [("343", 3), ("343", 6), ("343", 7), ("343", 9), ("343", 11)]),
 ]
 
 KEEPER = (0x42, 0x06, 0x0000)
 SIDE_PITCH = {
-    "2-2":   [KEEPER, (0x3F, 0x23, 0x4000), (0x45, 0x23, 0x8000), (0x3F, 0x55, 0x4000), (0x45, 0x55, 0x8000)],
-    "1-2-1": [KEEPER, (0x42, 0x23, 0x0000), (0x03, 0x41, 0x8000), (0x81, 0x41, 0x4000), (0x42, 0x5F, 0x0000)],
-    "3-1":   [KEEPER, (0x03, 0x28, 0x8000), (0x42, 0x19, 0x0000), (0x81, 0x28, 0x4000), (0x42, 0x5F, 0x0000)],
-    "1-3":   [KEEPER, (0x42, 0x23, 0x0000), (0x03, 0x55, 0x8000), (0x81, 0x55, 0x4000), (0x42, 0x64, 0x0000)],
+    "2-2-1": [KEEPER, (0x3F, 0x23, 0x4000), (0x45, 0x23, 0x8000), (0x03, 0x46, 0x8000), (0x81, 0x46, 0x4000), (0x42, 0x64, 0x0000)],
+    "2-1-2": [KEEPER, (0x3F, 0x23, 0x4000), (0x45, 0x23, 0x8000), (0x42, 0x41, 0x0000), (0x3F, 0x5F, 0x4000), (0x45, 0x5F, 0x8000)],
+    "1-2-2": [KEEPER, (0x42, 0x23, 0x0000), (0x03, 0x41, 0x8000), (0x81, 0x41, 0x4000), (0x3F, 0x5F, 0x4000), (0x45, 0x5F, 0x8000)],
+    "3-1-1": [KEEPER, (0x03, 0x28, 0x8000), (0x42, 0x19, 0x0000), (0x81, 0x28, 0x4000), (0x42, 0x41, 0x0000), (0x42, 0x64, 0x0000)],
+    "1-3-1": [KEEPER, (0x42, 0x23, 0x0000), (0x03, 0x46, 0x8000), (0x42, 0x41, 0x0000), (0x81, 0x46, 0x4000), (0x42, 0x64, 0x0000)],
 }
 
 
@@ -81,9 +86,9 @@ def c_positions(flat):
 def main():
     lines = [
         "/* GENERATED by scripts/make_indoor_tactics.py -- do not edit by hand; edit its ROLES",
-        " * and rerun. The four INDOOR tactics (docs/INDOOR.md, phase 3): positions[0..3] for",
-        " * ordinals 2-5, derived from the outdoor presets; [4..9] empty. Installed in",
-        " * _teamTacticsTable[0..3] for an indoor match only (indoor.c). */",
+        " * and rerun. The five INDOOR tactics (docs/INDOOR.md, phase 5.1): positions[0..4] for",
+        " * ordinals 2-6, derived from the outdoor presets; [5..9] empty. Installed in",
+        " * _teamTacticsTable[0..4] for an indoor match only (indoor.c). */",
         '#include "indoor.h"',
         '#include "game_types.h"',
         "",
@@ -95,7 +100,7 @@ def main():
         lines.append("    {   /* %s */" % name)
         lines.append("        { " + ", ".join("0x%02X" % b for b in nb) + " },")
         lines.append("        {")
-        players = [c_positions(role(s)) for s in srcs] + [empty] * 6
+        players = [c_positions(role(s)) for s in srcs] + [empty] * (10 - len(srcs))
         lines.append(",\n".join("            " + p for p in players))
         lines.append("        },")
         lines.append("        { " + ", ".join(["0xFF"] * 10) + " },   /* no pairs */")

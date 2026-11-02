@@ -1,4 +1,4 @@
-/* indoor.c -- INDOOR: a friendly played five a side in a hall (include/indoor.h,
+/* indoor.c -- INDOOR: a friendly played six a side in a hall (include/indoor.h,
  * docs/INDOOR.md). */
 /* Size over speed: nothing here is hot (kick-off and two tiny per-frame loops), and at
  * -O2 the m68k compiler unrolled and inlined it to over 5 KB. */
@@ -117,7 +117,7 @@ void Indoor_EndMatch(void)
 extern TeamTactics *_teamTacticsTable[];
 extern void        *_tacticsStringTable[];
 extern void        *_sidePitchSurnamePositionsTable[];
-extern char _aIndoor22[], _aIndoor121[], _aIndoor31[], _aIndoor13[];
+extern char _aIndoor221[], _aIndoor212[], _aIndoor122[], _aIndoor311[], _aIndoor131[];
 
 static int16_t      s_tacticsInstalled;
 static TeamTactics *s_outdoorTactics[INDOOR_TACTICS];
@@ -128,7 +128,7 @@ static uint8_t      s_teamTactics[2];
 
 static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
 {
-    char *names[INDOOR_TACTICS] = { _aIndoor22, _aIndoor121, _aIndoor31, _aIndoor13 };
+    char *names[INDOOR_TACTICS] = { _aIndoor221, _aIndoor212, _aIndoor122, _aIndoor311, _aIndoor131 };
 
     if (s_tacticsInstalled)
         return;
@@ -140,7 +140,7 @@ static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
         _tacticsStringTable[i] = names[i];
         _sidePitchSurnamePositionsTable[i] = _indoorSidePitch[i];
     }
-    /* A team on a tactic past the four plays 2-2 for this match. */
+    /* A team on a tactic past the five plays 2-2-1 for this match. */
     s_teams[0] = team1;
     s_teams[1] = team2;
     for (int16_t t = 0; t < 2; t++) {
@@ -219,7 +219,7 @@ void Indoor_ParkPlayers(void)
 
 int16_t Indoor_RestartOrdinal(int16_t ordinal)
 {
-    static const int16_t kRole[INDOOR_PLAYERS + 1] = { 0, 1, 3, 4, 10, 11 };
+    static const int16_t kRole[INDOOR_PLAYERS + 1] = { 0, 1, 3, 4, 8, 10, 11 };
     if (!_gIndoor || ordinal < 1 || ordinal > INDOOR_PLAYERS)
         return ordinal;
     return kRole[ordinal];

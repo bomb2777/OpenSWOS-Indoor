@@ -6096,7 +6096,7 @@ static uint16_t s_outdoorPitchType;
 static uint16_t s_outdoorPitchTypeOrSeason;
 static uint16_t s_outdoorMinSubstitutes, s_outdoorMaxSubstitutes;
 
-/* Indoors a side may make 5 substitutions, from all 11 on its bench (FROM 5: no bench
+/* Indoors a side may make 5 substitutions, from all 10 on its bench (FROM 5: no bench
  * slot from 11 on is cut off, InitInGamePlayer). Set when INDOOR is switched on, and
  * when the screen opens with it on; changeable after, as outdoors. */
 #define INDOOR_SUBSTITUTES 5

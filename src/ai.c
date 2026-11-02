@@ -741,7 +741,10 @@ setup_resume_play_and_turn_bias:
         team->AI_afterTouchStrength = 1;
 
     team->currentAllowedDirection = d7;
-    team->normalFire = 1;
+    if (INDOOR_KEEPER_PASSES())     /* INDOOR: no long ball out of the keeper's hands */
+        team->quickFire = 1;
+    else
+        team->normalFire = 1;
     d2_byte = (int8_t)((uint8_t)(d7 << 5) - (uint8_t)d5);
     _aiResumePlayTimer = 15;
     d0 = -1;
@@ -927,7 +930,10 @@ aftertouch_by_distance:
 
 apply_dir_and_normal_fire:
     team->currentAllowedDirection = d7;
-    team->normalFire = 1;
+    if (INDOOR_KEEPER_PASSES())     /* INDOOR: no long ball out of the keeper's hands */
+        team->quickFire = 1;
+    else
+        team->normalFire = 1;
 
     /* Penalty/penalties: zero spin and return */
     if (_gameState == ST_PENALTY || _gameState == ST_PENALTIES) {

@@ -1576,6 +1576,7 @@ not_in_penalty:
             ball->z.s.i = 0;
             DoPass(player, team);
             team->lastHeadingTacklingPlayer = player;
+            Indoor_KeeperReleased(player, team);    /* INDOOR: a throw out of his hands */
 
             if (_gameStatePl != ST_GAME_IN_PROGRESS) {
                 ThrowInDeadProc();
@@ -1628,6 +1629,7 @@ not_in_penalty:
             _playerHadBall = 0;
             PlayerKickingBall(player, team);
             team->lastHeadingTacklingPlayer = player;
+            Indoor_KeeperReleased(player, team);    /* INDOOR: a kick out of his hands */
 
             if (_gameStatePl != ST_GAME_IN_PROGRESS) {
                 ThrowInDeadProc();

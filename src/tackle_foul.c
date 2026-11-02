@@ -416,9 +416,11 @@ TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team)
     if (TestRules_NoInjuriesCards())
         return 1;  /* the testers' rule (test_rules.h): never send off — eligibility=no */
 
-    /* Need at least one human controller (not with [tweaks] cpu_cards: include/tweaks.h) */
+    /* Need at least one human controller (not with [tweaks] cpu_cards: include/tweaks.h;
+     * INDOOR's test switch sends computer players off too, so a CPU match shows the
+     * time penalty) */
     if (team->playerNumber == 0 &&
-        team->playerCoachNumber == 0 && !Tweaks_On(TWEAK_CPU_CARDS))
+        team->playerCoachNumber == 0 && !Tweaks_On(TWEAK_CPU_CARDS) && !Indoor_TestRed())
         return 1;
 
     /* Check injury quota */
@@ -493,6 +495,7 @@ SendPlayerAway(Sprite *player, TeamGeneralInfo *team)
     player->sentAway = (int16_t)1;
     player->destX = (int16_t)-0x14;   /* -20 */
     player->destY = (int16_t)449;
+    Indoor_TimePenalty(player, team);   /* INDOOR: to the bench for 5 minutes */
 }
 
 /* ========================================================================
@@ -583,6 +586,8 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
         if (ModMatch_StraightReds())
             goto try_red;
     }
+    if (Indoor_TestRed())           /* INDOOR test switch: every foul a red card */
+        goto try_red;
 
     /* Discipline zone check: victim inside main playing area? */
     {

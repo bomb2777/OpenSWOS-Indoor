@@ -213,12 +213,12 @@ int16_t Indoor_GoalY(int16_t y);
  * The camera follows the ball across as outdoors, clamped to INDOOR_HALL_LEFT..RIGHT:
  * laid out for the 4:3 view (336) and the Amiga's (320) -- no widescreen (the owner) --
  * so the view pans, and the bench is seen while play is on the left. */
-#define INDOOR_GLASS_LEFT        24     /* the side glass's width: left (to the bench)... */
-#define INDOOR_GLASS_RIGHT       32     /* ... and right (to the stand) */
-#define INDOOR_BENCH_X           (INDOOR_LEFT - INDOOR_GLASS_LEFT - 4)  /* the bench (its sprites), 149 */
+#define INDOOR_GLASS_LEFT        10     /* the side glass's width, left and right */
+#define INDOOR_GLASS_RIGHT       10
+#define INDOOR_BENCH_X           (INDOOR_LEFT - INDOOR_GLASS_LEFT - 4)  /* the bench (its sprites), 163 */
 #define INDOOR_SIDE_COLS         8      /* 9 for a moment in 5.3, 6 in 5.2, 2 in 5.1 */
 #define INDOOR_SIDE_LEFT_COL     ((INDOOR_BENCH_X - 16 - 5) / 16 - INDOOR_SIDE_COLS)   /* 0: x 0..127 */
-#define INDOOR_SIDE_RIGHT_COL    ((INDOOR_RIGHT + INDOOR_GLASS_RIGHT + 15) / 16)         /* 33: x 528..655 */
+#define INDOOR_SIDE_RIGHT_COL    ((INDOOR_RIGHT + INDOOR_GLASS_RIGHT + 15) / 16)         /* 32: x 512..639 */
 #define INDOOR_SIDE_FIRST_ROW    (INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS)             /* 11 */
 #define INDOOR_SIDE_ROWS         (INDOOR_CROWD_BOTTOM_ROW - INDOOR_SIDE_FIRST_ROW)      /* 34: rows 11..44 */
 #define INDOOR_HALL_LEFT         (INDOOR_SIDE_LEFT_COL * 16)
@@ -230,16 +230,21 @@ int16_t Indoor_GoalY(int16_t y);
 /* ---- The glass (phase 5.3) ----------------------------------------------------------
  * Grey and see-through (the owner's SWIS hall: (98,98,98) at ~60 %). Along the sides it is
  * in the floor (LINO.MAP), INDOOR_GLASS_LEFT/RIGHT wide. At the ends it is seen in
- * perspective: the top wall hides what is behind it -- the top goal, the floor there and
- * the three nearest rows of fans -- and the bottom one the court's last
- * INDOOR_GLASS_BOTTOM_H rows and the players in them. The PC draws that over every frame,
+ * perspective, as high as from the three nearest rows of fans to the goal line: the top
+ * wall hides what is behind it -- the floor there and those fans -- and the bottom one as
+ * many of the court's last rows and the players in them. Each has a HOLE where its goal
+ * stands, the goal's width and height, seen through clear: the top goal, a keeper on the
+ * bottom goal line. The PC draws that over every frame,
  * after the sprites (Indoor_DrawGlass, from the game loop): players and fans are greyed
  * live. The Amiga cannot afford it a frame; its map (LINO_A.MAP) has the floor of both
  * ends greyed instead, the players and fans not. */
-#define INDOOR_GLASS_X0          (INDOOR_BENCH_X + 4)                       /* 153 */
-#define INDOOR_GLASS_X1          (INDOOR_SIDE_RIGHT_COL * 16 - 1)           /* 527 */
+#define INDOOR_GLASS_X0          (INDOOR_LEFT - INDOOR_GLASS_LEFT)          /* 167 */
+#define INDOOR_GLASS_X1          (INDOOR_RIGHT + INDOOR_GLASS_RIGHT)        /* 505 */
 #define INDOOR_GLASS_TOP_Y0      ((INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS - 3) * 16)  /* 128 */
-#define INDOOR_GLASS_BOTTOM_H    24
+#define INDOOR_GLASS_HEIGHT      (INDOOR_TOP - INDOOR_GLASS_TOP_Y0)          /* 80, both ends */
+#define INDOOR_GLASS_HOLE_X0     300    /* the goal frame, outside to outside */
+#define INDOOR_GLASS_HOLE_X1     372
+#define INDOOR_GLASS_HOLE_H      24     /* the goal's height at the line */
 void Indoor_DrawGlass(void);
 
 /* A number of the crowd code outdoors, its indoor counterpart indoors. */

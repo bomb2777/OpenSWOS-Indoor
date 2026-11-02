@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "image_cmd.h"
+#include "indoor.h"          /* INDOOR: the line-up's little pitch */
 #include "jag_graphics.h"
 #include "game_types.h"
 #include "display.h"
@@ -421,6 +422,12 @@ update_cursor:
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 {
+    {   /* INDOOR: the menu sprites are extracted afresh -- the line-up's little pitch is
+         * green again (indoor.h, Indoor_SidePitchColours). */
+        extern uint16_t _menuBGImageCmdStream[];
+        if (cmdBuffer == _menuBGImageCmdStream)
+            Indoor_MenuSpritesReloaded();
+    }
 #ifdef SWOS_SDL_BUILD
     /* SWOS_DEBUG_SPRITE_LOAD=1 traces every extract with its hotspot, which is
      * what the onScreen cull reads — useful for comparing our bank's metrics

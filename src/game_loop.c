@@ -959,10 +959,11 @@ static void game_loop_body(void)
     d2 = 313;
     if (_trainingGame == 0) {
         uint16_t r = Rand();
+        /* INDOOR: the hall's ends (indoor.h INDOOR_VIEW_*), not the stadium's */
         if (r & 1)
-            d2 = SIM_CAMERA_MAX_Y;   /* bottom end: 592 at 272 lines */
+            d2 = INDOOR_OR(SIM_CAMERA_MAX_Y, (int16_t)(INDOOR_VIEW_BOTTOM - _sim_view_height));   /* bottom end: 592 at 272 lines */
         else
-            d2 = 16;                 /* top end: the same in both */
+            d2 = INDOOR_OR(16, INDOOR_VIEW_TOP);    /* top end: the same in both */
         d1 = SIM_CAMERA_CENTRE_X;    /* 168 at 336 wide */
     }
 

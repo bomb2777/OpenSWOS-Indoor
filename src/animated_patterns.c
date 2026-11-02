@@ -356,11 +356,13 @@ ResetAnimatedPatternsForBothTeams(void)
     /* top fans section: offset 0xA8 bytes = 42 longs, 126 entries
      * (INDOOR: the stands' rows, indoor.h -- 0xA8 is row 1 x 42 x 4) */
     resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer +
-                                       INDOOR_OR(0xA8, INDOOR_CROWD_TOP_ROW * 42 * 4)), 125);
+                                       INDOOR_OR(0xA8, INDOOR_CROWD_TOP_ROW * 42 * 4)),
+                          INDOOR_OR(125, INDOOR_CROWD_ROWS * 42 - 1));
 
     /* bottom fans section: offset 0x2178 bytes = 2142 longs, 126 entries (row 51) */
     resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer +
-                                       INDOOR_OR(0x2178, INDOOR_CROWD_BOTTOM_ROW * 42 * 4)), 125);
+                                       INDOOR_OR(0x2178, INDOOR_CROWD_BOTTOM_ROW * 42 * 4)),
+                          INDOOR_OR(125, INDOOR_CROWD_ROWS * 42 - 1));
 
     /* INDOOR: the side stands, every row between the end stands */
     if (_gIndoor)
@@ -701,7 +703,8 @@ pattern_loop:
                 if (_otherTeamScored != 0 && randomVal >= 21 && randomVal < 42)
                     d4 = 0;
 
-                spriteIdx = randomVal + INDOOR_OR(21, INDOOR_CROWD_TOP_ROW * 21);
+                /* (INDOOR: the stand's three rows nearest the court) */
+                spriteIdx = randomVal + INDOOR_OR(21, (INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS - 3) * 21);
             } else if ((int16_t)_cameraY.s.i >= INDOOR_OR(544, INDOOR_FANS_BOTTOM_SEEN)) {
                 /* bottom of pitch: sprite range 1071..1133 */
                 swapTwoRandomIndicesFromAnimPatternsTable();

@@ -730,8 +730,10 @@ has_picture:
     /* ---- Out-of-play boundary checks when game not in progress ---- */
     if (_gameStatePl != ST_GAME_IN_PROGRESS) {
         /* INDOOR: after the whistle too the ball comes off the glass (not into a goal's
-         * mouth: the net below catches it). The fence below is then never reached. */
-        if (_gIndoor)
+         * mouth: the net below catches it). The fence below is then never reached. Only a
+         * ball that was on the court: at half time and after the match the game parks it
+         * far off the pitch. */
+        if (_gIndoor && (int16_t)(savedX >> 16) >= INDOOR_LEFT && (int16_t)(savedX >> 16) <= INDOOR_RIGHT)
             (void)Indoor_BallAtWall(ball, savedX, savedY);
 
         /* X boundary */

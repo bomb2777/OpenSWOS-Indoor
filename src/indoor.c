@@ -59,6 +59,7 @@ static void install_tactics(TeamFileEx *team1, TeamFileEx *team2);
 static void release_tactics(void);
 static void install_court(void);
 static void release_court(void);
+static void time_penalties_clear(void);
 
 void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
 {
@@ -88,6 +89,7 @@ void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
 
     _gIndoor = 1;
     _gIndoorFloor = floor;
+    time_penalties_clear();
     install_tactics(team1, team2);
     install_court();
 #ifdef SWOS_SDL_BUILD
@@ -107,6 +109,7 @@ void Indoor_PinPitch(void)
 
 void Indoor_EndMatch(void)
 {
+    time_penalties_clear();
     release_court();
     release_tactics();
     _gIndoor = 0;
@@ -209,6 +212,7 @@ static void park(Sprite *s)
 }
 
 static void keeper_rule_disarm(void);
+static void time_penalties_end(void);
 
 void Indoor_ParkPlayers(void)
 {
@@ -216,6 +220,7 @@ void Indoor_ParkPlayers(void)
         return;
     if (_gameStatePl != ST_GAME_IN_PROGRESS)
         keeper_rule_disarm();       /* any stoppage ends it: a goal, a foul, half time */
+    time_penalties_end();
     for (int16_t i = INDOOR_PLAYERS; i < 11; i++) {
         park(_team1SpritesTable[i]);
         park(_team2SpritesTable[i]);
@@ -401,6 +406,8 @@ static void release_court(void)
 
 static void keep_inside(Sprite *s)
 {
+    if (s->sentAway)
+        return;                     /* on his way to the bench, or sitting out his time */
     if (s->x.s.i < INDOOR_LEFT)   { s->x.s.i = INDOOR_LEFT;   s->x.s.frac = 0; }
     if (s->x.s.i > INDOOR_RIGHT)  { s->x.s.i = INDOOR_RIGHT;  s->x.s.frac = 0; }
     if (s->y.s.i < INDOOR_TOP)    { s->y.s.i = INDOOR_TOP;    s->y.s.frac = 0; }
@@ -495,4 +502,90 @@ void Indoor_KeeperRuleCheck(const Sprite *ball)
         return;
     }
     s_keeperBallY = y;
+}
+
+/* ---- The time penalty (phase 5.1) ------------------------------------------------ */
+
+extern uint32_t _gameTime;
+extern PlayerInfo *GetPlayerPointerFromShirtNumber(Sprite *player, TeamGeneralInfo *team);
+
+/* The minute the clock shows: _gameTime is BCD in the m68k byte order on both targets
+ * (byte 1 hundreds, 2 tens, 3 ones -- game_state.c's GAMETIME_* ). */
+static int16_t clock_minute(void)
+{
+    const uint8_t *t = (const uint8_t *)&_gameTime;
+    return (int16_t)(t[1] * 100 + t[2] * 10 + t[3]);
+}
+
+/* Two a side can sit out at once: a third red before the first is back is still a
+ * send-off, only for the rest of the match. */
+#define INDOOR_PENALTY_SLOTS 4
+static struct {
+    Sprite          *player;    /* 0 = free */
+    TeamGeneralInfo *team;
+    int16_t          backAt;    /* the clock minute he comes back on */
+} s_penalties[INDOOR_PENALTY_SLOTS];
+
+static void time_penalties_clear(void)
+{
+    for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++)
+        s_penalties[i].player = 0;
+}
+
+void Indoor_TimePenalty(Sprite *player, TeamGeneralInfo *team)
+{
+    if (!_gIndoor)
+        return;
+    player->destX = INDOOR_BENCH_X;     /* to the bench, not off the pitch */
+    for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++) {
+        if (!s_penalties[i].player) {
+            s_penalties[i].player = player;
+            s_penalties[i].team = team;
+            s_penalties[i].backAt = (int16_t)(clock_minute() + INDOOR_PENALTY_MINUTES);
+#ifdef SWOS_SDL_BUILD
+            fprintf(stderr, "[indoor] time penalty: player %d sits out from minute %d to %d\n",
+                    player->playerOrdinal, clock_minute(), s_penalties[i].backAt);
+#endif
+            return;
+        }
+    }
+}
+
+static void time_penalties_end(void)
+{
+    int16_t now = clock_minute();
+    for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++) {
+        Sprite *p = s_penalties[i].player;
+        PlayerInfo *pi;
+        if (!p || now < s_penalties[i].backAt)
+            continue;
+        s_penalties[i].player = 0;
+        if (!p->sentAway)
+            continue;               /* already back some other way */
+        /* Back on, booked: one more yellow is another red. Positioning walks him from
+         * the bench to his place in the formation. */
+        p->sentAway = 0;
+        p->cards = 1;
+        pi = GetPlayerPointerFromShirtNumber(p, s_penalties[i].team);
+        if (pi)
+            pi->numYellowCards = 1;
+#ifdef SWOS_SDL_BUILD
+        fprintf(stderr, "[indoor] time penalty over: player %d back on at minute %d\n",
+                p->playerOrdinal, now);
+#endif
+    }
+}
+
+int16_t Indoor_TestRed(void)
+{
+#ifdef SWOS_SDL_BUILD
+    static int16_t s_testRed = -1;
+    if (s_testRed < 0) {
+        const char *v = getenv("SWOS_INDOOR_TEST_RED");
+        s_testRed = (v && v[0] == '1' && v[1] == '\0') ? 1 : 0;
+    }
+    return (int16_t)(_gIndoor && s_testRed);
+#else
+    return 0;
+#endif
 }

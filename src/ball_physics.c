@@ -978,6 +978,7 @@ after_goalpost:
             /* INDOOR: no out of play -- glass walls, but for a goal */
             if (Indoor_BallAtWall(ball, savedX, savedY))
                 CheckIfBallOutOfPlay();
+            Indoor_KeeperRuleCheck(ball);   /* the keeper's throw over the halfway line */
         } else if (bx < 81 || bx > 590 || by < 129 || by > 769) {
             CheckIfBallOutOfPlay();
         }

@@ -227,6 +227,7 @@ static Sprite *prevLastPlayer;
 static TeamGeneralInfo *prevLastTeamPlayed;
 static const int16_t freeKickFactorsX_data[7] = {0, 3, 4, 5, 4, 3, 0};
 static int16_t freeKickDestX_local;
+static int16_t indoorWall_local;    /* INDOOR: this player is in the two-man wall */
 
 /* ==================================================================
  * UpdatePlayers — per-frame update for all 11 players on a team
@@ -2649,7 +2650,24 @@ not_in_penalty:
 
                 /* Free kick spacing for defenders */
                 freeKickDestX_local = 0;
-                if (!_gIndoor &&        /* the wall counts on ordinals 2-5; indoor has 4 players */
+                indoorWall_local = 0;
+                /* INDOOR: a wall of two, the back pair (ordinals 2 and 3), in the middle two
+                 * of the four wall places (3 and 4), re-centred as below when one of them
+                 * is off; its distance scaled to the indoor free kick's (index_restart). */
+                if (_gIndoor &&
+                    team != _lastTeamPlayedBeforeBreak &&
+                    gs > ST_FREE_KICK_LEFT1 && gs < ST_FREE_KICK_RIGHT3 &&
+                    (player->playerOrdinal == 2 || player->playerOrdinal == 3)) {
+                    Sprite *second = team->spritesTable[1];     /* ordinal 2 */
+                    Sprite *third = team->spritesTable[2];      /* ordinal 3 */
+                    int16_t factor = freeKickFactorsX_data[gs - 6];
+                    int16_t inWall = (int16_t)((second->cards >= 0) + (third->cards >= 0));
+                    freeKickDestX_local = (int16_t)(factor * 2 - factor * inWall);
+                    ordinal = (int16_t)(3 + ((player->playerOrdinal == 3 && second->cards >= 0) ? 1 : 0));
+                    indoorWall_local = 1;
+                    goto index_restart;
+                }
+                if (!_gIndoor &&        /* the wall counts on ordinals 2-5; indoors it is above */
                     team != _lastTeamPlayedBeforeBreak &&
                     gs >= ST_FREE_KICK_LEFT1 && gs <= ST_FREE_KICK_RIGHT3 &&
                     gs != ST_FREE_KICK_LEFT1 && gs != ST_FREE_KICK_RIGHT3) {
@@ -2711,6 +2729,10 @@ not_in_penalty:
                                 player->destY = INDOOR_Y(dy + 129);
                                 goto finalize;
                             }
+                            if (indoorWall_local) {     /* INDOOR: the wall at the court's distance */
+                                dx = (int16_t)(dx * INDOOR_FREE_KICK_DISTANCE / 65);
+                                dy = (int16_t)(dy * INDOOR_FREE_KICK_DISTANCE / 65);
+                            }
                             dx += ballX;
                             dy += ballY;
                         } else {
@@ -2732,6 +2754,10 @@ not_in_penalty:
                                 player->destX = INDOOR_X(dx + 81);     /* INDOOR: onto the court */
                                 player->destY = INDOOR_Y(dy + 129);
                                 goto finalize;
+                            }
+                            if (indoorWall_local) {     /* INDOOR: the wall at the court's distance */
+                                dx = (int16_t)(dx * INDOOR_FREE_KICK_DISTANCE / 65);
+                                dy = (int16_t)(dy * INDOOR_FREE_KICK_DISTANCE / 65);
                             }
                             dx += ballX;
                             dy += ballY;

@@ -186,9 +186,11 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    The sizes in 5.1 above are superseded by these.
 5.3. **The owner's third list** (2026-11-02) — done (`dc78d73`):
    - **Glass** ((98,98,98) at ~60 %, his SWIS `wall_transparent` / `sidewall_*`), `0b5c1bf`:
-     along the sides in the floor, 24 px left (to the bench) and 32 px right (to the stand). At
-     the ends in perspective: the top wall greys the top goal, the floor behind it and the three
-     nearest rows of fans, the bottom one the court's last 24 rows and the players in them. The
+     along the sides in the floor, 10 px. At the ends in perspective, both 80 px high
+     (`INDOOR_GLASS_HEIGHT`): the top wall greys the floor behind it and the three nearest rows
+     of fans, the bottom one the court's last 80 rows and the players in them; each with a clear
+     hole where its goal stands (x 300..372, 24 px at the line: the top goal, a keeper on the
+     bottom line). The
      PC draws that over every frame after the sprites (`Indoor_DrawGlass`: a colour table from
      the palette on screen, rebuilt when it changes); the Amiga cannot afford it a frame and
      loads `LINO_A.MAP` (`make_indoor_hall.py --amiga`), the floor of both ends greyed, the
@@ -208,8 +210,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      stand; the match's first and last camera at the hall's ends (`game_loop.c`,
      `match_setup.c`), and a camera outside the hall jumps to its target (`MoveCamera`).
    - **Stands deeper:** `INDOOR_CROWD_ROWS` 5 (rows 6–10, 45–49; the fans animate in the
-     three nearest the court), `INDOOR_SIDE_COLS` 8 (x 0..127 and 528..655); the bench at
-     `INDOOR_BENCH_X` 149, outside the left glass. Parquet shows only in the bench zone.
+     three nearest the court), `INDOOR_SIDE_COLS` 8 (x 0..127 and 512..639); the bench at
+     `INDOOR_BENCH_X` 163, outside the left glass. Parquet shows only in the bench zone.
    - **Players held by the glass at stoppages too** (`Indoor_KeepPlayersInside`): a slide or a
      dive the whistle stops used to carry on through it; not during the walk-on, half time, the
      end or a substitution.

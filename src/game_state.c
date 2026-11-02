@@ -6,7 +6,7 @@
 #include "long_bench.h"
 #include "game_state.h"
 #include "goal_ring.h"
-#include "indoor.h"          /* INDOOR: the court */
+#include "indoor.h"          /* INDOOR: the court, the 2 x 20 clock */
 #include "game_types.h"
 #include "endian_helpers.h"
 #include "display.h"    /* _screen_width, WIDE_MARGIN — center the in-match HUD in widescreen */
@@ -831,14 +831,16 @@ time_invisible:
     if (_playingPenalties)
         goto no_update_to_time;
 
-    /* Accumulate time delta */
-    _secondsSwitchAccumulator -= Stoppage_Delta(_timeDelta);   /* (added time: the 10-minute pace) */
+    /* Accumulate time delta (added time: the 10-minute pace).
+     * INDOOR: 2 x 20 minutes in the real time 2 x 45 take (the GAME LENGTH option's):
+     * 4 for every 9 of a second's frames, so a displayed minute lasts 9/4 as long. */
+    _secondsSwitchAccumulator -= (uint16_t)INDOOR_OR(Stoppage_Delta(_timeDelta), _timeDelta * 4);
     if ((int16_t)_secondsSwitchAccumulator >= 0)
         goto no_update_to_time;
 
     /* GS_54_49: frames per in-game second — Amiga 49, DOS 54 (set per style by
      * ApplyGameStyle/dos_gameplay.c). The whole match-clock cadence keys off this. */
-    _secondsSwitchAccumulator += (uint16_t)_gsFramesPerGameSecond;
+    _secondsSwitchAccumulator += (uint16_t)INDOOR_OR(_gsFramesPerGameSecond, _gsFramesPerGameSecond * 9);
     _gameSeconds++;
 
     if (_gameSeconds != 60)
@@ -875,12 +877,12 @@ check_game_end:
     if (_gameTime == HOST_TO_BE32(0x00000001))
         BumpPlayersLastPlayedHalfAtHalfStart();
 
-    /* Minute 46: mark second-half start */
-    if (_gameTime == HOST_TO_BE32(0x00000406))
+    /* Minute 46: mark second-half start (INDOOR 21) */
+    if (_gameTime == HOST_TO_BE32(INDOOR_OR(0x00000406, 0x00000201)))
         BumpPlayersLastPlayedHalfAtHalfStart();
 
-    /* Minute 45: half-time */
-    if (_gameTime == HOST_TO_BE32(0x00000405))
+    /* Minute 45: half-time (INDOOR 20) */
+    if (_gameTime == HOST_TO_BE32(INDOOR_OR(0x00000405, 0x00000200)))
     {
         if ((int16_t)_gameSeconds >= 0)
             goto last_cycle;
@@ -892,8 +894,8 @@ check_game_end:
         goto not_end_of_second_extra;
     }
 
-    /* Minute 90: full-time */
-    if (_gameTime == HOST_TO_BE32(0x00000900))
+    /* Minute 90: full-time (INDOOR 40; a friendly never has extra time) */
+    if (_gameTime == HOST_TO_BE32(INDOOR_OR(0x00000900, 0x00000400)))
     {
         if ((int16_t)_gameSeconds >= 0)
             goto last_cycle;

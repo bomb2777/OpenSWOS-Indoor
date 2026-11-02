@@ -308,8 +308,8 @@ __attribute__((noinline)) int16_t Indoor_GoalY(int16_t y)
 
 extern void ResetBothTeamSpinTimers(void);
 
-/* How much of its speed the ball keeps off the glass: 3/4 (a post keeps 3/4 too). */
-#define INDOOR_WALL_KEEP_SHIFT 2
+/* How much of its speed the ball keeps off the glass: 15/16 (phase 5.2; a post keeps 3/4). */
+#define INDOOR_WALL_KEEP_SHIFT 4
 
 static void mirror_dest(int16_t *dest, int32_t saved)
 {

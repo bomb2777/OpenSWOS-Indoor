@@ -217,6 +217,12 @@ int16_t Indoor_GoalY(int16_t y);
  * the court and moved the goal sprites to its ends (Indoor_EndMatch gives them back). */
 void Indoor_KeepPlayersInside(void);
 
+/* The ball on the hall's floor (phase 5.2): its ground friction times NUM/DEN -- 2/3, so
+ * 15 a frame on the HARD floor becomes 10 and the ball rolls further. In the air as
+ * outdoors. UpdateBall. */
+#define INDOOR_BALL_FRICTION_NUM 2
+#define INDOOR_BALL_FRICTION_DEN 3
+
 /* UpdateBall, instead of the outdoor "out of play": the ball off a wall, unless it is
  * going into a goal (in the mouth, under the bar), which is left to the goal code.
  * Returns 1 if it was a goal-mouth crossing CheckIfBallOutOfPlay must decide. */

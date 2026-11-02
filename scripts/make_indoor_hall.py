@@ -47,15 +47,16 @@ OUT = os.path.join(REPO, "bin", "grafs_indoor", "LINO.MAP")
 
 # include/indoor.h -- keep in step.
 HALF_W, HALF_L = 159, 241
-CROWD_TOP_ROW = (449 - HALF_L) // 16 - 5        # INDOOR_CROWD_TOP_ROW: 8
+CROWD_ROWS = 5                                  # INDOOR_CROWD_ROWS
+CROWD_TOP_ROW = (449 - HALF_L) // 16 - 2 - CROWD_ROWS  # INDOOR_CROWD_TOP_ROW: 6
 CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 45
 BOX_HALF_W, BOX_DEPTH = 74, 75
 # The sides of the hall (indoor.h, phase 5.1): the bench's right edge, the side stands.
-BENCH_X = 336 - HALF_W - 24                       # INDOOR_BENCH_X: 153
-SIDE_COLS = 6
-SIDE_LEFT_COL = (BENCH_X - 16 - 14) // 16 - SIDE_COLS   # 1
+BENCH_X = 336 - HALF_W - 12                       # INDOOR_BENCH_X: 165
+SIDE_COLS = 9
+SIDE_LEFT_COL = (BENCH_X - 16 - 5) // 16 - SIDE_COLS    # 0
 SIDE_RIGHT_COL = (336 + HALF_W + 16 + 15) // 16         # 32
-SIDE_FIRST_ROW = CROWD_TOP_ROW + 3                      # 11
+SIDE_FIRST_ROW = CROWD_TOP_ROW + CROWD_ROWS             # 11
 SIDE_ROWS = CROWD_BOTTOM_ROW - SIDE_FIRST_ROW           # 34
 DUGOUTS_Y = [(368, 430), (464, 526)]                    # the outdoor dugouts' (bench_subs.c 389/485)
 PENALTY_SPOT = 71
@@ -118,6 +119,7 @@ def main():
 
     pal = game_palette()
     pal_rgb = pal
+    grey = lambda i: pal_rgb[i]
     src = Image.open(args.src).convert("RGB")
     # The court's colours, sampled where the SWIS hall has them (image y is down:
     # 2000 - libgdx y).
@@ -147,12 +149,34 @@ def main():
     for y in (CY, TOP + PENALTY_SPOT, BOTTOM - PENALTY_SPOT):
         d.rectangle([CX - 1, y - 1, CX, y], fill=line)
 
+    # The glass (phase 5.3; the owner's SWIS hall: wall_transparent.png, sidewall_*.png --
+    # grey, (98, 98, 98) at about 60 % over what is behind it): the strip behind each goal
+    # line from the stand to the court, and along each side from the bench's edge (left)
+    # or the stand (right) to the court, end stand to end stand; a light rim on its outside.
+    # Drawn before the goal, which stands in it.
+    gtop = (CROWD_TOP_ROW + CROWD_ROWS) * 16
+    gbottom = CROWD_BOTTOM_ROW * 16 - 1
+    gleft, gright = BENCH_X + 1, SIDE_RIGHT_COL * 16 - 1
+    def glass(box):
+        x0, y0, x1, y1 = box
+        region = img.crop((x0, y0, x1 + 1, y1 + 1))
+        tint = Image.new("RGB", region.size, (98, 98, 98))
+        img.paste(Image.blend(region, tint, 0.6), (x0, y0))
+    glass((gleft, gtop, gright, TOP - 1))                  # behind the top goal line
+    glass((gleft, BOTTOM + 1, gright, gbottom))            # behind the bottom one
+    glass((gleft, TOP, LEFT - 1, BOTTOM))                  # the left side
+    glass((RIGHT + 1, TOP, gright, BOTTOM))                # the right side
+    rim = grey(56)
+    d.line([gleft, gtop, gright, gtop], fill=rim)
+    d.line([gleft, gbottom, gright, gbottom], fill=rim)
+    d.line([gleft, gtop, gleft, gbottom], fill=rim)
+    d.line([gright, gtop, gright, gbottom], fill=rim)
+
     # The top goal's frame and net, behind the goal line. A stadium paints its goals into
     # the pitch; the goal SPRITES only add what must be drawn over the players -- the
     # bottom goal's front, the top goal's strip of net 18-23 px behind the line. So this
     # draws the rest of the top one: the crossbar, the posts, the net falling to the line,
     # its inside in shadow. Our own drawing, in the goal sprites' greys (palette 50-59).
-    grey = lambda i: pal_rgb[i]
     gx0, gx1 = CX - 36, CX + 36              # the frame, outside to outside (300..372)
     d.line([gx0, TOP - 18, gx1, TOP - 18], fill=grey(59))       # crossbar
     d.line([gx0 + 1, TOP - 17, gx1, TOP - 17], fill=grey(50))
@@ -208,9 +232,13 @@ def main():
     def put(r, row):
         cells[r * COLS:(r + 1) * COLS] = row
     put(0, ROW0)
-    for i, row in enumerate(TOP_STAND):
+    # Five rows deep (phase 5.3): the stadium's rows repeated, the three nearest the court
+    # last at the top and first at the bottom -- those are the ones the fans animate in.
+    top = [TOP_STAND[1], TOP_STAND[2]] + TOP_STAND
+    bottom = BOTTOM_STAND + [BOTTOM_STAND[1], BOTTOM_STAND[2]]
+    for i, row in enumerate(top[-CROWD_ROWS:]):
         put(CROWD_TOP_ROW + i, row)
-    for i, row in enumerate(BOTTOM_STAND):
+    for i, row in enumerate(bottom[:CROWD_ROWS]):
         put(CROWD_BOTTOM_ROW + i, row)
     # The side stands: the top team's fans on the left (1/3), the bottom team's on the
     # right (17/19) -- the end stands' plain rows; their other rows have a step or the

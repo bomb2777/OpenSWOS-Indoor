@@ -28,7 +28,7 @@
 #include "bench_subs.h"
 #include "dos_sound.h"
 #include "game_types.h"
-#include "indoor.h"     /* INDOOR: parked players are never substituted */
+#include "indoor.h"     /* INDOOR: parked players are never substituted; the bench x */
 #include "game_state.h"
 #include "goalkeeper.h"
 #include "match_sim.h"
@@ -670,11 +670,12 @@ activate_bench:
         _plComingYTmp = 449;
         _plComingY = _plComingYTmp;
         _benchWriteOnly01 = _benchY + 50;
-        _benchXLimit = 27;
-        _subsMenuX = 100;
-        _formationMenuX = 100;
-        _plLeavingX = 39;
-        _plComingX = 26;
+        /* INDOOR: the bench beside the court (indoor.h INDOOR_BENCH_SHIFT) */
+        _benchXLimit = (uint16_t)INDOOR_OR(27, 27 + INDOOR_BENCH_SHIFT);
+        _subsMenuX = (uint16_t)INDOOR_OR(100, 100 + INDOOR_BENCH_SHIFT);
+        _formationMenuX = (uint16_t)INDOOR_OR(100, 100 + INDOOR_BENCH_SHIFT);
+        _plLeavingX = (uint16_t)INDOOR_OR(39, 39 + INDOOR_BENCH_SHIFT);
+        _plComingX = (uint16_t)INDOOR_OR(26, 26 + INDOOR_BENCH_SHIFT);
         _benchWriteOnly02 = 35;
 
         checkForThrowInAndGoalkeepersBall();
@@ -1690,7 +1691,7 @@ static PlayerInfo *getBenchPlayerPointer(uint16_t index, uint16_t *outOrdinal)
 /* benchXLimit's match value, set by the activation block (SWOS2.s:18776
  * `move.w #27,(benchXLimit)`). Named here because the play-time draw runs
  * before the subs menu has ever set the global. */
-#define BENCH_X_LIMIT_PLAY 27
+#define BENCH_X_LIMIT_PLAY INDOOR_OR(27, 27 + INDOOR_BENCH_SHIFT)    /* INDOOR: beside the court */
 
 /* The bench geometry is normally established when the subs menu OPENS (see the
  * activation block: benchY/opponentBenchY from 389/485, benchXLimit 27, and the

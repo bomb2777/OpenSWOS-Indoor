@@ -272,6 +272,24 @@ void Indoor_TacticsButtons(struct MenuEntry *first)
     }
 }
 
+void Indoor_StadiumRows(struct MenuEntry *first)
+{
+    MenuEntry *e = first;
+    if (!_gIndoor)
+        return;
+    /* Left: shirts 5-15, names 16-26, substitutes 27-31; right: 32-42, 43-53, 54-58. */
+    for (int16_t i = INDOOR_PLAYERS; i < 11; i++) {
+        e[5 + i].isInvisible = 1;
+        e[16 + i].isInvisible = 1;
+        e[32 + i].isInvisible = 1;
+        e[43 + i].isInvisible = 1;
+    }
+    for (int16_t k = 0; k < 5; k++) {
+        e[27 + k].isInvisible = 1;
+        e[54 + k].isInvisible = 1;
+    }
+}
+
 /* ---- The court (phase 4) ------------------------------------------------------------ */
 
 /* Linear between two fixed points (a0 -> b0, a1 -> b1). */

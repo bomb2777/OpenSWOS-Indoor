@@ -106,6 +106,11 @@ extern uint16_t    _indoorSidePitch[INDOOR_TACTICS][33];
 struct MenuEntry;
 void Indoor_TacticsButtons(struct MenuEntry *first);
 
+/* The pre-match screen (ShowStadiumInit, entries from `first`): indoors only the starting
+ * INDOOR_PLAYERS of each side -- the rows of slots 6-10 and the substitutes' hidden.
+ * Nothing outdoors. */
+void Indoor_StadiumRows(struct MenuEntry *first);
+
 /* How many tactics a team can choose from: 18 outdoors, INDOOR_TACTICS indoors. */
 int16_t Indoor_TacticsCount(void);
 

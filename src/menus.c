@@ -839,6 +839,7 @@ void ShowStadiumInit(void)
             }
         }
     }
+    Indoor_StadiumRows(&_menuEntries[0]);  /* INDOOR: the six who start, no bench */
 
     DrawMenu();
     SetExitMenuFlag();

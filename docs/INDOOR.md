@@ -1,6 +1,6 @@
 # INDOOR.md — six a side in a hall
 
-> **Status (2026-11-02): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), and phase 5.1 (six a side, the indoor rules, the hall's sides); phase 6 (online) open.** This fork's own
+> **Status (2026-11-02): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides) and 5.2 (the owner's second list); phase 6 (online) open.** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -165,7 +165,25 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
       outdoors, clamped to the hall stand to stand (`INDOOR_HALL_LEFT/RIGHT` 112..528). **Laid out
       for the 4:3 view and the Amiga only — no widescreen (the owner)**: the court alone is 276 px,
       so the view pans and the bench is seen while play is on the left.
-   Open: the pre-match "team v team" screen still lists 11 + 5; tuning by play.
+   Open: tuning by play.
+5.2. **The owner's second list** (2026-11-02, after playing 5.1) — done:
+   - **The ball:** ground friction × 2/3 indoors (`INDOOR_BALL_FRICTION_NUM/DEN`; 10 a frame on
+     the HARD floor, not 15), the glass keeps 15/16 of its speed (`INDOOR_WALL_KEEP_SHIFT` 4), and
+     after a whistle the ball comes off the glass too (UpdateBall's stopped-state fence calls
+     `Indoor_BallAtWall` for a ball that was on the court; until then only the outdoor fence
+     stopped it, ~30 px beyond the glass).
+   - **Court 318 × 482** (x 177..495, y 208..690; box 148 × 75, spot 71, free kick 60 / 66) and
+     **side stands six columns wide** (x 16..111 and 512..607; `INDOOR_SIDE_COLS` 6, the bench at
+     `INDOOR_BENCH_X` 153): the panning camera never shows the hall's edge. End stands rows 8–10
+     and 45–47.
+   - **Tactics further apart:** per ball sector the five are moved from their centre by `SPREAD`
+     1.5 (`scripts/make_indoor_tactics.py`).
+   - **The pre-match screen** lists the six who start (`Indoor_StadiumRows`, from
+     `ShowStadiumInit`).
+   - **A player sitting out** stands by his own team's dugout with the small red card (sprite 139)
+     over him (`Indoor_DrawPenaltyCards`, every frame from `DrawBenchAndSubsMenu`); the bench
+     figures during play are drawn on the Amiga too indoors (on SDL they always were).
+   The sizes in 5.1 above are superseded by these.
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 

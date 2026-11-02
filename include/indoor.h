@@ -188,6 +188,26 @@ int16_t Indoor_GoalY(int16_t y);
 #define INDOOR_VIEW_TOP     (INDOOR_CROWD_TOP_ROW * 16)
 #define INDOOR_VIEW_BOTTOM  ((INDOOR_CROWD_BOTTOM_ROW + INDOOR_CROWD_ROWS) * 16)
 
+/* ---- The sides of the hall (phase 5.1) ---------------------------------------------
+ * Across, left to right: the left stand (2 columns, the top team's crowd tiles), floor,
+ * the bench's dugouts (drawn in LINO.MAP at the outdoor ones' y, their right edge at
+ * INDOOR_BENCH_X), floor, the court, floor, the right stand (the bottom team's tiles).
+ * The side stands run between the end stands; the fan animation picks cells in them too.
+ * The camera follows the ball across as outdoors, clamped to INDOOR_HALL_LEFT..RIGHT:
+ * laid out for the 4:3 view (336) and the Amiga's (320) -- no widescreen (the owner) --
+ * so the view pans, and the bench is seen while play is on the left. */
+#define INDOOR_BENCH_X           (INDOOR_LEFT - 24)  /* the bench (its sprites), 174 */
+#define INDOOR_SIDE_COLS         2
+#define INDOOR_SIDE_LEFT_COL     ((INDOOR_BENCH_X - 16 - 14) / 16 - INDOOR_SIDE_COLS)  /* 7: x 112..143 */
+#define INDOOR_SIDE_RIGHT_COL    ((INDOOR_RIGHT + 16 + 15) / 16)                        /* 31: x 496..527 */
+#define INDOOR_SIDE_FIRST_ROW    (INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS)             /* 13 */
+#define INDOOR_SIDE_ROWS         (INDOOR_CROWD_BOTTOM_ROW - INDOOR_SIDE_FIRST_ROW)      /* 30: to row 42 */
+#define INDOOR_HALL_LEFT         (INDOOR_SIDE_LEFT_COL * 16)
+#define INDOOR_HALL_RIGHT        ((INDOOR_SIDE_RIGHT_COL + INDOOR_SIDE_COLS) * 16)
+/* The bench's world positions are the outdoor ones (_benchXLimit 27, the subs menu at
+ * 100, ...) moved right by this, and so is the camera while the bench is called. */
+#define INDOOR_BENCH_SHIFT       (INDOOR_BENCH_X - 27)
+
 /* A number of the crowd code outdoors, its indoor counterpart indoors. */
 #define INDOOR_OR(outdoor, indoor)  (_gIndoor ? (indoor) : (outdoor))
 
@@ -223,7 +243,6 @@ void Indoor_KeeperRuleCheck(const Sprite *ball);
  * Indoor_ParkPlayers' (every frame). SWOS_INDOOR_TEST_RED=1 makes every card a red, to
  * see it in a computer match (Indoor_TestRed, tackle_foul.c). */
 #define INDOOR_PENALTY_MINUTES 5
-#define INDOOR_BENCH_X  (INDOOR_LEFT - 24)  /* where the bench sits, beside the court */
 void    Indoor_TimePenalty(Sprite *player, TeamGeneralInfo *team);
 int16_t Indoor_TestRed(void);
 

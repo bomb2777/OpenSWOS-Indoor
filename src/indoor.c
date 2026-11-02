@@ -550,11 +550,28 @@ static void time_penalties_clear(void)
         s_penalties[i].player = 0;
 }
 
+extern TeamGame _topTeamInGame;
+extern void DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y);
+#define SPR_RED_CARD_SMALL 139          /* bench_subs.c's */
+
+/* The y of a team's dugout: 389 or 485, by the rule the bench uses (bench_subs.c's
+ * activation block and draw_bench_occupants_only). */
+static int16_t team_bench_y(const TeamGeneralInfo *team)
+{
+    int16_t topY = 389, botY = 485;
+    if ((uint8_t)_topTeamInGame.teamName[0] & 2) {
+        int16_t t = topY; topY = botY; botY = t;
+    }
+    return team == &_topTeamData ? topY : botY;
+}
+
 void Indoor_TimePenalty(Sprite *player, TeamGeneralInfo *team)
 {
     if (!_gIndoor)
         return;
-    player->destX = INDOOR_BENCH_X;     /* to the bench, not off the pitch */
+    /* To his team's dugout, beside the seated bench: not off the pitch. */
+    player->destX = INDOOR_BENCH_X + 10;
+    player->destY = (int16_t)(team_bench_y(team) + 20);
     for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++) {
         if (!s_penalties[i].player) {
             s_penalties[i].player = player;
@@ -591,6 +608,17 @@ static void time_penalties_end(void)
         fprintf(stderr, "[indoor] time penalty over: player %d back on at minute %d\n",
                 p->playerOrdinal, now);
 #endif
+    }
+}
+
+void Indoor_DrawPenaltyCards(void)
+{
+    if (!_gIndoor)
+        return;
+    for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++) {
+        const Sprite *p = s_penalties[i].player;
+        if (p && p->sentAway)
+            DrawSpriteHotspotInCameraView(SPR_RED_CARD_SMALL, p->x.s.i, (int16_t)(p->y.s.i - 22));
     }
 }
 

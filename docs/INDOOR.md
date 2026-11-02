@@ -185,14 +185,21 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      figures during play are drawn on the Amiga too indoors (on SDL they always were).
    The sizes in 5.1 above are superseded by these.
 5.3. **The owner's third list** (2026-11-02) — done (`dc78d73`):
-   - **Glass:** a grey, see-through strip ((98,98,98) at ~60 %, his SWIS `wall_transparent` /
-     `sidewall_*`) behind each goal line and along both sides, a light rim outside; in LINO.MAP.
-   - **Sorted line-up**, as his SWIS `getStartingFiveAccordingToTactic`: at kick-off
-     (`install_tactics` → `sort_line_up`) the keeper, then each of the tactic's outfield places
-     (2-2-1: D D M M A, 2-1-2: D D M A A, 1-2-2: D M M A A, 3-1-1: D D D M A, 1-3-1: D M M M A)
-     by the first player in `playerNumbers` order who plays it (RB/LB/CD, RW/LW/MF, ST), else
-     the first outfield player left; the bench by position. The outdoor order is put back at the
-     end of the match.
+   - **Glass** ((98,98,98) at ~60 %, his SWIS `wall_transparent` / `sidewall_*`), `0b5c1bf`:
+     along the sides in the floor, 24 px left (to the bench) and 32 px right (to the stand). At
+     the ends in perspective: the top wall greys the top goal, the floor behind it and the three
+     nearest rows of fans, the bottom one the court's last 24 rows and the players in them. The
+     PC draws that over every frame after the sprites (`Indoor_DrawGlass`: a colour table from
+     the palette on screen, rebuilt when it changes); the Amiga cannot afford it a frame and
+     loads `LINO_A.MAP` (`make_indoor_hall.py --amiga`), the floor of both ends greyed, the
+     players and fans not.
+   - **Sorted line-up** (`install_tactics` → `sort_line_up`): the keeper, then each of the
+     tactic's outfield places (2-2-1: D D M M A, 2-1-2: D D M A A, 1-2-2: D M M A A, 3-1-1:
+     D D D M A, 1-3-1: D M M M A) by the BEST player left who plays it (RB/LB/CD, RW/LW/MF, ST)
+     -- the highest `PlayerFile.price`, the team's order deciding a tie -- else the best outfield
+     player left; the bench by position, within one by value. (His SWIS took the first in the
+     team's order; that left Germany's Sammer and Moller out.) The outdoor order is put back at
+     the end of the match.
    - **The PLAY MATCH screen's little pitch** (sprite 225) a blue court indoors: menu colours 14
      and 11 swapped (`Indoor_SidePitchColours`, from `SetPlayerSurnamesOnSidePitch`), swapped
      back outdoors, reset by `ProcessImageCommandStream` on the menu stream.
@@ -200,9 +207,9 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    - **Walk-on** at the court's right edge (`InitPlayersBeforeEnteringPitch`), not through the
      stand; the match's first and last camera at the hall's ends (`game_loop.c`,
      `match_setup.c`), and a camera outside the hall jumps to its target (`MoveCamera`).
-   - **Stands 50 % deeper:** `INDOOR_CROWD_ROWS` 5 (rows 6–10, 45–49; the fans animate in the
-     three nearest the court), `INDOOR_SIDE_COLS` 9 (x 0..143 and 512..655); the bench at
-     `INDOOR_BENCH_X` 165 to make room. Parquet shows only in the bench zone.
+   - **Stands deeper:** `INDOOR_CROWD_ROWS` 5 (rows 6–10, 45–49; the fans animate in the
+     three nearest the court), `INDOOR_SIDE_COLS` 8 (x 0..127 and 528..655); the bench at
+     `INDOOR_BENCH_X` 149, outside the left glass. Parquet shows only in the bench zone.
    - **Players held by the glass at stoppages too** (`Indoor_KeepPlayersInside`): a slide or a
      dive the whistle stops used to carry on through it; not during the walk-on, half time, the
      end or a substitution.

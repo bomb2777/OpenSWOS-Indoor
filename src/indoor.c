@@ -794,9 +794,10 @@ static void glass_table(void)
     s_glassRim = (uint8_t)nearest_colour(rgb, 187, 187, 187);
 }
 
-/* World rectangle x0..x1, y0..y1 through the glass, its top row the rim -- but for the
- * goal's hole, rows h0..h1 of x INDOOR_GLASS_HOLE_X0..X1, seen through clear. */
-static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0, int16_t h1)
+/* World rectangle x0..x1, y0..y1 through the glass, row `rimY` its light rim -- but for
+ * the goal's hole, rows h0..h1 of x INDOOR_GLASS_HOLE_X0..X1, seen through clear. */
+static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0, int16_t h1,
+                       int16_t rimY)
 {
     int16_t camX = Render_CameraX(), camY = Render_CameraY();
     uint8_t *fb = (uint8_t *)_frontbufferBasePtr;
@@ -813,25 +814,39 @@ static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h
                 continue;
             if (inHole && x >= INDOOR_GLASS_HOLE_X0 && x <= INDOOR_GLASS_HOLE_X1)
                 continue;
-            row[sx] = y == y0 ? s_glassRim : s_glassLut[row[sx]];
+            row[sx] = y == rimY ? s_glassRim : s_glassLut[row[sx]];
         }
     }
 }
 
-void Indoor_DrawGlass(void)
+/* The top wall, before the sprites: it stands behind the players (they are in front of
+ * it, on the court), so it greys only what is behind it -- the floor and the three
+ * nearest rows of fans, from them down to the goal line; its rim along its top. */
+void Indoor_DrawGlassBehind(void)
 {
     if (!_gIndoor)
         return;
     glass_table();
-    /* The top wall: from the three nearest rows of fans down to the goal line. */
     glass_band(INDOOR_GLASS_X0, INDOOR_GLASS_TOP_Y0, INDOOR_GLASS_X1, INDOOR_TOP - 1,
-               (int16_t)(INDOOR_TOP - INDOOR_GLASS_HOLE_H), INDOOR_TOP - 1);
-    /* The bottom wall: as high, up from the goal line over the court. */
+               (int16_t)(INDOOR_TOP - INDOOR_GLASS_HOLE_H_TOP), INDOOR_TOP - 1, INDOOR_GLASS_TOP_Y0);
+}
+
+/* The bottom wall, after the sprites: the players on the court's last rows are behind it.
+ * As high as the top one, up from the goal line; its rim along its foot, the goal line. */
+void Indoor_DrawGlassFront(void)
+{
+    if (!_gIndoor)
+        return;
+    glass_table();
     glass_band(INDOOR_GLASS_X0, (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_HEIGHT), INDOOR_GLASS_X1, INDOOR_BOTTOM,
-               (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_HOLE_H), INDOOR_BOTTOM);
+               (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_HOLE_H_BOTTOM), INDOOR_BOTTOM, INDOOR_BOTTOM);
 }
 #else
-void Indoor_DrawGlass(void)
+void Indoor_DrawGlassBehind(void)
+{
+}
+
+void Indoor_DrawGlassFront(void)
 {
 }
 #endif

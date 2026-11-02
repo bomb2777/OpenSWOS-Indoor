@@ -234,9 +234,9 @@ int16_t Indoor_GoalY(int16_t y);
  * wall hides what is behind it -- the floor there and those fans -- and the bottom one as
  * many of the court's last rows and the players in them. Each has a HOLE where its goal
  * stands, the goal's width and height, seen through clear: the top goal, a keeper on the
- * bottom goal line. The PC draws that over every frame,
- * after the sprites (Indoor_DrawGlass, from the game loop): players and fans are greyed
- * live. The Amiga cannot afford it a frame; its map (LINO_A.MAP) has the floor of both
+ * bottom goal line. The players are IN FRONT of the top wall and BEHIND the bottom one. The PC draws that over every frame,
+ * (Indoor_DrawGlassBehind before the sprites, the top wall: fans greyed live, players not;
+ * Indoor_DrawGlassFront after them, the bottom wall: the players there greyed). The Amiga cannot afford it a frame; its map (LINO_A.MAP) has the floor of both
  * ends greyed instead, the players and fans not. */
 #define INDOOR_GLASS_X0          (INDOOR_LEFT - INDOOR_GLASS_LEFT)          /* 167 */
 #define INDOOR_GLASS_X1          (INDOOR_RIGHT + INDOOR_GLASS_RIGHT)        /* 505 */
@@ -244,8 +244,10 @@ int16_t Indoor_GoalY(int16_t y);
 #define INDOOR_GLASS_HEIGHT      (INDOOR_TOP - INDOOR_GLASS_TOP_Y0)          /* 80, both ends */
 #define INDOOR_GLASS_HOLE_X0     300    /* the goal frame, outside to outside */
 #define INDOOR_GLASS_HOLE_X1     372
-#define INDOOR_GLASS_HOLE_H      24     /* the goal's height at the line */
-void Indoor_DrawGlass(void);
+#define INDOOR_GLASS_HOLE_H_TOP    24   /* the goals' heights at the line: the top one's */
+#define INDOOR_GLASS_HOLE_H_BOTTOM 18   /* (net to the line) and the bottom one's frame */
+void Indoor_DrawGlassBehind(void);
+void Indoor_DrawGlassFront(void);
 
 /* A number of the crowd code outdoors, its indoor counterpart indoors. */
 #define INDOOR_OR(outdoor, indoor)  (_gIndoor ? (indoor) : (outdoor))

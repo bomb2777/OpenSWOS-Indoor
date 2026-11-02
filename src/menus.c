@@ -904,6 +904,7 @@ void ShowStadiumInit(void)
             }
         }
     }
+    Indoor_StadiumRows(&_menuEntries[0]);  /* INDOOR: the six who start, no bench */
 
     /* A world's stadium name under the team bars (entry 60; world_stadium.c, the Mod 4.1's
      * stadium.py): a neutral final's venue, else the home club's ground; none known, none shown. */

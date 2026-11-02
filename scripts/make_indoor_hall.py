@@ -53,12 +53,12 @@ CROWD_TOP_ROW = (449 - HALF_L) // 16 - 2 - CROWD_ROWS  # INDOOR_CROWD_TOP_ROW: 6
 CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 45
 BOX_HALF_W, BOX_DEPTH = 74, 75
 # The sides of the hall (indoor.h, phase 5.1): the bench's right edge, the side stands.
-GLASS_LEFT, GLASS_RIGHT = 24, 32                  # INDOOR_GLASS_LEFT / _RIGHT
-GLASS_BOTTOM = 24                                 # INDOOR_GLASS_BOTTOM_H
-BENCH_X = 336 - HALF_W - GLASS_LEFT - 4           # INDOOR_BENCH_X: 149
+GLASS_LEFT, GLASS_RIGHT = 10, 10                  # INDOOR_GLASS_LEFT / _RIGHT
+HOLE_X0, HOLE_X1, HOLE_H = 300, 372, 24           # INDOOR_GLASS_HOLE_*: the goal's
+BENCH_X = 336 - HALF_W - GLASS_LEFT - 4           # INDOOR_BENCH_X: 163
 SIDE_COLS = 8
 SIDE_LEFT_COL = (BENCH_X - 16 - 5) // 16 - SIDE_COLS    # 0
-SIDE_RIGHT_COL = (336 + HALF_W + GLASS_RIGHT + 15) // 16  # 33
+SIDE_RIGHT_COL = (336 + HALF_W + GLASS_RIGHT + 15) // 16  # 32
 SIDE_FIRST_ROW = CROWD_TOP_ROW + CROWD_ROWS             # 11
 SIDE_ROWS = CROWD_BOTTOM_ROW - SIDE_FIRST_ROW           # 34
 DUGOUTS_Y = [(368, 430), (464, 526)]                    # the outdoor dugouts' (bench_subs.c 389/485)
@@ -196,25 +196,30 @@ def main():
     # perspective -- the top wall hides what is behind it, the top goal, the floor and the
     # nearest fans, the bottom one the court's last strip and the players there -- which
     # the PC draws over each frame (indoor.c, Indoor_DrawGlass); the Amiga, which cannot,
-    # has its floor here (--amiga, LINO_A.MAP): the strip behind the top goal line, the
-    # court's last GLASS_BOTTOM rows.
-    gx0, gx1 = BENCH_X + 4, SIDE_RIGHT_COL * 16 - 1
+    # has its floor here (--amiga, LINO_A.MAP): the strip behind the top goal line, and as
+    # high up the court from the bottom one (indoor.h INDOOR_GLASS_HEIGHT). Both with the
+    # goal's hole, clear.
+    gx0, gx1 = 336 - HALF_W - GLASS_LEFT, 336 + HALF_W + GLASS_RIGHT
     gtop = (CROWD_TOP_ROW + CROWD_ROWS) * 16
-    def glass(box):
+    gheight = TOP - (CROWD_TOP_ROW + CROWD_ROWS - 3) * 16      # 80
+    def glass(box, hole=None):
         x0, y0, x1, y1 = box
+        keep = img.crop(hole) if hole else None
         region = img.crop((x0, y0, x1 + 1, y1 + 1))
         tint = Image.new("RGB", region.size, (98, 98, 98))
         img.paste(Image.blend(region, tint, 0.6), (x0, y0))
+        if hole:
+            img.paste(keep, hole[:2])
     rim = grey(56)
     glass((gx0, TOP, LEFT - 1, BOTTOM))             # the left side
     glass((RIGHT + 1, TOP, gx1, BOTTOM))            # the right side
     d.line([gx0, TOP, gx0, BOTTOM], fill=rim)
     d.line([gx1, TOP, gx1, BOTTOM], fill=rim)
     if args.amiga:
-        glass((gx0, gtop, gx1, TOP - 1))            # behind the top goal line
-        glass((LEFT, BOTTOM - GLASS_BOTTOM, RIGHT, BOTTOM))     # the court's last strip
+        glass((gx0, gtop, gx1, TOP - 1), (HOLE_X0, TOP - HOLE_H, HOLE_X1 + 1, TOP))
+        glass((gx0, BOTTOM - gheight, gx1, BOTTOM), (HOLE_X0, BOTTOM - HOLE_H, HOLE_X1 + 1, BOTTOM + 1))
         d.line([gx0, gtop, gx1, gtop], fill=rim)
-        d.line([LEFT, BOTTOM - GLASS_BOTTOM, RIGHT, BOTTOM - GLASS_BOTTOM], fill=rim)
+        d.line([gx0, BOTTOM - gheight, gx1, BOTTOM - gheight], fill=rim)
 
     cache = {}
     idx = [[0] * WORLD_W for _ in range(WORLD_H)]

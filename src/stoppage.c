@@ -22,6 +22,7 @@
 #include "world_rules.h"
 #include "world.h"
 #include "game_types.h"
+#include "indoor.h"          /* INDOOR: the hall plays its own 2 x 20 clock, no added time */
 #ifdef SWOS_SDL_BUILD
 #include <stdio.h>
 #endif
@@ -61,7 +62,7 @@ extern int _gArcadeMode;
 
 int32_t Stoppage_Wanted(void)
 {
-    if (!WorldRules_World() || _trainingGame)
+    if (!WorldRules_World() || _trainingGame || _gIndoor)  /* (INDOOR, this fork's: no added time) */
         return 0;
 #ifdef SWOS_SDL_BUILD
     if (_gArcadeMode)

@@ -307,6 +307,17 @@ static volatile int s_screenshot_request;
 
 /* A screenshot at the next full render, as F12 takes one (the career autopilot's test
  * switch SWOS_GOLDEN_SHOT_COMP, career_autopilot.c). */
+/* The palette as the screen shows it now (fades included), 256 x RGB: the indoor glass
+ * builds its "seen through the glass" colours from it (indoor.c). */
+void Platform_PaletteRGB(uint8_t rgb[768])
+{
+    for (int i = 0; i < 256; i++) {
+        rgb[i * 3 + 0] = s_palette[i].r;
+        rgb[i * 3 + 1] = s_palette[i].g;
+        rgb[i * 3 + 2] = s_palette[i].b;
+    }
+}
+
 void Platform_RequestScreenshot(void)
 {
     s_screenshot_request = 1;

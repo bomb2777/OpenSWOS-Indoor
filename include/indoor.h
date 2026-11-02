@@ -202,4 +202,18 @@ void Indoor_KeepPlayersInside(void);
  * Returns 1 if it was a goal-mouth crossing CheckIfBallOutOfPlay must decide. */
 int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY);
 
+/* ---- The keeper's throw (phase 5.1) ------------------------------------------------
+ * A ball the keeper releases from his HANDS (a throw, a pass or a kick out of them) must
+ * not cross the halfway line before another player -- of either side -- has touched it;
+ * if it does, the other side has a free kick on the halfway line where it crossed.
+ * UpdatePlayers' two restart blocks call Indoor_KeeperReleased as the ball leaves a
+ * player (it acts only for a keeper holding the ball, indoors); UpdateBall calls
+ * Indoor_KeeperRuleCheck every frame the ball is in play. A ball off a body that is not
+ * a kick, a header or a control does not count as touched: the game does not record it. */
+void Indoor_KeeperReleased(Sprite *player, TeamGeneralInfo *team);
+/* The computer's keeper knows the rule: holding the ball indoors, it passes (quick
+ * fire) where outdoors it would kick (ai.c). */
+#define INDOOR_KEEPER_PASSES()  (_gIndoor && _gameState == ST_KEEPER_HOLDS_BALL)
+void Indoor_KeeperRuleCheck(const Sprite *ball);
+
 #endif /* INDOOR_H */

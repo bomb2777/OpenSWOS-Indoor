@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """make_indoor_hall.py -- the INDOOR hall's floor as a pitch map (docs/INDOOR.md, phase 5).
 
-    python3 scripts/make_indoor_hall.py [--src playground_v2.png] [--preview out.png]
+    python3 scripts/make_indoor_hall.py [--src playground_v2.png] [--preview out.png] [--amiga]
 
 Writes bin/grafs_indoor/LINO.MAP: the blue linoleum court in a parquet hall, in the
 format of the game's own pitch maps (an 8-bitplane .MAP like grafs_aga/P2020_n.MAP), which
@@ -44,6 +44,7 @@ from PIL import Image, ImageDraw
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SWIS = os.path.expanduser("~/zz_max/projects/libgdx-swis-2022/core/assets/images/swis/hall/playground_v2.png")
 OUT = os.path.join(REPO, "bin", "grafs_indoor", "LINO.MAP")
+OUT_AMIGA = os.path.join(REPO, "bin", "grafs_indoor", "LINO_A.MAP")
 
 # include/indoor.h -- keep in step.
 HALF_W, HALF_L = 159, 241
@@ -52,10 +53,12 @@ CROWD_TOP_ROW = (449 - HALF_L) // 16 - 2 - CROWD_ROWS  # INDOOR_CROWD_TOP_ROW: 6
 CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 45
 BOX_HALF_W, BOX_DEPTH = 74, 75
 # The sides of the hall (indoor.h, phase 5.1): the bench's right edge, the side stands.
-BENCH_X = 336 - HALF_W - 12                       # INDOOR_BENCH_X: 165
-SIDE_COLS = 9
+GLASS_LEFT, GLASS_RIGHT = 24, 32                  # INDOOR_GLASS_LEFT / _RIGHT
+GLASS_BOTTOM = 24                                 # INDOOR_GLASS_BOTTOM_H
+BENCH_X = 336 - HALF_W - GLASS_LEFT - 4           # INDOOR_BENCH_X: 149
+SIDE_COLS = 8
 SIDE_LEFT_COL = (BENCH_X - 16 - 5) // 16 - SIDE_COLS    # 0
-SIDE_RIGHT_COL = (336 + HALF_W + 16 + 15) // 16         # 32
+SIDE_RIGHT_COL = (336 + HALF_W + GLASS_RIGHT + 15) // 16  # 33
 SIDE_FIRST_ROW = CROWD_TOP_ROW + CROWD_ROWS             # 11
 SIDE_ROWS = CROWD_BOTTOM_ROW - SIDE_FIRST_ROW           # 34
 DUGOUTS_Y = [(368, 430), (464, 526)]                    # the outdoor dugouts' (bench_subs.c 389/485)
@@ -115,6 +118,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default=SWIS)
     ap.add_argument("--preview", help="also write the floor as a PNG (in the game's colours)")
+    ap.add_argument("--amiga", action="store_true",
+                    help="the Amiga's map, LINO_A.MAP: the glass at the ends drawn into the floor")
     args = ap.parse_args()
 
     pal = game_palette()
@@ -148,29 +153,6 @@ def main():
     d.rectangle([LEFT, TOP, RIGHT, BOTTOM], outline=line)
     for y in (CY, TOP + PENALTY_SPOT, BOTTOM - PENALTY_SPOT):
         d.rectangle([CX - 1, y - 1, CX, y], fill=line)
-
-    # The glass (phase 5.3; the owner's SWIS hall: wall_transparent.png, sidewall_*.png --
-    # grey, (98, 98, 98) at about 60 % over what is behind it): the strip behind each goal
-    # line from the stand to the court, and along each side from the bench's edge (left)
-    # or the stand (right) to the court, end stand to end stand; a light rim on its outside.
-    # Drawn before the goal, which stands in it.
-    gtop = (CROWD_TOP_ROW + CROWD_ROWS) * 16
-    gbottom = CROWD_BOTTOM_ROW * 16 - 1
-    gleft, gright = BENCH_X + 1, SIDE_RIGHT_COL * 16 - 1
-    def glass(box):
-        x0, y0, x1, y1 = box
-        region = img.crop((x0, y0, x1 + 1, y1 + 1))
-        tint = Image.new("RGB", region.size, (98, 98, 98))
-        img.paste(Image.blend(region, tint, 0.6), (x0, y0))
-    glass((gleft, gtop, gright, TOP - 1))                  # behind the top goal line
-    glass((gleft, BOTTOM + 1, gright, gbottom))            # behind the bottom one
-    glass((gleft, TOP, LEFT - 1, BOTTOM))                  # the left side
-    glass((RIGHT + 1, TOP, gright, BOTTOM))                # the right side
-    rim = grey(56)
-    d.line([gleft, gtop, gright, gtop], fill=rim)
-    d.line([gleft, gbottom, gright, gbottom], fill=rim)
-    d.line([gleft, gtop, gleft, gbottom], fill=rim)
-    d.line([gright, gtop, gright, gbottom], fill=rim)
 
     # The top goal's frame and net, behind the goal line. A stadium paints its goals into
     # the pitch; the goal SPRITES only add what must be drawn over the players -- the
@@ -206,6 +188,33 @@ def main():
         d.point((gx1 - 1, y), fill=c)
         d.point((gx0 + 1, y), fill=grey(50))
         d.point((gx1, y), fill=grey(50))
+
+    # The glass (phase 5.3; the owner's SWIS hall: wall_transparent.png, sidewall_*.png --
+    # grey, (98, 98, 98) at about 60 % over what is behind it), drawn last, over the goal.
+    # Along each side, end stand to end stand, from the bench (left) or the stand (right)
+    # to the court, with a light rim on its outside. The glass at the ends is seen in
+    # perspective -- the top wall hides what is behind it, the top goal, the floor and the
+    # nearest fans, the bottom one the court's last strip and the players there -- which
+    # the PC draws over each frame (indoor.c, Indoor_DrawGlass); the Amiga, which cannot,
+    # has its floor here (--amiga, LINO_A.MAP): the strip behind the top goal line, the
+    # court's last GLASS_BOTTOM rows.
+    gx0, gx1 = BENCH_X + 4, SIDE_RIGHT_COL * 16 - 1
+    gtop = (CROWD_TOP_ROW + CROWD_ROWS) * 16
+    def glass(box):
+        x0, y0, x1, y1 = box
+        region = img.crop((x0, y0, x1 + 1, y1 + 1))
+        tint = Image.new("RGB", region.size, (98, 98, 98))
+        img.paste(Image.blend(region, tint, 0.6), (x0, y0))
+    rim = grey(56)
+    glass((gx0, TOP, LEFT - 1, BOTTOM))             # the left side
+    glass((RIGHT + 1, TOP, gx1, BOTTOM))            # the right side
+    d.line([gx0, TOP, gx0, BOTTOM], fill=rim)
+    d.line([gx1, TOP, gx1, BOTTOM], fill=rim)
+    if args.amiga:
+        glass((gx0, gtop, gx1, TOP - 1))            # behind the top goal line
+        glass((LEFT, BOTTOM - GLASS_BOTTOM, RIGHT, BOTTOM))     # the court's last strip
+        d.line([gx0, gtop, gx1, gtop], fill=rim)
+        d.line([LEFT, BOTTOM - GLASS_BOTTOM, RIGHT, BOTTOM - GLASS_BOTTOM], fill=rim)
 
     cache = {}
     idx = [[0] * WORLD_W for _ in range(WORLD_H)]
@@ -265,11 +274,12 @@ def main():
 
     data = b"".join((n * 256).to_bytes(4, "big") for n in cells)
     data += b"".join(planar(t) for t in tiles)
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    open(OUT, "wb").write(data)
+    out = OUT_AMIGA if args.amiga else OUT
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    open(out, "wb").write(data)
     used = sorted({v for t in tiles[FAN_TILES:] for v in t})
     print("wrote %s: %d bytes, %d tiles (%d unique + %d blanks), palette entries %s"
-          % (os.path.relpath(OUT, REPO), len(data), len(tiles), len(tiles) - FAN_TILES,
+          % (os.path.relpath(out, REPO), len(data), len(tiles), len(tiles) - FAN_TILES,
              FAN_TILES, used))
 
     if args.preview:

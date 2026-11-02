@@ -54,7 +54,8 @@ CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 45
 BOX_HALF_W, BOX_DEPTH = 74, 75
 # The sides of the hall (indoor.h, phase 5.1): the bench's right edge, the side stands.
 GLASS_LEFT, GLASS_RIGHT = 10, 10                  # INDOOR_GLASS_LEFT / _RIGHT
-HOLE_X0, HOLE_X1, HOLE_H = 300, 372, 24           # INDOOR_GLASS_HOLE_*: the goal's
+HOLE_X0, HOLE_X1 = 300, 372                       # INDOOR_GLASS_HOLE_*: the goals'
+HOLE_H_TOP, HOLE_H_BOTTOM = 24, 18
 BENCH_X = 336 - HALF_W - GLASS_LEFT - 4           # INDOOR_BENCH_X: 163
 SIDE_COLS = 8
 SIDE_LEFT_COL = (BENCH_X - 16 - 5) // 16 - SIDE_COLS    # 0
@@ -216,10 +217,11 @@ def main():
     d.line([gx0, TOP, gx0, BOTTOM], fill=rim)
     d.line([gx1, TOP, gx1, BOTTOM], fill=rim)
     if args.amiga:
-        glass((gx0, gtop, gx1, TOP - 1), (HOLE_X0, TOP - HOLE_H, HOLE_X1 + 1, TOP))
-        glass((gx0, BOTTOM - gheight, gx1, BOTTOM), (HOLE_X0, BOTTOM - HOLE_H, HOLE_X1 + 1, BOTTOM + 1))
-        d.line([gx0, gtop, gx1, gtop], fill=rim)
-        d.line([gx0, BOTTOM - gheight, gx1, BOTTOM - gheight], fill=rim)
+        glass((gx0, gtop, gx1, TOP - 1), (HOLE_X0, TOP - HOLE_H_TOP, HOLE_X1 + 1, TOP))
+        glass((gx0, BOTTOM - gheight, gx1, BOTTOM), (HOLE_X0, BOTTOM - HOLE_H_BOTTOM, HOLE_X1 + 1, BOTTOM + 1))
+        d.line([gx0, gtop, gx1, gtop], fill=rim)          # the top wall's top
+        d.line([gx0, BOTTOM, HOLE_X0 - 1, BOTTOM], fill=rim)   # the bottom wall's foot, the
+        d.line([HOLE_X1 + 1, BOTTOM, gx1, BOTTOM], fill=rim)   # goal line (not in the hole)
 
     cache = {}
     idx = [[0] * WORLD_W for _ in range(WORLD_H)]

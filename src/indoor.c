@@ -185,6 +185,7 @@ int16_t Indoor_TakeOutdoorTactic(int16_t slot, TeamTactics *t)
 
 extern Sprite **_team1SpritesTable;
 extern Sprite **_team2SpritesTable;
+extern uint16_t _gameStatePl;
 
 /* Where the parked players stand: beside the left touchline, as far out as a
  * sent-off player walks (SendPlayerAway: -20) and then some, so not even a sprite's
@@ -207,10 +208,14 @@ static void park(Sprite *s)
     s->deltaZ.raw = 0;
 }
 
+static void keeper_rule_disarm(void);
+
 void Indoor_ParkPlayers(void)
 {
     if (!_gIndoor)
         return;
+    if (_gameStatePl != ST_GAME_IN_PROGRESS)
+        keeper_rule_disarm();       /* any stoppage ends it: a goal, a foul, half time */
     for (int16_t i = INDOOR_PLAYERS; i < 11; i++) {
         park(_team1SpritesTable[i]);
         park(_team2SpritesTable[i]);
@@ -394,8 +399,6 @@ static void release_court(void)
     s_courtInstalled = 0;
 }
 
-extern uint16_t _gameStatePl;
-
 static void keep_inside(Sprite *s)
 {
     if (s->x.s.i < INDOOR_LEFT)   { s->x.s.i = INDOOR_LEFT;   s->x.s.frac = 0; }
@@ -412,4 +415,84 @@ void Indoor_KeepPlayersInside(void)
         keep_inside(_team1SpritesTable[i]);
         keep_inside(_team2SpritesTable[i]);
     }
+}
+
+/* ---- The keeper's throw (phase 5.1) ------------------------------------------------ */
+
+extern int16_t  _gameState;
+extern Sprite  *_lastPlayerPlayed;
+extern int16_t  _breakCameraMode;
+extern uint8_t  _playerTurnFlags;
+extern int16_t  _foulXCoordinate, _foulYCoordinate;
+extern int16_t  _cameraDirection;
+extern int16_t  _cameraXVelocity, _cameraYVelocity;
+extern int16_t  _gameNotInProgressCounterWriteOnly;
+extern int16_t  _stoppageTimerTotal, _stoppageTimerActive;
+extern TeamGeneralInfo *_lastTeamPlayedBeforeBreak;
+extern TeamGeneralInfo  _topTeamData;
+extern void StopAllPlayers(void);
+extern void PlayFoulWhistleSample(void);
+
+static Sprite          *s_keeperReleaser;   /* the keeper whose throw is in the air; 0 = none */
+static TeamGeneralInfo *s_keeperTeam;
+static int16_t          s_keeperBallY;      /* the ball's y when last looked at */
+
+static void keeper_rule_disarm(void)
+{
+    s_keeperReleaser = 0;
+}
+
+void Indoor_KeeperReleased(Sprite *player, TeamGeneralInfo *team)
+{
+    if (!_gIndoor || _gameState != ST_KEEPER_HOLDS_BALL || player->playerOrdinal != 1)
+        return;
+    s_keeperReleaser = player;
+    s_keeperTeam = team;
+    s_keeperBallY = player->y.s.i;      /* the ball is in his hands */
+}
+
+/* A free kick to the side that did not break the rule, at (x, y): a foul's stoppage
+ * without a foul -- the tail of TestFoulForPenaltyAndFreeKick (tackle_foul.c), ST_FOUL
+ * (no wall), the camera turned as for a foul by `offender`. */
+static void award_free_kick(TeamGeneralInfo *offender, int16_t x, int16_t y)
+{
+    PlayFoulWhistleSample();
+    _cameraDirection = (offender == &_topTeamData) ? 0 : 4;
+    _gameState = ST_FOUL;
+    _breakCameraMode = -1;
+    _playerTurnFlags = 0xFF;
+    _foulXCoordinate = x;
+    _foulYCoordinate = y;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _lastTeamPlayedBeforeBreak = offender->opponentsTeam;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
+    StopAllPlayers();
+    _cameraXVelocity = 0;
+    _cameraYVelocity = 0;
+}
+
+void Indoor_KeeperRuleCheck(const Sprite *ball)
+{
+    int16_t y;
+
+    if (!_gIndoor || !s_keeperReleaser || _gameStatePl != ST_GAME_IN_PROGRESS)
+        return;
+    if (_lastPlayerPlayed != s_keeperReleaser) {    /* someone else has played it */
+        keeper_rule_disarm();
+        return;
+    }
+    y = ball->y.s.i;
+    if ((s_keeperBallY <= 449) != (y <= 449)) {
+        TeamGeneralInfo *offender = s_keeperTeam;
+        keeper_rule_disarm();
+#ifdef SWOS_SDL_BUILD
+        fprintf(stderr, "[indoor] the keeper's throw crossed the halfway line untouched: "
+                        "free kick at x %d\n", ball->x.s.i);
+#endif
+        award_free_kick(offender, ball->x.s.i, 449);
+        return;
+    }
+    s_keeperBallY = y;
 }

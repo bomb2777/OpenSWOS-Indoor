@@ -21,8 +21,12 @@ The source roles were read off each preset's average position over the 35 ball s
            start-up by InitUserTactics); 5-4-1's 8; 4-2-4's 11
     1-3-1  3-4-3's central defender 3, its midfield 6, 7 and 9, its centre forward 11
 
+Then, ball sector by ball sector, the five are moved apart from their centre by SPREAD
+(phase 5.2: they stood too close together -- taken from eleven, five fill less of the
+court): the shape stays, the gaps grow. Clamped to the grid (x 0-14, y 0-15).
+
 The positions are on the tactics grid, which phase 4 maps onto the indoor area. A
-starting point to tune by playing: edit the ROLES below, rerun, rebuild.
+starting point to tune by playing: edit the ROLES or SPREAD below, rerun, rebuild.
 
 The restart tables give indoor 2-6 the places of outdoor 3, 4, 8, 10 and 11
 (Indoor_RestartOrdinal): 2 and 3 a back pair, 4 the middle, 5 and 6 take the kick-off.
@@ -45,6 +49,8 @@ ROLES = [
     ("3-1-1", [("532", 2), ("532", 3), ("532", 5), ("541", 8), ("424", 11)]),
     ("1-3-1", [("343", 3), ("343", 6), ("343", 7), ("343", 9), ("343", 11)]),
 ]
+
+SPREAD = 1.5
 
 KEEPER = (0x42, 0x06, 0x0000)
 SIDE_PITCH = {
@@ -78,6 +84,20 @@ def role(src):
     return player(*src)
 
 
+def spread(players):
+    """The five players' positions moved apart from their centre, sector by sector."""
+    out = [list(p) for p in players]
+    for sec in range(35):
+        xs = [p[sec] >> 4 for p in players]
+        ys = [p[sec] & 15 for p in players]
+        cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+        for i in range(len(players)):
+            x = min(14, max(0, round(cx + (xs[i] - cx) * SPREAD)))
+            y = min(15, max(0, round(cy + (ys[i] - cy) * SPREAD)))
+            out[i][sec] = (x << 4) | y
+    return out
+
+
 def c_positions(flat):
     rows = [flat[r * 7:(r + 1) * 7] for r in range(5)]
     return "{ { " + ", ".join("{ " + ", ".join("0x%02X" % b for b in row) + " }" for row in rows) + " } }"
@@ -100,7 +120,7 @@ def main():
         lines.append("    {   /* %s */" % name)
         lines.append("        { " + ", ".join("0x%02X" % b for b in nb) + " },")
         lines.append("        {")
-        players = [c_positions(role(s)) for s in srcs] + [empty] * (10 - len(srcs))
+        players = [c_positions(p) for p in spread([role(s) for s in srcs])] + [empty] * (10 - len(srcs))
         lines.append(",\n".join("            " + p for p in players))
         lines.append("        },")
         lines.append("        { " + ", ".join(["0xFF"] * 10) + " },   /* no pairs */")

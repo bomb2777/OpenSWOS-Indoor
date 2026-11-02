@@ -1687,7 +1687,8 @@ static PlayerInfo *getBenchPlayerPointer(uint16_t index, uint16_t *outOrdinal)
  * Main drawing entry for bench/substitutes menu.
  * Called from GameLoop each frame when bench is active.
  * ================================================================ */
-#ifdef SWOS_SDL_BUILD
+/* (Both targets since INDOOR: the Amiga draws the bench during play indoors, where it
+ * is in view -- below.) */
 /* benchXLimit's match value, set by the activation block (SWOS2.s:18776
  * `move.w #27,(benchXLimit)`). Named here because the play-time draw runs
  * before the subs menu has ever set the global. */
@@ -1749,12 +1750,13 @@ static void draw_bench_occupants_only(void)
     _benchTeam = savedTeam;      _benchTeamGame = savedTeamGame;
     _initialSubsState = savedInitial;
 }
-#endif
 
 void __attribute__((used, externally_visible))
 DrawBenchAndSubsMenu(void)
 {
     uint16_t d0, d1, d2;
+
+    Indoor_DrawPenaltyCards();      /* INDOOR: a small red card over a player sitting out */
 
     if (_inSubstitutesMenu != 0)
         goto draw_bench;
@@ -1786,6 +1788,10 @@ DrawBenchAndSubsMenu(void)
         if (bench_occupants_visible()) {
             draw_bench_occupants_only();
         }
+#else
+        /* INDOOR: on the Amiga too -- the bench is beside the court, in view during play. */
+        if (_gIndoor && bench_occupants_visible())
+            draw_bench_occupants_only();
 #endif
         return;
     }

@@ -189,8 +189,10 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      along the sides in the floor, 10 px. At the ends in perspective, both 80 px high
      (`INDOOR_GLASS_HEIGHT`): the top wall greys the floor behind it and the three nearest rows
      of fans, the bottom one the court's last 80 rows and the players in them; each with a clear
-     hole where its goal stands (x 300..372, 24 px at the line: the top goal, a keeper on the
-     bottom line). The
+     hole where its goal stands (x 300..372; 24 px at the top line, the bottom goal frame's 18 px
+     at the bottom one: the top goal, a keeper on the bottom line). The players are in front of
+     the top wall (drawn before the sprites, `Indoor_DrawGlassBehind`) and behind the bottom one
+     (after them, `Indoor_DrawGlassFront`), whose light rim runs along its foot, the goal line. The
      PC draws that over every frame after the sprites (`Indoor_DrawGlass`: a colour table from
      the palette on screen, rebuilt when it changes); the Amiga cannot afford it a frame and
      loads `LINO_A.MAP` (`make_indoor_hall.py --amiga`), the floor of both ends greyed, the

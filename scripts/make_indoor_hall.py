@@ -32,7 +32,8 @@ the game fills them at load from the player's own pitch (pitch.c, indoorTakeCrow
 original art is in this file. The stands are three rows behind each goal (indoor.h
 INDOOR_CROWD_*), laid out as a stadium's (map rows 1-3 / 51-53), and row 0 lists the crowd
 tiles as every pitch's does -- the kit recolouring reads it (FixupAndColorPitchFile); the
-camera never shows it.
+camera never shows it. Side stands run between the end stands, and the bench's dugouts
+stand beside the court on the left (phase 5.1; indoor.h INDOOR_SIDE_*, INDOOR_BENCH_X).
 """
 import argparse
 import os
@@ -49,6 +50,14 @@ HALF_W, HALF_L = 138, 209
 CROWD_TOP_ROW = (449 - HALF_L) // 16 - 5        # INDOOR_CROWD_TOP_ROW: 10
 CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 43
 BOX_HALF_W, BOX_DEPTH = 64, 65
+# The sides of the hall (indoor.h, phase 5.1): the bench's right edge, the side stands.
+BENCH_X = 336 - HALF_W - 24                       # INDOOR_BENCH_X: 174
+SIDE_COLS = 2
+SIDE_LEFT_COL = (BENCH_X - 16 - 14) // 16 - SIDE_COLS   # 7
+SIDE_RIGHT_COL = (336 + HALF_W + 16 + 15) // 16         # 31
+SIDE_FIRST_ROW = CROWD_TOP_ROW + 3                      # 13
+SIDE_ROWS = CROWD_BOTTOM_ROW - SIDE_FIRST_ROW           # 30
+DUGOUTS_Y = [(368, 430), (464, 526)]                    # the outdoor dugouts' (bench_subs.c 389/485)
 PENALTY_SPOT = 62
 CX, CY = 336, 449
 LEFT, RIGHT, TOP, BOTTOM = CX - HALF_W, CX + HALF_W, CY - HALF_L, CY + HALF_L
@@ -117,6 +126,7 @@ def main():
     circle = src.getpixel((650, 1000))      # inside the centre circle
     line = (255, 255, 255)
     court_shadow = (17, 17, 136)             # the net's inside at the line: a dark floor blue
+    floor_shadow = (119, 85, 51)             # a shadow on the parquet
     # The parquet: a patch from the hall's margin, scaled like the court, repeated.
     patch_src = src.crop((10, 10, 10 + round(32 / SCALE), 10 + round(32 / SCALE)))
     patch = patch_src.resize((32, 32), Image.LANCZOS)
@@ -154,6 +164,17 @@ def main():
         if i % 2 == 0 and i < len(shades):   # its mesh
             for x in range(gx0 + 2 + (i // 2) % 2, gx1 - 1, 2):
                 d.point((x, y), fill=grey(55))
+    # The bench's two dugouts, beside the court on the left (our drawing, the goal
+    # greys): a roof, its rim, and the seats under it, a shadow towards the court.
+    for (y0, y1) in DUGOUTS_Y:
+        x0, x1 = BENCH_X - 16, BENCH_X - 1
+        d.rectangle([x0 + 2, y0 + 3, x1 + 3, y1 + 3], fill=floor_shadow)
+        d.rectangle([x0, y0, x1, y1], fill=grey(54), outline=grey(58))
+        d.line([x0 + 2, y0 + 1, x0 + 2, y1 - 12], fill=grey(59))
+        d.rectangle([x0, y1 - 10, x1, y1], fill=grey(51), outline=grey(50))
+        for x in range(x0 + 3, x1, 4):
+            d.line([x, y1 - 9, x, y1 - 1], fill=grey(50))
+
     for i in range(18):                      # the posts, white in the light
         y = TOP - 17 + i
         c = grey([59, 58, 57, 56, 55][min(i // 4, 4)])
@@ -191,6 +212,18 @@ def main():
         put(CROWD_TOP_ROW + i, row)
     for i, row in enumerate(BOTTOM_STAND):
         put(CROWD_BOTTOM_ROW + i, row)
+    # The side stands: the top team's fans on the left (1/3), the bottom team's on the
+    # right (17/19) -- the end stands' plain rows; their other rows have a step or the
+    # boards' edge drawn in, which in a column comes out as stripes. A stair every ten
+    # rows (9, 25).
+    for i in range(SIDE_ROWS):
+        r = SIDE_FIRST_ROW + i
+        aisle = i % 10 == 5
+        left = [9, 9] if aisle else [(1, 3)[i % 2], (3, 1)[i % 2]]
+        right = [25, 25] if aisle else [(17, 19)[i % 2], (19, 17)[i % 2]]
+        for k in range(SIDE_COLS):
+            cells[r * COLS + SIDE_LEFT_COL + k] = left[k]
+            cells[r * COLS + SIDE_RIGHT_COL + k] = right[k]
 
     def planar(t):
         out = bytearray()

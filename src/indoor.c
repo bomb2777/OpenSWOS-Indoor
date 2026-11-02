@@ -794,13 +794,15 @@ static void glass_table(void)
     s_glassRim = (uint8_t)nearest_colour(rgb, 187, 187, 187);
 }
 
-/* World rectangle x0..x1, y0..y1 through the glass, its top row the rim. */
-static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
+/* World rectangle x0..x1, y0..y1 through the glass, its top row the rim -- but for the
+ * goal's hole, rows h0..h1 of x INDOOR_GLASS_HOLE_X0..X1, seen through clear. */
+static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0, int16_t h1)
 {
     int16_t camX = Render_CameraX(), camY = Render_CameraY();
     uint8_t *fb = (uint8_t *)_frontbufferBasePtr;
     for (int16_t y = y0; y <= y1; y++) {
         int16_t sy = (int16_t)(y - camY);
+        int16_t inHole = (int16_t)(y >= h0 && y <= h1);
         uint8_t *row;
         if (sy < 0 || sy >= _screen_height)
             continue;
@@ -808,6 +810,8 @@ static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
         for (int16_t x = x0; x <= x1; x++) {
             int16_t sx = (int16_t)(x - camX);
             if (sx < 0 || sx >= _screen_width)
+                continue;
+            if (inHole && x >= INDOOR_GLASS_HOLE_X0 && x <= INDOOR_GLASS_HOLE_X1)
                 continue;
             row[sx] = y == y0 ? s_glassRim : s_glassLut[row[sx]];
         }
@@ -820,9 +824,11 @@ void Indoor_DrawGlass(void)
         return;
     glass_table();
     /* The top wall: from the three nearest rows of fans down to the goal line. */
-    glass_band(INDOOR_GLASS_X0, INDOOR_GLASS_TOP_Y0, INDOOR_GLASS_X1, INDOOR_TOP - 1);
-    /* The bottom wall: the court's last rows, up from the goal line. */
-    glass_band(INDOOR_LEFT, (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_BOTTOM_H), INDOOR_RIGHT, INDOOR_BOTTOM);
+    glass_band(INDOOR_GLASS_X0, INDOOR_GLASS_TOP_Y0, INDOOR_GLASS_X1, INDOOR_TOP - 1,
+               (int16_t)(INDOOR_TOP - INDOOR_GLASS_HOLE_H), INDOOR_TOP - 1);
+    /* The bottom wall: as high, up from the goal line over the court. */
+    glass_band(INDOOR_GLASS_X0, (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_HEIGHT), INDOOR_GLASS_X1, INDOOR_BOTTOM,
+               (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_HOLE_H), INDOOR_BOTTOM);
 }
 #else
 void Indoor_DrawGlass(void)

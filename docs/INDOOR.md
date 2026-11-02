@@ -1,14 +1,15 @@
-# INDOOR.md — five a side in a hall
+# INDOOR.md — six a side in a hall
 
-> **Status (2026-11-01): in progress — phase 1 of 6 done (the switch), phase 2 (five a side), phase 3 (tactics), phase 4 (court and walls), phase 5 (the hall: floor, goal, crowd).** This fork's own
+> **Status (2026-11-02): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), and phase 5.1 (six a side, the indoor rules, the hall's sides); phase 6 (online) open.** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
 
-A **friendly** can be played indoors: five a side (a keeper and four), on a small pitch
+A **friendly** can be played indoors: six a side (a keeper and five), on a small pitch
 with glass walls all round, so the ball never goes out of play — the only stoppages are a
-goal, a foul (free kick, penalty) and half time. Squads, the database, the controls and
-every other screen are unchanged.
+goal, a foul (free kick, penalty), the keeper's throw over the halfway line and half time.
+The match is 2 × 20 minutes; a red card is a 5-minute time penalty; a free-kick wall is two
+players. Squads, the database, the controls and every other screen are unchanged.
 
 The **floor** of the hall decides how the ball plays, as a SWOS pitch type:
 
@@ -131,6 +132,40 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    `PITCHn.BLK` with DOS graphics), before it loads the hall: no original art is in the file. The
    fan animation (`animated_patterns.c`) and the camera follow the rows (`INDOOR_OR`: the outdoor
    number outdoors). The sides of the court stay floor: the animation only works in rows.
+5.1. **Six a side and the indoor rules** (the owner's list, 2026-11-02) — done, six commits:
+   1. **Six a side on 276 × 418.** `INDOOR_PLAYERS 6` (parked slots 6–10, a bench of 10 in slots
+      6–15), the court x 198..474, y 240..658, everything in it scaled (box 128 × 65, spot 62,
+      free-kick distance 52 / step 57). Five tactics **2-2-1, 2-1-2, 1-2-2, 3-1-1, 1-3-1**
+      (`scripts/make_indoor_tactics.py`: roles from 4-4-2, 4-2-4, 5-4-1, 5-3-2, 3-4-3); restart
+      roles 3, 4, 8, 10, 11 (ordinals 2–3 back, 4 middle, 5–6 take the kick-off).
+   2. **Clock 2 × 20** in the real time the GAME LENGTH option gives 2 × 45: `UpdateTime`'s step
+      ×4 and reload ×9 indoors, half time at 20, full time at 40 (a friendly has no extra time).
+   3. **The keeper's throw.** A ball released from the keeper's hands (`ST_KEEPER_HOLDS_BALL`,
+      the throw/pass or kick block of `UpdatePlayers` → `Indoor_KeeperReleased`) that crosses
+      the halfway line before another player of either side touched it (`_lastPlayerPlayed`;
+      checked in `UpdateBall`, `Indoor_KeeperRuleCheck`) gives the other side a free kick on the
+      halfway line where it crossed: the foul's stoppage without a foul, `ST_FOUL`, no wall. Any
+      touch or stoppage disarms it. A ball off a body that is not a kick, header or control
+      counts as untouched (the game does not record it). The computer's keeper passes out of
+      his hands indoors (`INDOOR_KEEPER_PASSES`, `ai.c`): one rule free kick a CPU match, not 20.
+   4. **Red card = time penalty.** `SendPlayerAway` → `Indoor_TimePenalty`: the player walks to the
+      bench and sits out 5 minutes of the indoor clock (his side one short), then comes back on,
+      booked (`cards` 1: a further yellow is another red); up to four at once. A player on his way
+      off is no longer held inside the walls. **`SWOS_INDOOR_TEST_RED=1`** makes every indoor
+      foul a red card, the computer's players included (the original sends off only a side with
+      a human controller), so a CPU match shows it: `[indoor] time penalty` lines in `SWOS.log`.
+   5. **A wall of two:** the back pair (ordinals 2–3) in the middle two of the outdoor wall's four
+      places, re-centred when one is off, at the indoor distance (offsets × 52/65).
+   6. **The hall's sides.** A two-column stand along each side between the end stands (the top
+      team's fans 1/3 on the left, the bottom team's 17/19 on the right, a stair every ten rows),
+      animated (every other fan pick is a side cell on screen); the bench's two dugouts (our own
+      drawing) beside the court on the left, in front of the left stand, right edge
+      `INDOOR_BENCH_X` 174. The bench's world positions and the camera's bench views are the
+      outdoor ones moved by `INDOOR_BENCH_SHIFT` (147). The camera follows the ball across as
+      outdoors, clamped to the hall stand to stand (`INDOOR_HALL_LEFT/RIGHT` 112..528). **Laid out
+      for the 4:3 view and the Amiga only — no widescreen (the owner)**: the court alone is 276 px,
+      so the view pans and the bench is seen while play is on the left.
+   Open: the pre-match "team v team" screen still lists 11 + 5; tuning by play.
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 
@@ -153,3 +188,6 @@ Before each commit:
   `netplay_test.sh`, `check_netplay_compat.sh`) need the maintainer's recordings in
   `tests/dos`, which are not in git: where they exist, they must pass unchanged too.
 - **On:** a friendly with INDOOR (screen or `SWOS_INDOOR=1`); `SWOS.log`'s `[indoor]` line.
+  Headless test runs must ignore the desk's gamepads (`SDL_JOYSTICK_IGNORE_DEVICES` /
+  `SDL_GAMECONTROLLER_IGNORE_DEVICES` = their VID/PID): one rests at up-left and moves every
+  menu cursor.

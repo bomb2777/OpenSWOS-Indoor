@@ -111,6 +111,14 @@ void Indoor_TacticsButtons(struct MenuEntry *first);
  * Nothing outdoors. */
 void Indoor_StadiumRows(struct MenuEntry *first);
 
+/* The line-up screen's little pitch (sprite 225, used by nothing else) is a blue court
+ * indoors: its grass (menu colour 14) swapped with blue (11) -- a swap, so swapping again
+ * gives the green back exactly. SetPlayerSurnamesOnSidePitch calls it before every draw;
+ * ProcessImageCommandStream, extracting the menu sprites afresh, calls
+ * Indoor_MenuSpritesReloaded. */
+void Indoor_SidePitchColours(void);
+void Indoor_MenuSpritesReloaded(void);
+
 /* How many tactics a team can choose from: 18 outdoors, INDOOR_TACTICS indoors. */
 int16_t Indoor_TacticsCount(void);
 
@@ -184,29 +192,29 @@ int16_t Indoor_GoalY(int16_t y);
  * is in the file. Map row 0 lists them as a pitch does, for the kit colours.
  * The fan animation (animated_patterns.c) and the camera (move_camera.c) follow the rows.
  * Kept in step with scripts/make_indoor_hall.py. */
-#define INDOOR_CROWD_TOP_ROW     (INDOOR_TOP / 16 - 5)          /* 8: y 128..175 */
-#define INDOOR_CROWD_BOTTOM_ROW  ((INDOOR_BOTTOM + 16) / 16 + 1) /* 45: y 720..767 */
-#define INDOOR_CROWD_ROWS        3
+#define INDOOR_CROWD_ROWS        5      /* 3 until phase 5.3; the fans animate in the 3 nearest */
+#define INDOOR_CROWD_TOP_ROW     (INDOOR_TOP / 16 - 2 - INDOOR_CROWD_ROWS) /* 6: y 96..175 */
+#define INDOOR_CROWD_BOTTOM_ROW  ((INDOOR_BOTTOM + 16) / 16 + 1) /* 45: y 720..799 */
 #define INDOOR_CROWD_TILES       26     /* tiles 1..26 of a pitch bank */
 
 /* The camera's reach along the hall: the top stand's first row to the bottom one's last. */
 #define INDOOR_VIEW_TOP     (INDOOR_CROWD_TOP_ROW * 16)
 #define INDOOR_VIEW_BOTTOM  ((INDOOR_CROWD_BOTTOM_ROW + INDOOR_CROWD_ROWS) * 16)
 
-/* ---- The sides of the hall (phase 5.1; the stands three times as wide since 5.2) -----
- * Across, left to right: the left stand (6 columns, the top team's crowd tiles), floor,
+/* ---- The sides of the hall (phase 5.1; the stands wider in 5.2 and 5.3) --------------
+ * Across, left to right: the left stand (9 columns, the top team's crowd tiles), floor,
  * the bench's dugouts (drawn in LINO.MAP at the outdoor ones' y, their right edge at
  * INDOOR_BENCH_X), floor, the court, floor, the right stand (the bottom team's tiles).
  * The side stands run between the end stands; the fan animation picks cells in them too.
  * The camera follows the ball across as outdoors, clamped to INDOOR_HALL_LEFT..RIGHT:
  * laid out for the 4:3 view (336) and the Amiga's (320) -- no widescreen (the owner) --
  * so the view pans, and the bench is seen while play is on the left. */
-#define INDOOR_BENCH_X           (INDOOR_LEFT - 24)  /* the bench (its sprites), 153 */
-#define INDOOR_SIDE_COLS         6
-#define INDOOR_SIDE_LEFT_COL     ((INDOOR_BENCH_X - 16 - 14) / 16 - INDOOR_SIDE_COLS)  /* 1: x 16..111 */
-#define INDOOR_SIDE_RIGHT_COL    ((INDOOR_RIGHT + 16 + 15) / 16)                        /* 32: x 512..607 */
+#define INDOOR_BENCH_X           (INDOOR_LEFT - 12)  /* the bench (its sprites), 165 */
+#define INDOOR_SIDE_COLS         9      /* 6 in phase 5.2, 2 in 5.1 */
+#define INDOOR_SIDE_LEFT_COL     ((INDOOR_BENCH_X - 16 - 5) / 16 - INDOOR_SIDE_COLS)   /* 0: x 0..143 */
+#define INDOOR_SIDE_RIGHT_COL    ((INDOOR_RIGHT + 16 + 15) / 16)                        /* 32: x 512..655 */
 #define INDOOR_SIDE_FIRST_ROW    (INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS)             /* 11 */
-#define INDOOR_SIDE_ROWS         (INDOOR_CROWD_BOTTOM_ROW - INDOOR_SIDE_FIRST_ROW)      /* 34: to row 44 */
+#define INDOOR_SIDE_ROWS         (INDOOR_CROWD_BOTTOM_ROW - INDOOR_SIDE_FIRST_ROW)      /* 34: rows 11..44 */
 #define INDOOR_HALL_LEFT         (INDOOR_SIDE_LEFT_COL * 16)
 #define INDOOR_HALL_RIGHT        ((INDOOR_SIDE_RIGHT_COL + INDOOR_SIDE_COLS) * 16)
 /* The bench's world positions are the outdoor ones (_benchXLimit 27, the subs menu at
@@ -216,17 +224,18 @@ int16_t Indoor_GoalY(int16_t y);
 /* A number of the crowd code outdoors, its indoor counterpart indoors. */
 #define INDOOR_OR(outdoor, indoor)  (_gIndoor ? (indoor) : (outdoor))
 
-/* Every frame, after the players have moved, while the ball is in play: the players on
- * the court kept inside its walls (the parked ones stay parked). Indoor_BeginMatch has
+/* Every frame, after the players have moved, in play and at stoppages (not while the
+ * teams walk on or off, nor during a substitution): the players on the court kept inside
+ * its walls (the parked and the sent-off left alone). Indoor_BeginMatch has
  * already mapped the tactics grid's coordinate tables and the ball's sector limits onto
  * the court and moved the goal sprites to its ends (Indoor_EndMatch gives them back). */
 void Indoor_KeepPlayersInside(void);
 
-/* The ball on the hall's floor (phase 5.2): its ground friction times NUM/DEN -- 2/3, so
- * 15 a frame on the HARD floor becomes 10 and the ball rolls further. In the air as
- * outdoors. UpdateBall. */
-#define INDOOR_BALL_FRICTION_NUM 2
-#define INDOOR_BALL_FRICTION_DEN 3
+/* The ball on the hall's floor (phase 5.2, 5.3): its ground friction times NUM/DEN -- 4/5,
+ * so 15 a frame on the HARD floor becomes 12 and the ball rolls further than outdoors (2/3
+ * was too far, the owner). In the air as outdoors. UpdateBall. */
+#define INDOOR_BALL_FRICTION_NUM 4
+#define INDOOR_BALL_FRICTION_DEN 5
 
 /* UpdateBall, instead of the outdoor "out of play": the ball off a wall, unless it is
  * going into a goal (in the mouth, under the bar), which is left to the goal code.

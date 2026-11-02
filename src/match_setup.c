@@ -8,6 +8,7 @@
 #include "jag_graphics.h"
 #include "dos_gameplay.h"   /* ApplyGameStyle — the pitch factors below latch its tables */
 #include "game_types.h"
+#include "indoor.h"          /* INDOOR: the walk-on at the court's edge */
 #include "display.h"        /* single source of `#define AGA` — without it the #ifdef AGA
                              * pitch-palette block below is silently compiled out (ran the
                              * OCS 16-colour path on AGA). See docs/AGA.md §9a. */
@@ -386,6 +387,10 @@ void InitPlayersBeforeEnteringPitch(void)
             Sprite *sprite = *spritesTableA++;
             sprite->x.s.i  = *coords++ + 591;
             sprite->y.s.i  = *coords++ + 449;
+            /* INDOOR: not out of the tunnel through the stand -- they appear at the court's
+             * edge, the queue (100..300 px past the touchline outdoors) squeezed inside it. */
+            if (_gIndoor)
+                sprite->x.s.i = (int16_t)(INDOOR_RIGHT - 10 - (0x12C - (sprite->x.s.i - 591)) / 8);
 
             /* Add random jitter 0..7 to X */
             uint8_t r = Rand();
@@ -632,6 +637,8 @@ void GameOver(void)
     if (!_gDosGameplay && _trainingGame == 0) {
         viewY = 16;
     }
+    if (_gIndoor)
+        viewY = INDOOR_VIEW_TOP;    /* INDOOR: the hall's top end, not the stadium's */
     ReplayUpdateCameraAndSwapBuffers(viewX, viewY);
     UpdatePlanePtrsAndBlitParams();
 

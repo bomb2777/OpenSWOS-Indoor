@@ -633,6 +633,9 @@ has_picture:
         }
         if (ball->z.s.i != 0) {
             friction = _kBallAirConstant;
+        } else if (_gIndoor) {
+            /* INDOOR: the ball rolls further on the hall's floor (indoor.h) */
+            friction = (int16_t)(friction * INDOOR_BALL_FRICTION_NUM / INDOOR_BALL_FRICTION_DEN);
         }
         int16_t spd = ball->speed - friction;
         if (spd < 0) spd = 0;
@@ -726,6 +729,11 @@ has_picture:
 
     /* ---- Out-of-play boundary checks when game not in progress ---- */
     if (_gameStatePl != ST_GAME_IN_PROGRESS) {
+        /* INDOOR: after the whistle too the ball comes off the glass (not into a goal's
+         * mouth: the net below catches it). The fence below is then never reached. */
+        if (_gIndoor)
+            (void)Indoor_BallAtWall(ball, savedX, savedY);
+
         /* X boundary */
         int16_t bx = ball->x.s.i;
         if (bx < INDOOR_X(53) || bx > INDOOR_X(618)) {     /* INDOOR: the hall's */

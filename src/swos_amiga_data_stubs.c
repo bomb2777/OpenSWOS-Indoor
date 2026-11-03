@@ -1610,11 +1610,12 @@ SWOS_CHIP_BSS IntroChipRam g_introChipRam;
  * (accented capitals incl. Spanish Á Ú Ñ + ¿ ¡ and French Œ Ÿ, full ASCII, $),
  * which the DOS sprite build never touches, so the glyphs survive in DOS-graphics
  * mode as well as Amiga. Then 1310..1480, the shirt numbers: a match's 17..99, the menus' 12..99 (shirt_numbers.c);
- * 1481..1683 face 3's two sets and its menu icon (player_face3.c). */
+ * 1481..1683 face 3's two sets and its menu icon (player_face3.c); 1684..1691 INDOOR's
+ * marker on the glass and the woodwork (indoor.c, INDOOR_MARK_SPRITE_FIRST). */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-SWOS_CHIP_BSS char _spriteGraphics[1684 * 4];          /* 1684 ptrs × 4 B (32-bit) */
+SWOS_CHIP_BSS char _spriteGraphics[1692 * 4];          /* 1692 ptrs × 4 B (32-bit) */
 #else
-SWOS_CHIP_BSS char _spriteGraphics[1684 * 8];          /* 1684 ptrs × 8 B */
+SWOS_CHIP_BSS char _spriteGraphics[1692 * 8];          /* 1692 ptrs × 8 B */
 #endif
 /* spriteGraphicsPtr: real data in swos_amiga_data_imports.c */
 /* squadChangesAllowed: real data in swos_amiga_data_imports.c */

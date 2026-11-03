@@ -9,6 +9,7 @@
 #ifdef SWOS_SDL_BUILD
 #include "display.h"   /* WIDE_MARGIN — the second corner flag is widescreen-only */
 #endif
+#include "indoor.h"    /* INDOOR: the corner flag is the glass marker */
 
 /* Sprite image indices */
 #define SPR_ADVERT_1_PART_1     113
@@ -335,6 +336,11 @@ void UpdateCornerFlagSprite(void)
 {
     int16_t d0;
     Sprite *spr = &_cornerFlagSprite;
+
+    if (_gIndoor) {                     /* INDOOR: no corner flags; the glass's marker */
+        Indoor_UpdateMarker();
+        return;
+    }
 
     /* X position: if cameraX.s.i + 168 >= 336, hide far right; else show at x=81.
      * A world sprite in the draw list, so measured from the simulation draw view

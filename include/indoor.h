@@ -68,6 +68,11 @@ void Indoor_ParkPlayers(void);
  * 6 the forwards' (so the kick-off has its two at the centre circle). Outdoors, the
  * ordinal itself. */
 int16_t Indoor_RestartOrdinal(int16_t ordinal);
+/* The two-man wall (phase 5.4): where wall player `slot` (0 or 1, of `inWall` standing) goes
+ * for a free kick from (ballX, ballY) at the goal on row goalY -- on the line from the ball
+ * to the goal's middle, just past the free-kick distance, the two side by side across it. */
+void Indoor_WallSpot(int16_t ballX, int16_t ballY, int16_t goalY, int16_t slot, int16_t inWall,
+                     int16_t *x, int16_t *y);
 
 /* Whether the player in this slot of a side (0 = the keeper .. 10) is parked: never
  * offered for substitution. Always 0 outdoors. */

@@ -726,6 +726,10 @@ void SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint1
     uint8_t *a1 = _currentHilPtr;
 
     if (spriteIndexOrMarker >= 0) {
+        /* (INDOOR, this fork's: its marker's slots on SDL are past the 11 bits a .HIL keeps --
+         *  left out of the in-match replay rather than drawn as another sprite) */
+        if (_gIndoor && spriteIndexOrMarker >= 0x800)
+            return;
         /* Pack sprite data: (index << 20) | (x << 10) | y, with bit 31 clear.
          * Stored big-endian so the high byte (which holds bit 31, the
          * frame-marker discriminator vs sprite-data) lands at offset 0

@@ -20,6 +20,7 @@
 #include "game_types.h"     /* TEAM_FILE_BUFFER_SIZE */
 #include "player_looks.h"  /* SPRITE_TABLE_SLOTS */
 #include "long_bench.h"    /* LB_ARROW_SPRITE: the long bench's sprites after the looks' */
+#include "indoor.h"         /* INDOOR_SPRITE_TABLE_END: this fork's marker slots, last */
 
 /* AI_maxStoppageTime: real data in swos_amiga_data_imports.c */
 /* LoaderBootstrapBlobPI: real data in swos_data_bulk_imports.c */
@@ -1616,11 +1617,12 @@ SWOS_CHIP_BSS IntroChipRam g_introChipRam;
  * clock with its "+N" (stoppage.c); 1305..1309 are free. SDL: then the players' looks, a match's
  * twelve sets, their face icons and the line-up's little players (player_looks.h), then a long
  * bench's names of places 17.. and the front row's mirrored arrow (long_bench.h: LB_NAME_SPRITE_BASE
- * follows the looks' slots -- the two branches had both taken 1684..). */
+ * follows the looks' slots -- the two branches had both taken 1684..). Last, INDOOR's marker on
+ * the glass and the woodwork (indoor.h INDOOR_MARK_SPRITE_FIRST: this fork's). */
 #ifdef SWOS_SDL_BUILD
-SWOS_CHIP_BSS char _spriteGraphics[(LB_ARROW_SPRITE + 1) * sizeof(void *)];
+SWOS_CHIP_BSS char _spriteGraphics[INDOOR_SPRITE_TABLE_END * sizeof(void *)];
 #else
-SWOS_CHIP_BSS char _spriteGraphics[SPRITE_TABLE_SLOTS * sizeof(void *)];
+SWOS_CHIP_BSS char _spriteGraphics[INDOOR_SPRITE_TABLE_END * sizeof(void *)];
 #endif
 /* spriteGraphicsPtr: real data in swos_amiga_data_imports.c */
 /* squadChangesAllowed: real data in swos_amiga_data_imports.c */

@@ -33,6 +33,7 @@
 #include "image_cmd.h"      /* ProcessImageCommandStream */
 #include "platform_sdl.h"   /* Platform_NearestColour: the prediction overlay */
 #include "dos_mode.h"       /* _gDosView: the view a recording was played in */
+#include "indoor.h"         /* Indoor_DrawGlassBehind */
 #ifdef SWOS_NETPLAY
 #include "netplay_ghost.h"  /* Ghost_Prediction: this player's PRED and SEEN */
 #include "match_prediction.h"   /* the other player's, over the lobby's link */
@@ -629,10 +630,13 @@ static uint8_t *build_meta(void)
     BE_WRITE_U16(q, (uint16_t)_screen_width);                     q += 2;
     /* 8 the DOS view (320x200), 16 "the view is recorded" -- a recording made before the
      * view was kept says neither, and the player works it out (recorded_view); 32 the
-     * XBOX gameplay style (1 is DOS's; neither, the Amiga's). */
+     * XBOX gameplay style (1 is DOS's; neither, the Amiga's); 64 INDOOR (this fork's,
+     * docs/INDOOR.md: played in the hall, its floor in the word after
+     * gameMaxSubstitutes). */
     BE_WRITE_U16(q, (uint16_t)((_gDosGameplay ? 1 : 0) | (_gDosGraphics ? 2 : 0) |
                                (_gArcadeMode ? 4 : 0) | (_gDosView ? 8 : 0) | 16 |
-                               (_gGameplayStyle == GAMEPLAY_XBOX ? 32 : 0)));   q += 2;
+                               (_gGameplayStyle == GAMEPLAY_XBOX ? 32 : 0) |
+                               (_gIndoor ? 64 : 0)));   q += 2;
     /* The height the match was SIMULATED in (display.h _sim_view_height): 200 in the DOS
      * view, 272 in the Amiga's, whatever the picture. Playback maps the recorded camera
      * onto its own picture from it, exactly as the live match did (camera.c
@@ -643,7 +647,7 @@ static uint8_t *build_meta(void)
     q += 4;     /* the final score, patched in at the end of the match */
     BE_WRITE_U16(q, _pitchNumberAndType);                         q += 2;
     BE_WRITE_U16(q, _gameMaxSubstitutes);                         q += 2;
-    BE_WRITE_U16(q, 0);                                           q += 2;
+    BE_WRITE_U16(q, (uint16_t)(_gIndoor ? _gIndoorFloor : 0));    q += 2;     /* INDOOR: the floor */
     memcpy(q, _gameName, 40);                                     q += 40;
     memcpy(q, _gameRound, 40);                                    q += 40;
     put_team(q, &_topTeamInGame);                                 q += TEAM_BYTES;
@@ -1096,6 +1100,7 @@ static struct {
     uint32_t    seenLen;
     uint32_t   *seenAt;         /* frameCount + 1: where frame f's records start in `seen` */
     int32_t     dosView;        /* the view it was played in: 1 DOS, 0 Amiga, -1 not known */
+    int16_t     indoorFloor;    /* INDOOR: played in the hall on this floor (META 64), else INDOOR_OFF */
     char        names[2][64];   /* PLYR: who played, "" when the file does not say */
     uint16_t    simHeight;      /* META: the view height it was simulated in, 0 not known */
     char        file[256];      /* the file it was loaded from (ReplayV2_SaveCopy) */
@@ -1401,8 +1406,26 @@ void ReplayV2_UseRecordedView(void)
     fprintf(stderr, "[replay] shown in the %s view it was played in\n", _gDosView ? "DOS" : "Amiga");
 }
 
+/* INDOOR: a recording of a match in the hall is shown in the hall -- before the viewer
+ * loads its pitch (ViewHighLightsMain), and only for the viewing (ReplayV2_RestoreView). */
+static int16_t s_setIndoor;
+
+void ReplayV2_UseRecordedIndoor(void)
+{
+    if (!s_play.loaded || s_play.indoorFloor == INDOOR_OFF || _gIndoor)
+        return;
+    _gIndoor = 1;
+    _gIndoorFloor = s_play.indoorFloor;
+    s_setIndoor = 1;
+    fprintf(stderr, "[replay] played indoors: shown in the hall\n");
+}
+
 void ReplayV2_RestoreView(void)
 {
+    if (s_setIndoor) {
+        _gIndoor = 0;
+        s_setIndoor = 0;
+    }
     /* Only if it is still ours: leaving the DOS view has already reset it otherwise. */
     if (s_ownSimHeight >= 0) {
         if (_sim_view_height == s_setSimHeight)
@@ -1574,6 +1597,7 @@ int32_t ReplayV2_Load(const uint8_t *name)
         load_prediction(file, fileLen);
         s_play.dosView = recorded_view(meta, file, fileLen);
         s_play.simHeight = BE_READ_U16(meta + 6);
+        s_play.indoorFloor = (BE_READ_U16(meta + 4) & 64) ? (int16_t)BE_READ_U16(meta + 52) : INDOOR_OFF;
     }
 
     if (why) {
@@ -2022,6 +2046,7 @@ void ReplayV2_DrawFrame(void)
     DrawAnimatedPatterns();
     ModHooks_ReplayFrameBegin(modFirst, fresh);     /* (under the sprites: the weather mod's mud) */
     s_modLastCursor = s_play.cursor;
+    Indoor_DrawGlassBehind();       /* INDOOR: the top wall (the bottom one: DrawReplayFrame) */
 
     origin = Render_CameraX();
     camY = Render_CameraY();

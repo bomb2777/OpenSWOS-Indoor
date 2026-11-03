@@ -250,6 +250,15 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      each line's players go onto its places by side: places and players (RB/RW right, LB/LW
      left, the rest the middle) both in side order, paired off. A `[indoor] <team> line-up`
      line in `SWOS.log` names the six.
+   - **Replays show the glass** (the owner, 2026-11-03): a replay during the match
+     (`DrawReplayFrame`, both its `.HIL` ring and a `.SRP`) lays the top wall after the crowd
+     and, on the PC, the bottom one after the sprites; the Amiga's walls are in its map, and it
+     greys each recorded sprite's box in the bottom wall (`Indoor_GlassReplaySprite`). A saved
+     `.SRP` says it was played indoors -- META flag 64, its floor in the word after
+     `gameMaxSubstitutes` (docs/REPLAY_FORMAT_V2.md) -- and the viewer (LOAD/VIEW, the
+     recordings player) shows it in the hall (`ReplayV2_UseRecordedIndoor`, before the pitch
+     is loaded; undone in `ReplayV2_RestoreView`). A `.HIL` saved from an indoor match does
+     not say so: it plays on the outdoor pitch. The bench figures are not in a recording.
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 

@@ -193,10 +193,15 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      at the bottom one: the top goal, a keeper on the bottom line). The players are in front of
      the top wall (drawn before the sprites, `Indoor_DrawGlassBehind`) and behind the bottom one
      (after them, `Indoor_DrawGlassFront`), whose light rim runs along its foot, the goal line.
-     The PC greys through a colour table from the palette on screen (rebuilt when it changes);
-     the Amiga lays a checkerboard of grey (0x555) by the blitter, plane by plane (minterm 0xCA),
-     into both copies of a row of its 2x-tall frontbuffer -- a full wall in view costs it roughly
-     10-15 ms a frame by estimate, not yet measured.
+     The PC greys through a colour table from the palette on screen (rebuilt when it changes).
+     The Amiga cannot lay a wall a frame (the blitter doing it was more than a frame's chip bus:
+     the owner's A1200 crawled with a wall in view), so its map, `LINO_A.MAP`
+     (`make_indoor_hall.py --amiga`), has the glass baked in as a checkerboard of grey (0x555,
+     (x + y) even) -- the owner likes the retro look -- the three rows of fans behind the top
+     wall are tiles 27-52, greyed copies of the crowd made once at load
+     (`Indoor_GlassCrowdTiles`; those fans do not move), and a frame lays the checkerboard only
+     over the boxes of the players and the ball inside the bottom wall (blitter, minterm 0xCA,
+     both copies of a row of the 2x-tall frontbuffer).
    - **Court markings:** the penalty areas and the centre circle a lighter blue (palette 76,
      0x66E; the court 0x22C) inside clear white lines.
    - **Sorted line-up** (`install_tactics` → `sort_line_up`): the keeper, then each of the

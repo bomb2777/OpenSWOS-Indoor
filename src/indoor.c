@@ -949,7 +949,7 @@ int16_t Indoor_TestRed(void)
 extern void Platform_PaletteRGB(uint8_t rgb[768]);
 extern volatile uintptr_t _frontbufferBasePtr;
 
-static uint8_t  s_glassGrey;         /* the glass's grey, every other pixel (0x777) */
+static uint8_t  s_glassLut[256];     /* a colour -> that colour seen through the glass */
 static uint8_t  s_glassRim;          /* the glass's top edge */
 static uint32_t s_glassPalHash;      /* the palette the table was built for (0 = none) */
 
@@ -964,8 +964,9 @@ static int32_t nearest_colour(const uint8_t *rgb, int32_t r, int32_t g, int32_t 
     return best;
 }
 
-/* The glass's colours from the palette on screen, looked up again when it changes (a
- * fade, the pitch condition's colours). */
+/* The table from the palette on screen, rebuilt when it changes (a fade, the pitch
+ * condition's colours): 60 % of the glass's grey over each colour, as LINO.MAP's glass.
+ * (The PC keeps this clear glass; the Amiga has a checkerboard -- the owner, 5.4.) */
 static void glass_table(void)
 {
     uint8_t rgb[768];
@@ -977,14 +978,15 @@ static void glass_table(void)
     if (h == s_glassPalHash)
         return;
     s_glassPalHash = h;
-    s_glassGrey = (uint8_t)nearest_colour(rgb, 119, 119, 119);
+    for (int32_t i = 0; i < 256; i++)
+        s_glassLut[i] = (uint8_t)nearest_colour(rgb, (rgb[i * 3] * 4 + 98 * 6) / 10,
+                                                (rgb[i * 3 + 1] * 4 + 98 * 6) / 10,
+                                                (rgb[i * 3 + 2] * 4 + 98 * 6) / 10);
     s_glassRim = (uint8_t)nearest_colour(rgb, 187, 187, 187);
 }
 
 /* World rectangle x0..x1, y0..y1 through the glass, row `rimY` its light rim -- but for
- * the goal's hole, rows h0..h1 of x INDOOR_GLASS_HOLE_X0..X1, seen through clear. The
- * glass is a checkerboard of grey, (x + y) even in the world, as on the Amiga (the owner,
- * phase 5.4: the retro look on both). */
+ * the goal's hole, rows h0..h1 of x INDOOR_GLASS_HOLE_X0..X1, seen through clear. */
 static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0, int16_t h1,
                        int16_t rimY)
 {
@@ -1003,10 +1005,7 @@ static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h
                 continue;
             if (inHole && x >= INDOOR_GLASS_HOLE_X0 && x <= INDOOR_GLASS_HOLE_X1)
                 continue;
-            if (y == rimY)
-                row[sx] = s_glassRim;
-            else if (((x + y) & 1) == 0)
-                row[sx] = s_glassGrey;
+            row[sx] = y == rimY ? s_glassRim : s_glassLut[row[sx]];
         }
     }
 }
@@ -1026,7 +1025,7 @@ extern volatile uintptr_t _frontbufferBasePtr;
 extern uint16_t _cameraXMod320, _cameraYMod320;
 extern FixedPoint _cameraX, _cameraY;   /* Render_CameraX/Y read them on the Amiga */
 
-#define GLASS_GREY 53                   /* 0x777 (phase 5.4: was 0x555) */
+#define GLASS_GREY 52                   /* 0x555 */
 
 #define GLASS_BLT_W(reg, val)                                               \
     do {                                                                    \

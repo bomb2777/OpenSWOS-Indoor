@@ -1192,6 +1192,9 @@ KeepStatisticsOnScreen(void)
 void __attribute__((used, externally_visible))
 ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 {
+#ifdef SWOS_SDL_BUILD
+    { extern void ReplayV2_UseRecordedIndoor(void); ReplayV2_UseRecordedIndoor(); }  /* INDOOR */
+#endif
     CopyTeamsAndHeader();
     InitGameSaveTeams(leftTeam, rightTeam);
     /* The recorded pitch's colours. In SWOS2.s InitGameSaveTeams ends in `bra.w *+4`

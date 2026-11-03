@@ -40,6 +40,10 @@
 #include "player_anim.h"
 #include "player_sprites.h"
 #include "display.h"    /* _screen_width — widescreen bench-camera fix (no-op on Amiga) */
+#ifdef SWOS_SDL_BUILD
+#include <stdio.h>
+#include <stdlib.h>     /* getenv: SWOS_INDOOR_TEST_SUB */
+#endif
 
 #ifdef SWOS_DEBUG_AUTOSKIP
 #endif
@@ -509,6 +513,23 @@ static void aiCheckInjuredSubs(void)
  *
  * Per-frame substitution controls check. Called from GameLoop.
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+/* INDOOR, for a test (SWOS_INDOOR_TEST_SUB=1, as SWOS_INDOOR_TEST_RED): whenever a keeper
+ * holds the ball his side's bench is called and makes a substitution -- the 1st, 2nd or
+ * 3rd player on the bench in turn, so the limit and players coming back are played too --
+ * with the menu's own controls, pressed by this script instead of a player. */
+static int16_t indoor_test_sub(void)
+{
+    static int16_t on = -1;
+    if (on < 0) {
+        const char *v = getenv("SWOS_INDOOR_TEST_SUB");
+        on = (v && v[0] == '1' && v[1] == '\0') ? 1 : 0;
+    }
+    return (int16_t)(_gIndoor && on);
+}
+static int16_t s_testArmed = 1, s_testStep, s_testCount, s_testDowns;
+#endif
+
 void __attribute__((used, externally_visible))
 BenchCheckControls(void)
 {
@@ -582,6 +603,21 @@ BenchCheckControls(void)
 
     aiCheckInjuredSubs();
 
+#ifdef SWOS_SDL_BUILD
+    if (indoor_test_sub()) {
+        if (_gameState != ST_KEEPER_HOLDS_BALL) {
+            s_testArmed = 1;
+        } else if (s_testArmed) {
+            s_testArmed = 0;
+            s_testStep = 0;
+            s_testDowns = (int16_t)(1 + s_testCount++ % 3);
+            if (_lastTeamPlayedBeforeBreak == &_topTeamData)
+                _bench1Called = 1;
+            else
+                _bench2Called = 1;
+        }
+    }
+#endif
     /* check if either player has called the bench */
     if (LongBench_TestCallBench())      /* (test: SWOS_TEST_LONGBENCH, long_bench.c) */
         _bench1Called = 1;
@@ -855,6 +891,19 @@ menu_active_phase:
             return;
         }
 
+#ifdef SWOS_SDL_BUILD
+        if (indoor_test_sub()) {        /* (the script's presses: down 1-3 times, fire, fire) */
+            int16_t n = s_testStep++, downs = s_testDowns, k = (int16_t)(n / 8);
+            _subsDirection = 0xFFFF;
+            _subsFire = 0;
+            if (n % 8 == 0) {
+                if (k < downs)
+                    _subsDirection = 4;
+                else if (k == downs || k == downs + 1)
+                    _subsFire = 1;
+            }
+        }
+#endif
         d7 = (int16_t)_subsDirection;
         if (d7 < 0)
             goto clear_block;
@@ -998,7 +1047,9 @@ static void benchMenuHandleControls(void)
         return;
 
     move_down:
-        if (_gameState == ST_KEEPER_HOLDS_BALL)
+        /* (the keeper holding the ball allows tactics only -- INDOOR also substitutions:
+         * futsal substitutes at any time, and its ball is seldom out of play) */
+        if (_gameState == ST_KEEPER_HOLDS_BALL && !_gIndoor)
             return;
         _subsBlockDirections = 1;
         if (_benchPlayerIndex == (_gIndoor ? (uint16_t)Indoor_BenchSize() : LongBench_Last()))  /* 5; a long bench's last; INDOOR 11 */
@@ -1016,7 +1067,7 @@ static void benchMenuHandleControls(void)
         } else {
             if (_benchPlayerIndex == 0) goto training_swap;
         }
-        if (_gameState == ST_KEEPER_HOLDS_BALL && _trainingGame == 0)
+        if (_gameState == ST_KEEPER_HOLDS_BALL && _trainingGame == 0 && !_gIndoor)
             return;
         _subsBlockDirections = 1;
         if (_benchPlayerIndex == 0) {
@@ -1102,7 +1153,7 @@ static int16_t isThisPlayerOkToSelect(void)
         d1 = _team2GoalkeeperReplaced;
     }
 
-    if (d0 == LongBench_SubsAllowed())      /* (_maxSubsPerTeam; a long bench's competition: + 1 in extra time) */
+    if (d0 == LongBench_SubsAllowed() && !_gIndoor)      /* (_maxSubsPerTeam; a long bench's competition: + 1 in extra time; INDOOR: no limit) */
         return -1;
     /* dead code block at 10D1DE-10D1FC skipped (unreachable after bra.s) */
 
@@ -1153,7 +1204,8 @@ static void firePressedInSubsMenu(void)
     _overlayActiveFlag = 1;
     _plToEnterGameIndex = Indoor_BenchSlot(_benchPlayerIndex);
 
-    if (LB_GK_FIRST_PLACE() && _plToEnterGameIndex == 11) {
+    /* (INDOOR: slot 11 is an outfield substitute, not the reserve keeper) */
+    if (!_gIndoor && LB_GK_FIRST_PLACE() && _plToEnterGameIndex == 11) {
         _plToBeSubstitutedPos = 0;
         return;
     }
@@ -1245,7 +1297,7 @@ static void selectPlayerToSubstituteMenuHandler(void)
         _substitutedPlY = (uint16_t)sprPtr->y.s.i;
         _substitutedPlDestX = _plLeavingX;
         _substitutedPlDestY = _plComingYTmp;
-        _plSubstitutedX = 39;
+        _plSubstitutedX = (uint16_t)INDOOR_OR(39, 39 + INDOOR_BENCH_SHIFT);   /* INDOOR: from the dugout */
         _plSubstitutedY = 449;
     }
 }
@@ -1298,6 +1350,15 @@ substitutePlayer(void)
             a0->markedPlayer = (int16_t)(uint16_t)d7;
     }
 
+#ifdef SWOS_SDL_BUILD
+    if (_gIndoor) {
+        const uint16_t numSubs = ((TeamGeneralInfo *)_benchTeam)->teamNumber == 1 ? _team1NumSubs : _team2NumSubs;
+        fprintf(stderr, "[indoor] substitution (team %d, %u so far%s): slot %d on for slot %d\n",
+                (int)((TeamGeneralInfo *)_benchTeam)->teamNumber, (unsigned)numSubs,
+                _gameState == ST_KEEPER_HOLDS_BALL ? ", the keeper holding the ball" : "",
+                (int)d6, (int)d7);
+    }
+#endif
     swapPlayerNameData(d6, d7);
 #ifdef SWOS_SDL_BUILD
     extern int32_t NetplayMatch_Resimulating(void);
@@ -1314,7 +1375,7 @@ substitutePlayer(void)
      * ingameTeamPlayerOffsets[p] + 42 = start of PlayerInfo p in TeamGame;
      * position field is at offset 4 within PlayerInfo. Reached through the place's PlayerInfo:
      * a long bench's places 16.. are beside the team (long_bench.c). */
-    {
+    if (!_gIndoor) {                /* INDOOR: he may come back on, as in futsal */
         uint8_t *p7 = (uint8_t *)piFromOffset(a0, off7);
         p7[4] = 0xFF;  /* PlayerInfo.position = 0xFF */
     }
@@ -1567,7 +1628,7 @@ static void updateSubstitutePlayerIndices(void)
      * lowercase set below is what runs, the externally_visible uppercase set
      * is a parallel copy declared in bench_subs.h and called by nobody. Fix
      * both until they are merged. */
-    if (_subsState != 4) {
+    if (_subsState != 4 && !_gIndoor) {
         if (_plToEnterGameIndex == 11) {
             if (LB_GK_FIRST_PLACE())
                 return;
@@ -1651,6 +1712,14 @@ static void updatePlayerToBeSubstitutedPosition(void)
  * Returns: 0 = select this player (stop scanning), 1 = skip (continue)
  * Asm: d0=0 stops scan (bne loops on d0!=0), d0=1 keeps scanning.
  * ================================================================ */
+/* INDOOR: substitutions while the keeper holds the ball -- but not of him: he does not
+ * walk to the bench with it in his hands, and the substitution would wait for ever. */
+static int16_t holding_keeper(uint16_t pos)
+{
+    return (int16_t)(_gIndoor && _gameState == ST_KEEPER_HOLDS_BALL && pos == 0 &&
+                     (TeamGeneralInfo *)_benchTeam == _lastTeamPlayedBeforeBreak);
+}
+
 static uint16_t isPlayerOkToSubstitute(void)
 {
     /* INDOOR: a parked player (slots 5-10) is not on the pitch -- skip. Before the
@@ -1664,6 +1733,8 @@ static uint16_t isPlayerOkToSubstitute(void)
             return 1;   /* skip — position 0 in formation mode */
         return 0;       /* select */
     }
+    if (holding_keeper(_plToBeSubstitutedPos))
+        return 1;
 
     {
         TeamGame *btg = (TeamGame *)_benchTeamGame;
@@ -1740,6 +1811,8 @@ static void findInitialPlayerToBeSubstituted(void)
         PlayerInfo *pi = getBenchPlayerPointer((uint16_t)d1, &ordinal);
 
         if (Indoor_IsParkedSlot(ordinal))       /* INDOOR: not on the pitch */
+            goto next_player;
+        if (holding_keeper(ordinal))            /* INDOOR: nor the keeper with the ball */
             goto next_player;
         if ((uint8_t)pi->numYellowCards >= 2)
             goto next_player;

@@ -379,19 +379,102 @@ void Indoor_StadiumRows(struct MenuEntry *first)
 
 extern void ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable);
 #define SPR_SIDE_PITCH 225              /* the line-up screen's little pitch */
+extern uint8_t *_spriteGraphicsPtr;
 
 static int16_t s_sidePitchBlue;         /* sprite 225 has its colours swapped */
+
+/* The markings a hall does not have (phase 5.4): the four corner arcs and the two arcs on
+ * the penalty areas. Spans (y, x0, x1) of the top-left quarter of the sprite; the others
+ * are its mirrors (x -> 131 - x, y -> 114 - y). A pixel is cleared only when it has the
+ * lines' colour, so other art (the DOS sprites) loses nothing else. */
+static const uint8_t kArcSpans[][3] = {
+    { 2, 5, 5 }, { 3, 5, 5 }, { 4, 4, 4 }, { 5, 2, 3 },
+    { 20, 53, 53 }, { 21, 54, 54 }, { 22, 55, 55 }, { 23, 56, 56 },
+    { 24, 57, 58 }, { 25, 59, 61 }, { 26, 62, 65 },
+};
+#define ARC_PIXELS (18 * 4)
+static uint8_t s_arcSaved[ARC_PIXELS];
+
+static uint8_t *side_pixel_at(SpriteGraphics *spr, int16_t x, int16_t y, uint16_t *bit, int16_t *planes)
+{
+    uint16_t wq = (uint16_t)spr->wquads;
+#ifdef SWOS_SDL_BUILD
+    *bit = 0; *planes = 0;
+    return (uint8_t *)spr->sprData + (int32_t)y * wq * 16 + x;
+#else
+    *planes = (int16_t)spriteNumPlanes(SPR_SIDE_PITCH);
+    *bit = (uint16_t)(0x8000u >> (x & 15));
+    return (uint8_t *)spr->sprData + (int32_t)y * wq * 2 * *planes + (x >> 4) * 2;
+#endif
+}
+
+static uint8_t side_pixel(SpriteGraphics *spr, int16_t x, int16_t y)
+{
+    uint16_t bit; int16_t planes;
+    uint8_t *p = side_pixel_at(spr, x, y, &bit, &planes);
+#ifdef SWOS_SDL_BUILD
+    return *p;
+#else
+    uint8_t c = 0;
+    for (int16_t pl = 0; pl < planes; pl++)
+        if (*(uint16_t *)(p + pl * spr->wquads * 2) & bit)
+            c |= (uint8_t)(1 << pl);
+    return c;
+#endif
+}
+
+static void set_side_pixel(SpriteGraphics *spr, int16_t x, int16_t y, uint8_t c)
+{
+    uint16_t bit; int16_t planes;
+    uint8_t *p = side_pixel_at(spr, x, y, &bit, &planes);
+#ifdef SWOS_SDL_BUILD
+    *p = c;
+#else
+    for (int16_t pl = 0; pl < planes; pl++) {
+        uint16_t *w = (uint16_t *)(p + pl * spr->wquads * 2);
+        *w = (c & (1 << pl)) ? (uint16_t)(*w | bit) : (uint16_t)(*w & ~bit);
+    }
+#endif
+}
+
+/* hide: clear the arcs (saving what was there); else put it back. */
+static void side_pitch_arcs(int16_t hide)
+{
+    SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[SPR_SIDE_PITCH];
+    if (!spr || !spr->sprData || spr->wquads * 16 < 132 || spr->nlines < 115)
+        return;
+    const uint8_t line = side_pixel(spr, 1, 57), court = side_pixel(spr, 20, 40);
+    int16_t n = 0;
+    for (uint16_t s = 0; s < sizeof(kArcSpans) / sizeof(kArcSpans[0]); s++)
+        for (int16_t x0 = kArcSpans[s][1]; x0 <= kArcSpans[s][2]; x0++)
+            for (int16_t m = 0; m < 4; m++) {
+                const int16_t x = (m & 1) ? (int16_t)(131 - x0) : x0;
+                const int16_t y = (m & 2) ? (int16_t)(114 - kArcSpans[s][0]) : kArcSpans[s][0];
+                if (hide) {
+                    s_arcSaved[n] = side_pixel(spr, x, y);
+                    if (s_arcSaved[n] == line)
+                        set_side_pixel(spr, x, y, court);
+                } else {
+                    set_side_pixel(spr, x, y, s_arcSaved[n]);
+                }
+                n++;
+            }
+}
 
 void Indoor_SidePitchColours(void)
 {
     static uint16_t swap[16];
     if (s_sidePitchBlue == (_gIndoor != 0))
         return;
+    if (!_gIndoor)
+        side_pitch_arcs(0);             /* (the arcs back before the colours) */
     for (int16_t i = 0; i < 16; i++)
         swap[i] = (uint16_t)i;
     swap[14] = 11;                      /* grass -> blue */
     swap[11] = 14;                      /* (and back) */
     ConvertSpriteColors(SPR_SIDE_PITCH, swap);
+    if (_gIndoor)
+        side_pitch_arcs(1);
     s_sidePitchBlue = (_gIndoor != 0);
 }
 
@@ -762,7 +845,7 @@ int16_t Indoor_TestRed(void)
 extern void Platform_PaletteRGB(uint8_t rgb[768]);
 extern volatile uintptr_t _frontbufferBasePtr;
 
-static uint8_t  s_glassLut[256];     /* a colour -> that colour seen through the glass */
+static uint8_t  s_glassGrey;         /* the glass's grey, every other pixel (0x777) */
 static uint8_t  s_glassRim;          /* the glass's top edge */
 static uint32_t s_glassPalHash;      /* the palette the table was built for (0 = none) */
 
@@ -777,8 +860,8 @@ static int32_t nearest_colour(const uint8_t *rgb, int32_t r, int32_t g, int32_t 
     return best;
 }
 
-/* The table from the palette on screen, rebuilt when it changes (a fade, the pitch
- * condition's colours): 60 % of the glass's grey over each colour, as LINO.MAP's glass. */
+/* The glass's colours from the palette on screen, looked up again when it changes (a
+ * fade, the pitch condition's colours). */
 static void glass_table(void)
 {
     uint8_t rgb[768];
@@ -790,15 +873,14 @@ static void glass_table(void)
     if (h == s_glassPalHash)
         return;
     s_glassPalHash = h;
-    for (int32_t i = 0; i < 256; i++)
-        s_glassLut[i] = (uint8_t)nearest_colour(rgb, (rgb[i * 3] * 4 + 98 * 6) / 10,
-                                                (rgb[i * 3 + 1] * 4 + 98 * 6) / 10,
-                                                (rgb[i * 3 + 2] * 4 + 98 * 6) / 10);
+    s_glassGrey = (uint8_t)nearest_colour(rgb, 119, 119, 119);
     s_glassRim = (uint8_t)nearest_colour(rgb, 187, 187, 187);
 }
 
 /* World rectangle x0..x1, y0..y1 through the glass, row `rimY` its light rim -- but for
- * the goal's hole, rows h0..h1 of x INDOOR_GLASS_HOLE_X0..X1, seen through clear. */
+ * the goal's hole, rows h0..h1 of x INDOOR_GLASS_HOLE_X0..X1, seen through clear. The
+ * glass is a checkerboard of grey, (x + y) even in the world, as on the Amiga (the owner,
+ * phase 5.4: the retro look on both). */
 static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0, int16_t h1,
                        int16_t rimY)
 {
@@ -817,7 +899,10 @@ static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h
                 continue;
             if (inHole && x >= INDOOR_GLASS_HOLE_X0 && x <= INDOOR_GLASS_HOLE_X1)
                 continue;
-            row[sx] = y == rimY ? s_glassRim : s_glassLut[row[sx]];
+            if (y == rimY)
+                row[sx] = s_glassRim;
+            else if (((x + y) & 1) == 0)
+                row[sx] = s_glassGrey;
         }
     }
 }
@@ -837,7 +922,7 @@ extern volatile uintptr_t _frontbufferBasePtr;
 extern uint16_t _cameraXMod320, _cameraYMod320;
 extern FixedPoint _cameraX, _cameraY;   /* Render_CameraX/Y read them on the Amiga */
 
-#define GLASS_GREY 52                   /* 0x555 */
+#define GLASS_GREY 53                   /* 0x777 (phase 5.4: was 0x555) */
 
 #define GLASS_BLT_W(reg, val)                                               \
     do {                                                                    \

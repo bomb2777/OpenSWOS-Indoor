@@ -230,10 +230,11 @@ int16_t Indoor_GoalY(int16_t y);
  * wall hides what is behind it -- the floor there and those fans -- and the bottom one as
  * many of the court's last rows and the players in them. Each has a HOLE where its goal
  * stands, the goal's width and height, seen through clear: the top goal, a keeper on the
- * bottom goal line. The players are IN FRONT of the top wall and BEHIND the bottom one. The PC draws that over every frame,
- * (Indoor_DrawGlassBehind before the sprites, the top wall: fans greyed live, players not;
- * Indoor_DrawGlassFront after them, the bottom wall: the players there greyed). The Amiga cannot afford it a frame; its map (LINO_A.MAP) has the floor of both
- * ends greyed instead, the players and fans not. */
+ * bottom goal line. The players are IN FRONT of the top wall and BEHIND the bottom one. Both
+ * targets draw the walls over every frame (Indoor_DrawGlassBehind before the sprites, the top
+ * wall: fans greyed live, players not; Indoor_DrawGlassFront after them, the bottom wall: the
+ * players there greyed) -- the PC through a colour table, the Amiga as a blitter
+ * checkerboard (indoor.c). */
 #define INDOOR_GLASS_X0          (INDOOR_LEFT - INDOOR_GLASS_LEFT)          /* 167 */
 #define INDOOR_GLASS_X1          (INDOOR_RIGHT + INDOOR_GLASS_RIGHT)        /* 505 */
 #define INDOOR_GLASS_TOP_Y0      ((INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS - 3) * 16)  /* 128 */

@@ -1781,7 +1781,9 @@ DrawBenchAndSubsMenu(void)
          * Occupants ONLY. The select arrow, drawSubstitutesMenu() and the rest
          * of draw_bench are menu UI and must not appear mid-match. */
         if (bench_occupants_visible()) {
+            s_benchSeats = _gIndoor ? 4 : 0;    /* INDOOR: the coach and four, as the Amiga */
             draw_bench_occupants_only();
+            s_benchSeats = 0;
         }
 #else
         /* INDOOR: on the Amiga too -- the bench is beside the court, in view during play.

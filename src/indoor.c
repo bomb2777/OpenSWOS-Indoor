@@ -752,7 +752,7 @@ int16_t Indoor_TestRed(void)
 #endif
 }
 
-/* ---- The glass at the ends, drawn over each frame (PC; phase 5.3) -------------------- */
+/* ---- The glass at the ends, drawn over each frame (phase 5.3) ------------------------ */
 
 #ifdef SWOS_SDL_BUILD
 #include "display.h"
@@ -819,6 +819,160 @@ static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h
     }
 }
 
+#elif defined(AGA)
+/* The Amiga: no colour table a frame could afford -- the glass is a CHECKERBOARD of grey
+ * over what is behind it, the classic see-through: every other pixel, fixed to the world
+ * (it does not crawl when the camera scrolls), laid by the blitter one bitplane at a time:
+ * D = A ? B : C, A the checkerboard (BLTADAT, the edges by its first/last-word masks), B
+ * the grey's bit in that plane (BLTBDAT), C/D the frame (minterm 0xCA). Into both copies
+ * of a row in the 2x-tall frontbuffer: a bob is undrawn from the other copy, so the glass
+ * is in what it restores, and laying the same grey on the same pixels again changes
+ * nothing -- nothing builds up. The addressing is the crowd animation's
+ * (animated_patterns.c drawPatternFromIndex). */
+#include "display.h"
+extern volatile uintptr_t _frontbufferBasePtr;
+extern uint16_t _cameraXMod320, _cameraYMod320;
+
+#define GLASS_GREY 52                   /* 0x555 */
+#define GLASS_RIM  56                   /* 0xBBB */
+
+#define GLASS_BLT_W(reg, val)                                               \
+    do {                                                                    \
+        uint16_t _v = (uint16_t)(val);                                      \
+        volatile uint16_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.w %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+#define GLASS_BLT_L(reg, val)                                               \
+    do {                                                                    \
+        uint32_t _v = (uint32_t)(val);                                      \
+        volatile uint32_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.l %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+
+static void glass_table(void)
+{
+}
+
+static void glass_wait_blit(void)
+{
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (BLIT_BUSY())
+        ;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+}
+
+/* Buffer rows by, by + step, ... (count of them), screen columns sx0..sx1 (bx = buffer
+ * columns): colour `colour` where `pattern` has a bit, in all eight planes. */
+static void glass_blit(int16_t by, int16_t count, int16_t step, int16_t bx0, int16_t bx1,
+                       uint16_t pattern, uint8_t colour)
+{
+    int16_t w0 = (int16_t)(bx0 >> 4), words = (int16_t)((bx1 >> 4) - w0 + 1);
+    uint16_t fwm = (uint16_t)(0xFFFFu >> (bx0 & 15));
+    uint16_t lwm = (uint16_t)(0xFFFFu << (15 - (bx1 & 15)));
+    uint8_t *row = (uint8_t *)_frontbufferBasePtr + (uint32_t)by * ROW_STRIDE_BYTES +
+                   SCROLL_LEFT_MARGIN_BYTES + w0 * 2;
+    int16_t mod = (int16_t)(step * ROW_STRIDE_BYTES - words * 2);
+    if (count <= 0 || words <= 0)
+        return;
+    for (int16_t pl = 0; pl < NUM_PLANES; pl++) {
+        uint32_t addr = (uint32_t)(uintptr_t)(row + pl * PLANE_STRIDE);
+        glass_wait_blit();
+        GLASS_BLT_W(_custom->bltcon0, 0x03CA);  /* use C, D; D = A ? B : C */
+        GLASS_BLT_W(_custom->bltcon1, 0);
+        GLASS_BLT_W(_custom->bltafwm, fwm);
+        GLASS_BLT_W(_custom->bltalwm, lwm);
+        GLASS_BLT_W(_custom->bltadat, pattern);
+        GLASS_BLT_W(_custom->bltbdat, (colour >> pl) & 1 ? 0xFFFF : 0);
+        GLASS_BLT_W(_custom->bltcmod, mod);
+        GLASS_BLT_W(_custom->bltdmod, mod);
+        GLASS_BLT_L(_custom->bltcpt, addr);
+        GLASS_BLT_L(_custom->bltdpt, addr);
+        GLASS_BLT_W(_custom->bltsize, (uint16_t)((count << 6) | words));
+    }
+}
+
+/* Screen rows sy0.. (count of them, every `step`th) in both copies: the buffer row of a
+ * screen row is sy + cameraYMod (0..2*272-1), its twin 272 away, either way. */
+static void glass_rows(int16_t sy0, int16_t count, int16_t step, int16_t bx0, int16_t bx1,
+                       uint16_t pattern, uint8_t colour)
+{
+    int16_t by0 = (int16_t)(sy0 + (int16_t)_cameraYMod320);
+    /* the rows before buffer row 272 and those from it on: each copy is 272 away */
+    int16_t before = by0 >= SCREEN_HEIGHT ? 0 : (int16_t)((SCREEN_HEIGHT - by0 + step - 1) / step);
+    if (before > count)
+        before = count;
+    if (before > 0) {
+        glass_blit(by0, before, step, bx0, bx1, pattern, colour);
+        glass_blit((int16_t)(by0 + SCREEN_HEIGHT), before, step, bx0, bx1, pattern, colour);
+    }
+    if (count > before) {
+        int16_t by = (int16_t)(by0 + before * step);
+        glass_blit(by, (int16_t)(count - before), step, bx0, bx1, pattern, colour);
+        glass_blit((int16_t)(by - SCREEN_HEIGHT), (int16_t)(count - before), step, bx0, bx1, pattern, colour);
+    }
+}
+
+/* World x0..x1 of world rows y0..y1, both colours of the checkerboard by row parity,
+ * clipped to the screen. */
+static void glass_rect(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
+{
+    int16_t camX = Render_CameraX(), camY = Render_CameraY();
+    int16_t sx0 = (int16_t)(x0 - camX), sx1 = (int16_t)(x1 - camX);
+    int16_t sy0 = (int16_t)(y0 - camY), sy1 = (int16_t)(y1 - camY);
+    if (sx0 < 0) sx0 = 0;
+    if (sx1 > SCREEN_WIDTH - 1) sx1 = SCREEN_WIDTH - 1;
+    if (sy0 < 0) sy0 = 0;
+    if (sy1 > SCREEN_HEIGHT - 1) sy1 = SCREEN_HEIGHT - 1;
+    if (sx0 > sx1 || sy0 > sy1)
+        return;
+    for (int16_t parity = 0; parity < 2; parity++) {
+        int16_t first = (int16_t)(sy0 + (((sy0 + camY) & 1) != parity));
+        int16_t count = first > sy1 ? 0 : (int16_t)((sy1 - first) / 2 + 1);
+        /* the pattern by the world's x parity: buffer x and world x differ by a multiple
+         * of 384 (cameraXMod is cameraX mod 384), so bit k's parity is the world's */
+        uint16_t pattern = (uint16_t)(((first + camY) & 1) ? 0x5555 : 0xAAAA);
+        glass_rows(first, count, 2, (int16_t)(sx0 + (int16_t)_cameraXMod320),
+                   (int16_t)(sx1 + (int16_t)_cameraXMod320), pattern, GLASS_GREY);
+    }
+}
+
+/* As the PC's: x0..x1 of rows y0..y1, a hole of rows h0..h1 over the goal, row rimY the
+ * light rim (solid). */
+static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0, int16_t h1,
+                       int16_t rimY)
+{
+    int16_t camX = Render_CameraX(), camY = Render_CameraY();
+    if (h0 > y0)
+        glass_rect(x0, y0, x1, (int16_t)(h0 - 1));
+    glass_rect(x0, h0, INDOOR_GLASS_HOLE_X0 - 1, h1);
+    glass_rect(INDOOR_GLASS_HOLE_X1 + 1, h0, x1, h1);
+    if (h1 < y1)
+        glass_rect(x0, (int16_t)(h1 + 1), x1, y1);
+    {   /* the rim: one solid row, but not across the hole */
+        int16_t sy = (int16_t)(rimY - camY);
+        if (sy >= 0 && sy < SCREEN_HEIGHT) {
+            int16_t segs[2][2] = { { x0, x1 }, { 0, -1 } };
+            if (rimY >= h0 && rimY <= h1) {
+                segs[0][1] = INDOOR_GLASS_HOLE_X0 - 1;
+                segs[1][0] = INDOOR_GLASS_HOLE_X1 + 1;
+                segs[1][1] = x1;
+            }
+            for (int16_t k = 0; k < 2; k++) {
+                int16_t sx0 = (int16_t)(segs[k][0] - camX), sx1 = (int16_t)(segs[k][1] - camX);
+                if (segs[k][0] > segs[k][1]) continue;
+                if (sx0 < 0) sx0 = 0;
+                if (sx1 > SCREEN_WIDTH - 1) sx1 = SCREEN_WIDTH - 1;
+                if (sx0 > sx1) continue;
+                glass_rows(sy, 1, 1, (int16_t)(sx0 + (int16_t)_cameraXMod320),
+                           (int16_t)(sx1 + (int16_t)_cameraXMod320), 0xFFFF, GLASS_RIM);
+            }
+        }
+    }
+}
+#endif
+
+#if defined(SWOS_SDL_BUILD) || defined(AGA)
 /* The top wall, before the sprites: it stands behind the players (they are in front of
  * it, on the court), so it greys only what is behind it -- the floor and the three
  * nearest rows of fans, from them down to the goal line; its rim along its top. */

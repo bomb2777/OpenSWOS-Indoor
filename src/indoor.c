@@ -9,6 +9,7 @@
 #include "menu_system.h"
 #include "display.h"            /* AGA, the frontbuffer's geometry (the glass) */
 #include "endian_helpers.h"
+#include "swos_sections.h"     /* the glass sources in chip RAM */
 #ifdef SWOS_SDL_BUILD
 #include <stdio.h>
 #include <stdlib.h>
@@ -864,79 +865,84 @@ static void glass_wait_blit(void)
     _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }
 
-/* Buffer rows by, by + step, ... (count of them), screen columns sx0..sx1 (bx = buffer
- * columns): colour `colour` where `pattern` has a bit, in all eight planes. */
-static void glass_blit(int16_t by, int16_t count, int16_t step, int16_t bx0, int16_t bx1,
-                       uint16_t pattern, uint8_t colour)
+/* ONE blit for a box, all eight planes at once: the frontbuffer's planes are interleaved
+ * (a row is eight 48-byte plane lines), so the box is `rows * 8` lines of PLANE_STRIDE. A
+ * reads the checkerboard per line from s_glassMask (a row's eight lines share its parity's
+ * pattern), B the grey's bit per line from s_glassColour (line p of a row: plane p), C/D the
+ * frame: D = A ? B : C (minterm 0xCA). Only the copy of the rows the display shows: a bob is
+ * undrawn from the other one, which holds the floor -- with its glass, from the map. Both
+ * sources are in chip RAM (the blitter reads nothing else). Each line of them is
+ * GLASS_MAX_WORDS wide; the blit takes `words` of it. */
+#ifndef INDOOR_GLASS_SPRITES
+#define INDOOR_GLASS_SPRITES 1              /* 0: the per-frame glass off (a test) */
+#endif
+#define GLASS_MAX_WORDS 4                   /* a box up to 49 px wide */
+#define GLASS_MAX_ROWS  40
+static uint16_t s_glassMask[(GLASS_MAX_ROWS + 1) * 8 * GLASS_MAX_WORDS] SWOS_CHIP_BSS;
+static uint16_t s_glassColour[GLASS_MAX_ROWS * 8 * GLASS_MAX_WORDS] SWOS_CHIP_BSS;
+static int16_t  s_glassSources;
+
+static void glass_sources(void)
 {
-    int16_t w0 = (int16_t)(bx0 >> 4), words = (int16_t)((bx1 >> 4) - w0 + 1);
-    uint16_t fwm = (uint16_t)(0xFFFFu >> (bx0 & 15));
-    uint16_t lwm = (uint16_t)(0xFFFFu << (15 - (bx1 & 15)));
-    uint8_t *row = (uint8_t *)_frontbufferBasePtr + (uint32_t)by * ROW_STRIDE_BYTES +
-                   SCROLL_LEFT_MARGIN_BYTES + w0 * 2;
-    int16_t mod = (int16_t)(step * ROW_STRIDE_BYTES - words * 2);
-    if (count <= 0 || words <= 0)
+    if (s_glassSources)
         return;
-    for (int16_t pl = 0; pl < NUM_PLANES; pl++) {
-        uint32_t addr = (uint32_t)(uintptr_t)(row + pl * PLANE_STRIDE);
-        glass_wait_blit();
-        GLASS_BLT_W(_custom->bltcon0, 0x03CA);  /* use C, D; D = A ? B : C */
-        GLASS_BLT_W(_custom->bltcon1, 0);
-        GLASS_BLT_W(_custom->bltafwm, fwm);
-        GLASS_BLT_W(_custom->bltalwm, lwm);
-        GLASS_BLT_W(_custom->bltadat, pattern);
-        GLASS_BLT_W(_custom->bltbdat, (colour >> pl) & 1 ? 0xFFFF : 0);
-        GLASS_BLT_W(_custom->bltcmod, mod);
-        GLASS_BLT_W(_custom->bltdmod, mod);
-        GLASS_BLT_L(_custom->bltcpt, addr);
-        GLASS_BLT_L(_custom->bltdpt, addr);
-        GLASS_BLT_W(_custom->bltsize, (uint16_t)((count << 6) | words));
-    }
+    for (int16_t line = 0; line < (GLASS_MAX_ROWS + 1) * 8; line++)
+        for (int16_t w = 0; w < GLASS_MAX_WORDS; w++) {
+            int16_t row = (int16_t)(line >> 3), pl = (int16_t)(line & 7);
+            s_glassMask[line * GLASS_MAX_WORDS + w] = (uint16_t)((row & 1) ? 0x5555 : 0xAAAA);
+            if (row < GLASS_MAX_ROWS)
+                s_glassColour[line * GLASS_MAX_WORDS + w] =
+                    (uint16_t)(((GLASS_GREY >> pl) & 1) ? 0xFFFF : 0);
+        }
+    s_glassSources = 1;
 }
 
-/* Screen rows sy0.. (count of them, every `step`th) in both copies: the buffer row of a
- * screen row is sy + cameraYMod (0..2*272-1), its twin 272 away, either way. */
-static void glass_rows(int16_t sy0, int16_t count, int16_t step, int16_t bx0, int16_t bx1,
-                       uint16_t pattern, uint8_t colour)
-{
-    int16_t by0 = (int16_t)(sy0 + (int16_t)_cameraYMod320);
-    /* the rows before buffer row 272 and those from it on: each copy is 272 away */
-    int16_t before = by0 >= SCREEN_HEIGHT ? 0 : (int16_t)((SCREEN_HEIGHT - by0 + step - 1) / step);
-    if (before > count)
-        before = count;
-    if (before > 0) {
-        glass_blit(by0, before, step, bx0, bx1, pattern, colour);
-        glass_blit((int16_t)(by0 + SCREEN_HEIGHT), before, step, bx0, bx1, pattern, colour);
-    }
-    if (count > before) {
-        int16_t by = (int16_t)(by0 + before * step);
-        glass_blit(by, (int16_t)(count - before), step, bx0, bx1, pattern, colour);
-        glass_blit((int16_t)(by - SCREEN_HEIGHT), (int16_t)(count - before), step, bx0, bx1, pattern, colour);
-    }
-}
-
-/* World x0..x1 of world rows y0..y1, both colours of the checkerboard by row parity,
- * clipped to the screen. */
+/* World x0..x1 of rows y0..y1 (no hole), clipped to the screen: one blit. */
 static void glass_rect(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
     int16_t camX = Render_CameraX(), camY = Render_CameraY();
     int16_t sx0 = (int16_t)(x0 - camX), sx1 = (int16_t)(x1 - camX);
     int16_t sy0 = (int16_t)(y0 - camY), sy1 = (int16_t)(y1 - camY);
+    int16_t bx0, bx1, w0, words, rows;
+    uint16_t fwm, lwm;
+    uint32_t dst, a, b;
     if (sx0 < 0) sx0 = 0;
     if (sx1 > SCREEN_WIDTH - 1) sx1 = SCREEN_WIDTH - 1;
     if (sy0 < 0) sy0 = 0;
     if (sy1 > SCREEN_HEIGHT - 1) sy1 = SCREEN_HEIGHT - 1;
     if (sx0 > sx1 || sy0 > sy1)
         return;
-    for (int16_t parity = 0; parity < 2; parity++) {
-        int16_t first = (int16_t)(sy0 + (((sy0 + camY) & 1) != parity));
-        int16_t count = first > sy1 ? 0 : (int16_t)((sy1 - first) / 2 + 1);
-        /* the pattern by the world's x parity: buffer x and world x differ by a multiple
-         * of 384 (cameraXMod is cameraX mod 384), so bit k's parity is the world's */
-        uint16_t pattern = (uint16_t)(((first + camY) & 1) ? 0x5555 : 0xAAAA);
-        glass_rows(first, count, 2, (int16_t)(sx0 + (int16_t)_cameraXMod320),
-                   (int16_t)(sx1 + (int16_t)_cameraXMod320), pattern, GLASS_GREY);
-    }
+    rows = (int16_t)(sy1 - sy0 + 1);
+    if (rows > GLASS_MAX_ROWS)
+        rows = GLASS_MAX_ROWS;
+    bx0 = (int16_t)(sx0 + (int16_t)_cameraXMod320);
+    bx1 = (int16_t)(sx1 + (int16_t)_cameraXMod320);
+    w0 = (int16_t)(bx0 >> 4);
+    words = (int16_t)((bx1 >> 4) - w0 + 1);
+    if (words > GLASS_MAX_WORDS)
+        words = GLASS_MAX_WORDS;
+    fwm = (uint16_t)(0xFFFFu >> (bx0 & 15));
+    lwm = (uint16_t)(0xFFFFu << (15 - (bx1 & 15)));
+    glass_sources();
+    dst = (uint32_t)(_frontbufferBasePtr + (uint32_t)(sy0 + (int16_t)_cameraYMod320) * ROW_STRIDE_BYTES +
+                     SCROLL_LEFT_MARGIN_BYTES + w0 * 2);
+    /* the world row's parity picks where in the mask the first line starts */
+    a = (uint32_t)(uintptr_t)&s_glassMask[(((sy0 + camY) & 1) * 8) * GLASS_MAX_WORDS];
+    b = (uint32_t)(uintptr_t)&s_glassColour[0];
+    glass_wait_blit();
+    GLASS_BLT_W(_custom->bltcon0, 0x0FCA);      /* use A, B, C, D; D = A ? B : C */
+    GLASS_BLT_W(_custom->bltcon1, 0);
+    GLASS_BLT_W(_custom->bltafwm, fwm);
+    GLASS_BLT_W(_custom->bltalwm, lwm);
+    GLASS_BLT_W(_custom->bltamod, (GLASS_MAX_WORDS - words) * 2);
+    GLASS_BLT_W(_custom->bltbmod, (GLASS_MAX_WORDS - words) * 2);
+    GLASS_BLT_W(_custom->bltcmod, PLANE_STRIDE - words * 2);
+    GLASS_BLT_W(_custom->bltdmod, PLANE_STRIDE - words * 2);
+    GLASS_BLT_L(_custom->bltapt, a);
+    GLASS_BLT_L(_custom->bltbpt, b);
+    GLASS_BLT_L(_custom->bltcpt, dst);
+    GLASS_BLT_L(_custom->bltdpt, dst);
+    GLASS_BLT_W(_custom->bltsize, (uint16_t)(((rows * 8) << 6) | words));
 }
 
 /* World x0..x1 of rows y0..y1 through the glass, but for the goal's hole (rows h0..h1 of
@@ -985,7 +991,7 @@ void Indoor_DrawGlassBehind(void)
 
 void Indoor_DrawGlassFront(void)
 {
-    if (!_gIndoor)
+    if (!_gIndoor || !INDOOR_GLASS_SPRITES)
         return;
     for (int16_t t = 0; t < 2; t++) {
         Sprite **tbl = t ? _team2SpritesTable : _team1SpritesTable;

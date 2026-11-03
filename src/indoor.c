@@ -7,6 +7,7 @@
 #include "swos_types.h"
 #include "game_types.h"
 #include "menu_system.h"
+#include "display.h"            /* AGA, the frontbuffer's geometry (the glass) */
 #ifdef SWOS_SDL_BUILD
 #include <stdio.h>
 #include <stdlib.h>
@@ -832,6 +833,7 @@ static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h
 #include "display.h"
 extern volatile uintptr_t _frontbufferBasePtr;
 extern uint16_t _cameraXMod320, _cameraYMod320;
+extern FixedPoint _cameraX, _cameraY;   /* Render_CameraX/Y read them on the Amiga */
 
 #define GLASS_GREY 52                   /* 0x555 */
 #define GLASS_RIM  56                   /* 0xBBB */

@@ -194,8 +194,7 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      at the bottom one: the top goal, a keeper on the bottom line). The players are in front of
      the top wall (drawn before the sprites, `Indoor_DrawGlassBehind`) and behind the bottom one
      (after them, `Indoor_DrawGlassFront`), whose light rim runs along its foot, the goal line.
-     The PC greyed through a colour table from the palette on screen until 5.4, when it took
-     the Amiga's checkerboard (below).
+     The PC greys through a colour table from the palette on screen (rebuilt when it changes).
      The Amiga cannot lay a wall a frame (the blitter doing it was more than a frame's chip bus:
      the owner's A1200 crawled with a wall in view), so its map, `LINO_A.MAP`
      (`make_indoor_hall.py --amiga`), has the glass baked in as a checkerboard of grey (0x555,
@@ -231,10 +230,10 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      their pixels in sprite 225 painted the court's colour indoors (only where they have the
      lines' colour), what was there saved and put back for an outdoor match
      (`side_pitch_arcs`, both targets: chunky on the PC, planar on the Amiga).
-   - **The glass a checkerboard on both targets** and lighter: palette 53 (0x777, was 0x555)
-     on every other pixel ((x + y) even in the world), the side glass in `LINO.MAP` /
-     `LINO_A.MAP` too; the PC lays the end walls each frame the same way
-     (`glass_band`, its grey the palette's nearest to 0x777).
+   - **The glass** was a lighter checkerboard on both targets for a day; the owner wanted it
+     back as it was (the PC clear, the Amiga's checkerboard 0x555).
+   - **The bench during play on the PC** shows the coach and four a side, as the Amiga
+     (`s_benchSeats` in `DrawBenchAndSubsMenu`'s play-time path; the substitutes menu lists all).
    - **Defenders further from the keeper** (`make_indoor_tactics.py`, `DEFENDERS`): in 2-2-1,
      2-1-2, 1-2-2 and 1-3-1 the defenders are moved out from the middle ×1.8 and a grid row up
      (never below row 2), in every ball sector -- the keeper holding the ball included (that

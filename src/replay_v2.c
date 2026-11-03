@@ -1420,6 +1420,7 @@ void ReplayV2_UseRecordedIndoor(void)
     _gIndoor = 1;
     _gIndoorFloor = s_play.indoorFloor;
     s_setIndoor = 1;
+    Indoor_BuildMarkSprites();          /* (the recording's marker sprites) */
     fprintf(stderr, "[replay] played indoors: shown in the hall\n");
 }
 

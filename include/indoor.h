@@ -285,6 +285,18 @@ void Indoor_KeepPlayersInside(void);
  * Returns 1 if it was a goal-mouth crossing CheckIfBallOutOfPlay must decide. */
 int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY);
 
+/* The marker (phase 5.5): a hard hit on the glass lights it, a post or the bar blinks red.
+ * Its pictures are sprite table slots INDOOR_MARK_SPRITE_FIRST.. (8, after face 3's), shown
+ * by the corner flag's sprite, which indoors is the marker or hidden (Indoor_UpdateMarker,
+ * from UpdateCornerFlagSprite). */
+#define INDOOR_MARK_SPRITE_FIRST 1684
+#define INDOOR_MARK_SPEED        1300   /* ball->speed: a shot or a clearance, not a pass */
+void Indoor_BuildMarkSprites(void);
+void Indoor_Woodwork(Sprite *ball, int16_t post);
+void Indoor_UpdateMarker(void);
+void Indoor_ClearMarker(void);
+int16_t Indoor_MarkerBox(int16_t *x0, int16_t *y0, int16_t *x1, int16_t *y1);
+
 /* ---- The keeper's throw (phase 5.1) ------------------------------------------------
  * A ball the keeper releases from his HANDS (a throw, a pass or a kick out of them) must
  * not cross the halfway line before another player -- of either side -- has touched it;

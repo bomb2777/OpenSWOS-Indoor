@@ -92,6 +92,8 @@ void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
 
     _gIndoor = 1;
     _gIndoorFloor = floor;
+    Indoor_BuildMarkSprites();
+    Indoor_ClearMarker();
     time_penalties_clear();
     install_tactics(team1, team2);
     install_court();
@@ -633,11 +635,13 @@ static void mirror_dest(int16_t *dest, int32_t saved)
     *dest = (int16_t)(at - (*dest - at));
 }
 
+static void mark_glass(Sprite *ball, int16_t side);
+
 int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY)
 {
     int16_t bx = ball->x.s.i;
     int16_t by = ball->y.s.i;
-    int16_t hit = 0;
+    int16_t hit = 0, side = 0;
 
     if (by < INDOOR_TOP || by > INDOOR_BOTTOM) {
         /* Into the goal: in the mouth (UpdateBall's posts test x - 1 against 302..366,
@@ -651,8 +655,10 @@ int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY)
     if (bx < INDOOR_LEFT || bx > INDOOR_RIGHT) {
         mirror_dest(&ball->destX, savedX);
         hit = 1;
+        side = 1;
     }
     if (hit) {
+        mark_glass(ball, side);         /* (before its speed is cut) */
         ball->x.raw = savedX;
         ball->y.raw = savedY;
         ball->speed = (int16_t)(ball->speed - (ball->speed >> INDOOR_WALL_KEEP_SHIFT));
@@ -992,6 +998,8 @@ static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h
 {
     int16_t camX = Render_CameraX(), camY = Render_CameraY();
     uint8_t *fb = (uint8_t *)_frontbufferBasePtr;
+    int16_t mx0 = 1, my0 = 1, mx1 = 0, my1 = 0;
+    (void)Indoor_MarkerBox(&mx0, &my0, &mx1, &my1);      /* (the marker stays bright) */
     for (int16_t y = y0; y <= y1; y++) {
         int16_t sy = (int16_t)(y - camY);
         int16_t inHole = (int16_t)(y >= h0 && y <= h1);
@@ -1004,6 +1012,8 @@ static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h
             if (sx < 0 || sx >= _screen_width)
                 continue;
             if (inHole && x >= INDOOR_GLASS_HOLE_X0 && x <= INDOOR_GLASS_HOLE_X1)
+                continue;
+            if (x >= mx0 && x <= mx1 && y >= my0 && y <= my1)
                 continue;
             row[sx] = y == rimY ? s_glassRim : s_glassLut[row[sx]];
         }
@@ -1267,3 +1277,202 @@ void Indoor_DrawGlassFront(void)
 {
 }
 #endif
+
+
+/* ---- The marker on the glass and the woodwork (phase 5.5) ----------------------------- *
+ * The owner's SWIS marks where the ball hits the glass (a growing ring and a cross) and
+ * blinks a post or the bar red; here, in the game's pixels: a hard hit (INDOOR_MARK_SPEED)
+ * lights the struck piece of glass -- a white checkerboard that fades to grey in three
+ * steps, half a second -- with the ball's bounce sample, and a post or the bar blinks red
+ * three times. One marker, the latest hit: a world sprite of its own pictures (sprite table
+ * slots INDOOR_MARK_SPRITE_FIRST..), shown by the corner flag's sprite, which a hall has
+ * no use for (indoors it is the marker or hidden). So it is drawn, undrawn on the Amiga
+ * and recorded in a replay like any sprite; it is not match state but the corner flag's
+ * place and picture are (sim_state.c), indoors only. */
+#include "sfx_crowd.h"
+
+extern Sprite _cornerFlagSprite;
+#ifdef SWOS_SDL_BUILD
+extern Sprite _cornerFlagSprite2;
+#endif
+extern void PlaySfxSample16(void);
+
+enum { MARK_SIDE = 0, MARK_END = 3, MARK_POST = 6, MARK_BAR = 7, MARK_SPRITES = 8 };
+#define MARK_GLASS_FRAMES   24          /* three steps of 8 */
+#define MARK_WOOD_FRAMES    48          /* three blinks: 8 on, 8 off */
+
+static const struct { uint8_t w, h, cx, cy; } kMarkSize[MARK_SPRITES] = {
+    { 10, 24, 5, 12 }, { 10, 24, 5, 12 }, { 10, 24, 5, 12 },    /* a side's glass */
+    { 24, 12, 12, 11 }, { 24, 12, 12, 11 }, { 24, 12, 12, 11 }, /* an end's, up from its foot */
+    { 3, 20, 1, 19 },                                           /* a post, up from the line */
+    { 24, 3, 12, 1 },                                           /* a piece of the bar */
+};
+#define MARK_MAX_LINES  24             /* (the tallest: a side's glass) */
+#define MARK_MAX_WQ     2
+
+static SpriteGraphics s_markHdr[MARK_SPRITES];
+#ifdef SWOS_SDL_BUILD
+static uint8_t s_markPix[MARK_SPRITES][MARK_MAX_LINES * MARK_MAX_WQ * 16];
+#else
+/* 4 colour planes and a mask of as many rows again (a linked sprite's), in chip RAM. */
+SWOS_CHIP_BSS static uint16_t s_markPix[MARK_SPRITES][MARK_MAX_LINES * MARK_MAX_WQ * 4 * 2];
+#endif
+static int16_t s_markBuilt;
+static int16_t s_markKind = -1, s_markTimer, s_markX, s_markY;
+
+/* A marker picture's colour at (x, y): 0 clear, 2 white, 1 grey, 10 red. */
+static uint8_t mark_colour(int16_t k, int16_t x, int16_t y)
+{
+    if (k >= MARK_POST)
+        return 10;
+    switch ((k - (k >= MARK_END ? MARK_END : MARK_SIDE))) {
+    case 0:  return ((x + y) & 1) ? 0 : 2;              /* bright: white on every other */
+    case 1:  return ((x + y) & 1) ? 0 : 1;              /* grey */
+    default: return ((x & 1) || (y & 1)) ? 0 : 1;       /* a quarter, grey */
+    }
+}
+
+/* The marker's pictures into their slots: once, and again if the table lost them. */
+void Indoor_BuildMarkSprites(void)
+{
+    SpriteGraphics **table = (SpriteGraphics **)_spriteGraphicsPtr;
+    if (!table)
+        return;
+    if (s_markBuilt && table[INDOOR_MARK_SPRITE_FIRST] == &s_markHdr[0])
+        return;
+    for (int16_t k = 0; k < MARK_SPRITES; k++) {
+        SpriteGraphics *h = &s_markHdr[k];
+        const int16_t w = kMarkSize[k].w, ht = kMarkSize[k].h, wq = (int16_t)((w + 15) / 16);
+#ifdef SWOS_SDL_BUILD
+        uint8_t *px = s_markPix[k];
+        for (int16_t y = 0; y < ht; y++)
+            for (int16_t x = 0; x < wq * 16; x++)
+                px[y * wq * 16 + x] = x < w ? mark_colour(k, x, y) : 0;
+        h->sprData = px;
+        h->maskPtr = 0;
+        h->type = 0;
+#else
+        /* As the game's own: per line its 4 planes' words, then the mask, a linked
+         * sprite's (the corner flag's type), its row for each plane. */
+        const SpriteGraphics *like = table[1070];          /* SPR_CORNER_FLAG_FRAME_0 */
+        const uint16_t sp = 4, reps = (like && like->type) ? sp : 1;
+        uint16_t *data = s_markPix[k], *mask = data + (uint32_t)ht * sp * wq;
+        for (int16_t y = 0; y < ht; y++) {
+            for (int16_t q = 0; q < wq; q++) {
+                uint16_t pl[4] = { 0, 0, 0, 0 }, m = 0;
+                for (int16_t b = 0; b < 16; b++) {
+                    const int16_t x = (int16_t)(q * 16 + b);
+                    const uint8_t c = x < w ? mark_colour(k, x, y) : 0;
+                    if (!c)
+                        continue;
+                    m |= (uint16_t)(0x8000u >> b);
+                    for (int16_t p = 0; p < 4; p++)
+                        if (c & (1 << p))
+                            pl[p] |= (uint16_t)(0x8000u >> b);
+                }
+                for (int16_t p = 0; p < 4; p++)
+                    data[(uint32_t)y * sp * wq + p * wq + q] = pl[p];
+                for (uint16_t r = 0; r < reps; r++)
+                    mask[(uint32_t)y * reps * wq + r * wq + q] = m;
+            }
+        }
+        if (like)
+            *h = *like;
+        h->sprData = (uint8_t *)data;
+        h->maskPtr = (uint8_t *)mask;
+#endif
+        h->pixWidth = w;
+        h->nlines = ht;
+        h->wquads = wq;
+        h->centerX = kMarkSize[k].cx;
+        h->centerY = kMarkSize[k].cy;
+        h->bltsize = (uint16_t)((ht << 6) + wq + wq);
+        h->ordinal = (int16_t)(INDOOR_MARK_SPRITE_FIRST + k);
+        table[INDOOR_MARK_SPRITE_FIRST + k] = h;
+    }
+    s_markBuilt = 1;
+}
+
+static void mark(int16_t kind, int16_t x, int16_t y, int16_t frames)
+{
+    Indoor_BuildMarkSprites();
+    s_markKind = kind;
+    s_markX = x;
+    s_markY = y;
+    s_markTimer = frames;
+}
+
+/* The ball off the glass (Indoor_BallAtWall): at a side (x past the court) or an end. */
+static void mark_glass(Sprite *ball, int16_t side)
+{
+    if (ball->speed < INDOOR_MARK_SPEED)
+        return;
+    if (side) {
+        int16_t y = ball->y.s.i;
+        if (y < INDOOR_TOP + 12) y = INDOOR_TOP + 12;
+        if (y > INDOOR_BOTTOM - 12) y = INDOOR_BOTTOM - 12;
+        mark(MARK_SIDE, ball->x.s.i < 336 ? (int16_t)(INDOOR_LEFT - 5) : (int16_t)(INDOOR_RIGHT + 6), y,
+             MARK_GLASS_FRAMES);
+    } else {
+        int16_t x = ball->x.s.i;
+        if (x < INDOOR_LEFT + 12) x = INDOOR_LEFT + 12;
+        if (x > INDOOR_RIGHT - 12) x = INDOOR_RIGHT - 12;
+        mark(MARK_END, x, ball->y.s.i <= 449 ? INDOOR_TOP : INDOOR_BOTTOM, MARK_GLASS_FRAMES);
+    }
+    PlaySfxSample16();                  /* the thud: the ball's bounce */
+}
+
+void Indoor_Woodwork(Sprite *ball, int16_t post)
+{
+    const int16_t line = ball->y.s.i <= 449 ? INDOOR_TOP : INDOOR_BOTTOM;
+    if (!_gIndoor)
+        return;
+    if (post)
+        mark(MARK_POST, (int16_t)(ball->x.s.i - 1 < 302 ? 300 : 370), line, MARK_WOOD_FRAMES);
+    else
+        mark(MARK_BAR, ball->x.s.i, (int16_t)(line - (line == INDOOR_TOP ? 21 : 17)),  /* (the top goal, */
+             MARK_WOOD_FRAMES);                                    /*  drawn in the map, is taller) */
+}
+
+void Indoor_ClearMarker(void)
+{
+    s_markTimer = 0;
+    s_markKind = -1;
+}
+
+/* Each frame, for the corner flag (UpdateCornerFlagSprite): the marker, or nothing. */
+void Indoor_UpdateMarker(void)
+{
+    Sprite *spr = &_cornerFlagSprite;
+    int16_t image = -1;
+#ifdef SWOS_SDL_BUILD
+    _cornerFlagSprite2.imageIndex = -1;
+#endif
+    if (s_markTimer > 0) {
+        const int16_t t = --s_markTimer;
+        if (s_markKind >= MARK_POST) {
+            if (((MARK_WOOD_FRAMES - 1 - t) / 8 & 1) == 0)
+                image = (int16_t)(INDOOR_MARK_SPRITE_FIRST + s_markKind);
+        } else {
+            image = (int16_t)(INDOOR_MARK_SPRITE_FIRST + s_markKind + (MARK_GLASS_FRAMES - 1 - t) / 8);
+        }
+        spr->x.s.i = s_markX;
+        spr->y.s.i = s_markY;
+    }
+    spr->imageIndex = image;
+}
+
+/* The marker's box in the world while it shows (the PC's bottom wall leaves it bright). */
+int16_t Indoor_MarkerBox(int16_t *x0, int16_t *y0, int16_t *x1, int16_t *y1)
+{
+    const Sprite *spr = &_cornerFlagSprite;
+    int16_t k;
+    if (!_gIndoor || s_markTimer <= 0 || spr->imageIndex < INDOOR_MARK_SPRITE_FIRST)
+        return 0;
+    k = (int16_t)(spr->imageIndex - INDOOR_MARK_SPRITE_FIRST);
+    *x0 = (int16_t)(spr->x.s.i - kMarkSize[k].cx);
+    *y0 = (int16_t)(spr->y.s.i - kMarkSize[k].cy);
+    *x1 = (int16_t)(*x0 + kMarkSize[k].w - 1);
+    *y1 = (int16_t)(*y0 + kMarkSize[k].h - 1);
+    return 1;
+}

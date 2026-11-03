@@ -272,6 +272,21 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      ball, through the menu's own controls -- the 1st, 2nd, 3rd substitute in turn.
    - **PC and Amiga alike:** the Amiga greys the referee behind the bottom wall too, and
      draws the bench figures from the moment a dugout's edge is in view, as the PC.
+   - **The marker** (his SWIS marks a hit on the glass with a ring and a cross and blinks a post
+     or the bar red; here in the game's pixels): a hit on the glass at `ball->speed` >=
+     `INDOOR_MARK_SPEED` (1300: shots and clearances, not passes -- a CPU match hits the glass
+     some 30 times, the hard hits about a third) lights the struck piece -- a side's 10 x 24,
+     an end's 24 x 12 up from its foot -- as a white checkerboard that fades to grey in three
+     steps (24 frames), with the ball's bounce sample (`PlaySfxSample16`, the PC sound too);
+     a post or the bar (`Indoor_Woodwork`, where `UpdateBall` plays the woodwork sample)
+     blinks red three times (48 frames). One marker, the latest hit. Its eight pictures are
+     made at kick-off in sprite table slots 1684..1691 (`INDOOR_MARK_SPRITE_FIRST`; the table
+     grew from 1684 to 1692) -- chunky on the PC, planar with a mask in chip RAM on the Amiga
+     -- and shown by the corner flag's sprite, which a hall has no use for: indoors
+     `UpdateCornerFlagSprite` hands it to `Indoor_UpdateMarker` (the marker or nothing; until
+     then nothing hid the outdoor flag indoors). So the Amiga undraws it as any bob and
+     a replay records it (the viewer makes the pictures for an indoor recording). The PC's
+     bottom wall leaves its box bright (`Indoor_MarkerBox`).
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 

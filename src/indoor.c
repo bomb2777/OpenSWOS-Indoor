@@ -8,6 +8,7 @@
 #include "game_types.h"
 #include "menu_system.h"
 #include "display.h"            /* AGA, the frontbuffer's geometry (the glass) */
+#include "endian_helpers.h"
 #ifdef SWOS_SDL_BUILD
 #include <stdio.h>
 #include <stdlib.h>
@@ -836,7 +837,6 @@ extern uint16_t _cameraXMod320, _cameraYMod320;
 extern FixedPoint _cameraX, _cameraY;   /* Render_CameraX/Y read them on the Amiga */
 
 #define GLASS_GREY 52                   /* 0x555 */
-#define GLASS_RIM  56                   /* 0xBBB */
 
 #define GLASS_BLT_W(reg, val)                                               \
     do {                                                                    \
@@ -939,42 +939,86 @@ static void glass_rect(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
     }
 }
 
-/* As the PC's: x0..x1 of rows y0..y1, a hole of rows h0..h1 over the goal, row rimY the
- * light rim (solid). */
-static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0, int16_t h1,
-                       int16_t rimY)
+/* World x0..x1 of rows y0..y1 through the glass, but for the goal's hole (rows h0..h1 of
+ * x INDOOR_GLASS_HOLE_X0..X1): the box split around it, each part clipped. */
+static void glass_box(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0, int16_t h1)
 {
-    int16_t camX = Render_CameraX(), camY = Render_CameraY();
-    if (h0 > y0)
-        glass_rect(x0, y0, x1, (int16_t)(h0 - 1));
-    glass_rect(x0, h0, INDOOR_GLASS_HOLE_X0 - 1, h1);
-    glass_rect(INDOOR_GLASS_HOLE_X1 + 1, h0, x1, h1);
-    if (h1 < y1)
-        glass_rect(x0, (int16_t)(h1 + 1), x1, y1);
-    {   /* the rim: one solid row, but not across the hole */
-        int16_t sy = (int16_t)(rimY - camY);
-        if (sy >= 0 && sy < SCREEN_HEIGHT) {
-            int16_t segs[2][2] = { { x0, x1 }, { 0, -1 } };
-            if (rimY >= h0 && rimY <= h1) {
-                segs[0][1] = INDOOR_GLASS_HOLE_X0 - 1;
-                segs[1][0] = INDOOR_GLASS_HOLE_X1 + 1;
-                segs[1][1] = x1;
-            }
-            for (int16_t k = 0; k < 2; k++) {
-                int16_t sx0 = (int16_t)(segs[k][0] - camX), sx1 = (int16_t)(segs[k][1] - camX);
-                if (segs[k][0] > segs[k][1]) continue;
-                if (sx0 < 0) sx0 = 0;
-                if (sx1 > SCREEN_WIDTH - 1) sx1 = SCREEN_WIDTH - 1;
-                if (sx0 > sx1) continue;
-                glass_rows(sy, 1, 1, (int16_t)(sx0 + (int16_t)_cameraXMod320),
-                           (int16_t)(sx1 + (int16_t)_cameraXMod320), 0xFFFF, GLASS_RIM);
+    int16_t a = h0 > y0 ? h0 : y0, b = h1 < y1 ? h1 : y1;
+    if (x0 > x1 || y0 > y1)
+        return;
+    if (a > b) {                        /* clear of the hole's rows */
+        glass_rect(x0, y0, x1, y1);
+        return;
+    }
+    if (y0 < a)
+        glass_rect(x0, y0, x1, (int16_t)(a - 1));
+    if (b < y1)
+        glass_rect(x0, (int16_t)(b + 1), x1, y1);
+    if (x0 < INDOOR_GLASS_HOLE_X0)
+        glass_rect(x0, a, (int16_t)(x1 < INDOOR_GLASS_HOLE_X0 - 1 ? x1 : INDOOR_GLASS_HOLE_X0 - 1), b);
+    if (x1 > INDOOR_GLASS_HOLE_X1)
+        glass_rect((int16_t)(x0 > INDOOR_GLASS_HOLE_X1 + 1 ? x0 : INDOOR_GLASS_HOLE_X1 + 1), a, x1, b);
+}
+
+extern Sprite _ballSprite;
+
+/* A sprite's box -- left/right of its x, up/down of its foot -- through the bottom wall,
+ * where it is inside it. */
+static void glass_sprite(int16_t x, int16_t y, int16_t left, int16_t right, int16_t up, int16_t down)
+{
+    int16_t x0 = (int16_t)(x - left), x1 = (int16_t)(x + right);
+    int16_t y0 = (int16_t)(y - up), y1 = (int16_t)(y + down);
+    if (y0 < INDOOR_BOTTOM - INDOOR_GLASS_HEIGHT) y0 = INDOOR_BOTTOM - INDOOR_GLASS_HEIGHT;
+    if (y1 > INDOOR_BOTTOM) y1 = INDOOR_BOTTOM;
+    if (x0 < INDOOR_GLASS_X0) x0 = INDOOR_GLASS_X0;
+    if (x1 > INDOOR_GLASS_X1) x1 = INDOOR_GLASS_X1;
+    glass_box(x0, y0, x1, y1, (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_HOLE_H_BOTTOM), INDOOR_BOTTOM);
+}
+
+/* The Amiga's glass is in its map (LINO_A.MAP: the floor and court behind it a checkerboard,
+ * make_indoor_hall.py --amiga) and in the greyed fans below (Indoor_GlassCrowdTiles): nothing
+ * to lay a frame -- the whole wall by the blitter was more than a frame's chip bus. What a
+ * map cannot hold are the bobs behind the bottom wall: those boxes, a few small blits. */
+void Indoor_DrawGlassBehind(void)
+{
+}
+
+void Indoor_DrawGlassFront(void)
+{
+    if (!_gIndoor)
+        return;
+    for (int16_t t = 0; t < 2; t++) {
+        Sprite **tbl = t ? _team2SpritesTable : _team1SpritesTable;
+        for (int16_t i = 0; i < INDOOR_PLAYERS; i++)
+            glass_sprite(tbl[i]->x.s.i, tbl[i]->y.s.i, 10, 12, 26, 5);
+    }
+    glass_sprite(_ballSprite.x.s.i, (int16_t)(_ballSprite.y.s.i - _ballSprite.z.s.i), 5, 7, 8, 7);
+}
+
+/* The fans behind the top wall, greyed: tiles 27-52 of LINO_A.MAP are 1-26 (the crowd, kit
+ * coloured by now) under the checkerboard -- (x + y) even, as in the map: in a tile's row r
+ * the pixels of the parity of r. 8-plane tiles, a row of eight plane words. Once, after
+ * FixupAndColorPitchFile has coloured the crowd. */
+void Indoor_GlassCrowdTiles(uint8_t *tiles)
+{
+    if (!_gIndoor)
+        return;
+    for (int16_t t = 1; t <= INDOOR_CROWD_TILES; t++) {
+        const uint8_t *src = tiles + (uint32_t)t * 256;
+        uint8_t *dst = tiles + (uint32_t)(t + INDOOR_CROWD_TILES) * 256;
+        for (int16_t r = 0; r < 16; r++) {
+            uint16_t mask = (uint16_t)((r & 1) ? 0x5555 : 0xAAAA);
+            for (int16_t pl = 0; pl < 8; pl++) {
+                uint16_t w = BE_READ_U16(src + r * 16 + pl * 2);
+                w = (uint16_t)((w & (uint16_t)~mask) | (((GLASS_GREY >> pl) & 1) ? mask : 0));
+                BE_WRITE_U16(dst + r * 16 + pl * 2, w);
             }
         }
     }
 }
 #endif
 
-#if defined(SWOS_SDL_BUILD) || defined(AGA)
+#ifdef SWOS_SDL_BUILD
 /* The top wall, before the sprites: it stands behind the players (they are in front of
  * it, on the court), so it greys only what is behind it -- the floor and the three
  * nearest rows of fans, from them down to the goal line; its rim along its top. */
@@ -997,7 +1041,7 @@ void Indoor_DrawGlassFront(void)
     glass_band(INDOOR_GLASS_X0, (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_HEIGHT), INDOOR_GLASS_X1, INDOOR_BOTTOM,
                (int16_t)(INDOOR_BOTTOM - INDOOR_GLASS_HOLE_H_BOTTOM), INDOOR_BOTTOM, INDOOR_BOTTOM);
 }
-#else
+#elif !defined(AGA)
 void Indoor_DrawGlassBehind(void)
 {
 }

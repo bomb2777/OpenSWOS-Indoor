@@ -23,12 +23,13 @@ The source roles were read off each preset's average position over the 35 ball s
 
 Then, ball sector by ball sector, the five are moved apart from their centre by SPREAD
 (phase 5.2: they stood too close together -- taken from eleven, five fill less of the
-court): the shape stays, the gaps grow. Clamped to the grid (x 0-14, y 0-15).
+court): the shape stays, the gaps grow. Clamped to the grid (x 0-14, y 0-15). Then the
+defenders of every tactic but 3-1-1 wider apart and a row further up (DEFENDERS, phase 5.4).
 
 The positions are on the tactics grid, which phase 4 maps onto the indoor area. A
 starting point to tune by playing: edit the ROLES or SPREAD below, rerun, rebuild.
 
-The restart tables give indoor 2-6 the places of outdoor 3, 4, 8, 10 and 11
+The restart tables give indoor 2-6 the places of outdoor 2, 5, 8, 10 and 11
 (Indoor_RestartOrdinal): 2 and 3 a back pair, 4 the middle, 5 and 6 take the kick-off.
 
 The little pitch on the line-up screen (SIDE_PITCH) is drawn by hand: (x, y, flags) per
@@ -51,6 +52,13 @@ ROLES = [
 ]
 
 SPREAD = 1.5
+
+# Phase 5.4 (the owner: "with 2-2-1 the two defenders stand too close to the keeper; 3-1-1
+# is good"): per tactic, its defenders (indexes into its five) moved out from the middle
+# (x 7) by DEF_WIDEN and up the court by DEF_LIFT rows, never deeper than DEF_MIN_Y -- in
+# every ball sector, the keeper holding it included. 3-1-1 stays as it was.
+DEF_WIDEN, DEF_LIFT, DEF_MIN_Y = 1.8, 1, 2
+DEFENDERS = {"2-2-1": [0, 1], "2-1-2": [0, 1], "1-2-2": [0], "1-3-1": [0]}
 
 KEEPER = (0x42, 0x06, 0x0000)
 SIDE_PITCH = {
@@ -98,6 +106,18 @@ def spread(players):
     return out
 
 
+def defenders(name, players):
+    """The tactic's defenders wider apart and further up (DEFENDERS)."""
+    out = [list(p) for p in players]
+    for i in DEFENDERS.get(name, []):
+        for sec in range(35):
+            x, y = out[i][sec] >> 4, out[i][sec] & 15
+            x = min(14, max(0, round(7 + (x - 7) * DEF_WIDEN)))
+            y = min(15, max(DEF_MIN_Y, y + DEF_LIFT))
+            out[i][sec] = (x << 4) | y
+    return out
+
+
 def c_positions(flat):
     rows = [flat[r * 7:(r + 1) * 7] for r in range(5)]
     return "{ { " + ", ".join("{ " + ", ".join("0x%02X" % b for b in row) + " }" for row in rows) + " } }"
@@ -120,7 +140,8 @@ def main():
         lines.append("    {   /* %s */" % name)
         lines.append("        { " + ", ".join("0x%02X" % b for b in nb) + " },")
         lines.append("        {")
-        players = [c_positions(p) for p in spread([role(s) for s in srcs])] + [empty] * (10 - len(srcs))
+        players = [c_positions(p) for p in defenders(name, spread([role(s) for s in srcs]))]
+        players += [empty] * (10 - len(srcs))
         lines.append(",\n".join("            " + p for p in players))
         lines.append("        },")
         lines.append("        { " + ", ".join(["0xFF"] * 10) + " },   /* no pairs */")

@@ -1791,9 +1791,11 @@ DrawBenchAndSubsMenu(void)
         }
 #else
         /* INDOOR: on the Amiga too -- the bench is beside the court, in view during play.
-         * Only when the dugouts are on screen, not just their edge, and each with its coach
-         * and four (s_benchSeats): two full benches are some twenty more bobs a frame. */
-        if (_gIndoor && (int16_t)(BENCH_X_LIMIT_PLAY - 8) > Render_CameraX()) {
+         * Each with its coach and four (s_benchSeats): two full benches are some twenty
+         * more bobs a frame. From the moment a dugout's edge is on screen, as the PC
+         * (bench_occupants_visible; until 2026-11-04 only once the dugouts were fully in
+         * view, so the figures popped in later than on the PC). */
+        if (_gIndoor && (int16_t)(BENCH_X_LIMIT_PLAY + 8) > Render_CameraX()) {
             s_benchSeats = 4;
             draw_bench_occupants_only();
             s_benchSeats = 0;

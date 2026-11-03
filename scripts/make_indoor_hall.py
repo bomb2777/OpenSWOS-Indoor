@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """make_indoor_hall.py -- the INDOOR hall's floor as a pitch map (docs/INDOOR.md, phase 5).
 
-    python3 scripts/make_indoor_hall.py [--src playground_v2.png] [--preview out.png] [--amiga]
+    python3 scripts/make_indoor_hall.py [--src playground_v2.png] [--preview out.png]
 
 Writes bin/grafs_indoor/LINO.MAP: the blue linoleum court in a parquet hall, in the
 format of the game's own pitch maps (an 8-bitplane .MAP like grafs_aga/P2020_n.MAP), which
@@ -44,7 +44,6 @@ from PIL import Image, ImageDraw
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SWIS = os.path.expanduser("~/zz_max/projects/libgdx-swis-2022/core/assets/images/swis/hall/playground_v2.png")
 OUT = os.path.join(REPO, "bin", "grafs_indoor", "LINO.MAP")
-OUT_AMIGA = os.path.join(REPO, "bin", "grafs_indoor", "LINO_A.MAP")
 
 # include/indoor.h -- keep in step.
 HALF_W, HALF_L = 159, 241
@@ -54,8 +53,6 @@ CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 45
 BOX_HALF_W, BOX_DEPTH = 74, 75
 # The sides of the hall (indoor.h, phase 5.1): the bench's right edge, the side stands.
 GLASS_LEFT, GLASS_RIGHT = 10, 10                  # INDOOR_GLASS_LEFT / _RIGHT
-HOLE_X0, HOLE_X1 = 300, 372                       # INDOOR_GLASS_HOLE_*: the goals'
-HOLE_H_TOP, HOLE_H_BOTTOM = 24, 18
 BENCH_X = 336 - HALF_W - GLASS_LEFT - 4           # INDOOR_BENCH_X: 163
 SIDE_COLS = 8
 SIDE_LEFT_COL = (BENCH_X - 16 - 5) // 16 - SIDE_COLS    # 0
@@ -119,8 +116,6 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default=SWIS)
     ap.add_argument("--preview", help="also write the floor as a PNG (in the game's colours)")
-    ap.add_argument("--amiga", action="store_true",
-                    help="the Amiga's map, LINO_A.MAP: the glass at the ends drawn into the floor")
     args = ap.parse_args()
 
     pal = game_palette()
@@ -130,8 +125,10 @@ def main():
     # The court's colours, sampled where the SWIS hall has them (image y is down:
     # 2000 - libgdx y).
     court = src.getpixel((300, 1000))       # the court, left of the centre circle
-    box = src.getpixel((650, 1900 - 1550))  # the penalty area, top
-    circle = src.getpixel((650, 1000))      # inside the centre circle
+    # The penalty areas and the centre circle a lighter blue than the court, inside clear
+    # white lines (the owner, 5.3: the hall's grey-blue areas read as glass).
+    # Palette entry 76, 0x66E: the court is 0x22C; 0x55C, nearer, is the grey-blue it replaces.
+    light = (0x66, 0x66, 0xEE)
     line = (255, 255, 255)
     court_shadow = (17, 17, 136)             # the net's inside at the line: a dark floor blue
     floor_shadow = (119, 85, 51)             # a shadow on the parquet
@@ -145,11 +142,11 @@ def main():
             img.paste(patch, (x, y))
     d = ImageDraw.Draw(img)
     d.rectangle([LEFT, TOP, RIGHT, BOTTOM], fill=court)
-    d.rectangle([CX - BOX_HALF_W, TOP, CX + BOX_HALF_W, TOP + BOX_DEPTH], fill=box)
-    d.rectangle([CX - BOX_HALF_W, BOTTOM - BOX_DEPTH, CX + BOX_HALF_W, BOTTOM], fill=box)
+    d.rectangle([CX - BOX_HALF_W, TOP, CX + BOX_HALF_W, TOP + BOX_DEPTH], fill=light, outline=line)
+    d.rectangle([CX - BOX_HALF_W, BOTTOM - BOX_DEPTH, CX + BOX_HALF_W, BOTTOM], fill=light, outline=line)
     # The centre circle: the hall's ellipse (about 220 x 180 there), scaled.
     rx, ry = round(110 * SCALE), round(90 * SCALE)
-    d.ellipse([CX - rx, CY - ry, CX + rx, CY + ry], fill=circle, outline=line)
+    d.ellipse([CX - rx, CY - ry, CX + rx, CY + ry], fill=light, outline=line)
     d.line([LEFT, CY, RIGHT, CY], fill=line)
     d.rectangle([LEFT, TOP, RIGHT, BOTTOM], outline=line)
     for y in (CY, TOP + PENALTY_SPOT, BOTTOM - PENALTY_SPOT):
@@ -196,13 +193,9 @@ def main():
     # to the court, with a light rim on its outside. The glass at the ends is seen in
     # perspective -- the top wall hides what is behind it, the top goal, the floor and the
     # nearest fans, the bottom one the court's last strip and the players there -- which
-    # the PC draws over each frame (indoor.c, Indoor_DrawGlass); the Amiga, which cannot,
-    # has its floor here (--amiga, LINO_A.MAP): the strip behind the top goal line, and as
-    # high up the court from the bottom one (indoor.h INDOOR_GLASS_HEIGHT). Both with the
-    # goal's hole, clear.
+    # the game draws over each frame (indoor.c, Indoor_DrawGlassBehind / _Front: the PC
+    # through a colour table, the Amiga as a checkerboard by the blitter).
     gx0, gx1 = 336 - HALF_W - GLASS_LEFT, 336 + HALF_W + GLASS_RIGHT
-    gtop = (CROWD_TOP_ROW + CROWD_ROWS) * 16
-    gheight = TOP - (CROWD_TOP_ROW + CROWD_ROWS - 3) * 16      # 80
     def glass(box, hole=None):
         x0, y0, x1, y1 = box
         keep = img.crop(hole) if hole else None
@@ -216,12 +209,6 @@ def main():
     glass((RIGHT + 1, TOP, gx1, BOTTOM))            # the right side
     d.line([gx0, TOP, gx0, BOTTOM], fill=rim)
     d.line([gx1, TOP, gx1, BOTTOM], fill=rim)
-    if args.amiga:
-        glass((gx0, gtop, gx1, TOP - 1), (HOLE_X0, TOP - HOLE_H_TOP, HOLE_X1 + 1, TOP))
-        glass((gx0, BOTTOM - gheight, gx1, BOTTOM), (HOLE_X0, BOTTOM - HOLE_H_BOTTOM, HOLE_X1 + 1, BOTTOM + 1))
-        d.line([gx0, gtop, gx1, gtop], fill=rim)          # the top wall's top
-        d.line([gx0, BOTTOM, HOLE_X0 - 1, BOTTOM], fill=rim)   # the bottom wall's foot, the
-        d.line([HOLE_X1 + 1, BOTTOM, gx1, BOTTOM], fill=rim)   # goal line (not in the hole)
 
     cache = {}
     idx = [[0] * WORLD_W for _ in range(WORLD_H)]
@@ -281,7 +268,7 @@ def main():
 
     data = b"".join((n * 256).to_bytes(4, "big") for n in cells)
     data += b"".join(planar(t) for t in tiles)
-    out = OUT_AMIGA if args.amiga else OUT
+    out = OUT
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "wb").write(data)
     used = sorted({v for t in tiles[FAN_TILES:] for v in t})

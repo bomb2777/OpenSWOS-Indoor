@@ -16,6 +16,7 @@
 #include "endian_helpers.h"
 #include "display.h"    /* WIDE_MARGIN — centre the replay overlay in widescreen (0 on Amiga) */
 #include "dos_mode.h"   /* _gDosView — the overlay's DOS positions */
+#include "indoor.h"     /* the glass over a replay */
 
 /* ---- Sprite constants ---- */
 #define SPR_REPLAY_FRAME_00  1095
@@ -865,6 +866,7 @@ void DrawReplayFrame(void)
         s_modFirst = 0;
     }
 #endif
+    Indoor_DrawGlassBehind();       /* INDOOR: the top wall, behind the players */
 
     /* Read next entry after frame marker */
     d0 = BE_READ_U32(a0);
@@ -953,6 +955,11 @@ sprite_decode:
 #endif
         DarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,
                           (uint16_t)(int16_t)sy);
+#ifndef SWOS_SDL_BUILD
+        /* INDOOR: a box behind the bottom wall greyed (the PC lays the wall below) */
+        Indoor_GlassReplaySprite((uint16_t)sprIdx, (int16_t)(sx + Render_CameraX()),
+                                 (int16_t)(sy + Render_CameraY()));
+#endif
     }
 
     /* Read next entry after sprite */
@@ -979,6 +986,9 @@ end_replay:
     return;
 
 after_decode:
+#ifdef SWOS_SDL_BUILD
+    Indoor_DrawGlassFront();        /* INDOOR: the bottom wall, over the replay's players */
+#endif
     /* loc_10C4E2: overlay drawing */
 
     /* The overlay's coordinates are each release's own, against its own screen:

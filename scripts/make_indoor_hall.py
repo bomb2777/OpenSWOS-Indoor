@@ -79,7 +79,7 @@ FAN_TILES = 27      # tile 0 and the crowd's 1-26, blank
 # tiles 27-52, the crowd seen through the top wall, filled at load from 1-26 (indoor.c,
 # Indoor_GlassCrowdTiles) -- the three rows of fans behind it use them, still.
 GLASS_CROWD = 26
-GLASS_GREY = 53                     # palette 53, 0x777 (indoor.c's; 0x555 until 5.4)
+GLASS_GREY = 52                     # palette 52, 0x555 (indoor.c's)
 GLASS_RIM = 56                      # 0xBBB
 GLASS_H = 80                        # INDOOR_GLASS_HEIGHT
 HOLE_X0, HOLE_X1 = 300, 372         # INDOOR_GLASS_HOLE_X0 / X1
@@ -200,15 +200,28 @@ def main():
         d.point((gx0 + 1, y), fill=grey(50))
         d.point((gx1, y), fill=grey(50))
 
-    # The glass (phase 5.3; a checkerboard of grey since 5.4, on both targets -- the
-    # owner's choice, the retro look): along each side, end stand to end stand, from the
-    # bench (left) or the stand (right) to the court, with a light rim on its outside (below,
-    # after the colours are indexed). The glass at the ends is seen in perspective -- the
-    # top wall hides what is behind it, the top goal, the floor and the nearest fans, the
-    # bottom one the court's last strip and the players there -- which the PC draws over
-    # each frame (indoor.c, Indoor_DrawGlassBehind / _Front); the Amiga has it baked into
-    # its map (--amiga, below).
+    # The glass (phase 5.3; the owner's SWIS hall: wall_transparent.png, sidewall_*.png --
+    # grey, (98, 98, 98) at about 60 % over what is behind it), drawn last, over the goal.
+    # Along each side, end stand to end stand, from the bench (left) or the stand (right)
+    # to the court, with a light rim on its outside. The glass at the ends is seen in
+    # perspective -- the top wall hides what is behind it, the top goal, the floor and the
+    # nearest fans, the bottom one the court's last strip and the players there -- which
+    # the PC draws over each frame (indoor.c, Indoor_DrawGlassBehind / _Front, a colour
+    # table); the Amiga has it baked into its map (--amiga, below).
     gx0, gx1 = 336 - HALF_W - GLASS_LEFT, 336 + HALF_W + GLASS_RIGHT
+    def glass(box, hole=None):
+        x0, y0, x1, y1 = box
+        keep = img.crop(hole) if hole else None
+        region = img.crop((x0, y0, x1 + 1, y1 + 1))
+        tint = Image.new("RGB", region.size, (98, 98, 98))
+        img.paste(Image.blend(region, tint, 0.6), (x0, y0))
+        if hole:
+            img.paste(keep, hole[:2])
+    rim = grey(56)
+    glass((gx0, TOP, LEFT - 1, BOTTOM))             # the left side
+    glass((RIGHT + 1, TOP, gx1, BOTTOM))            # the right side
+    d.line([gx0, TOP, gx0, BOTTOM], fill=rim)
+    d.line([gx1, TOP, gx1, BOTTOM], fill=rim)
 
     cache = {}
     idx = [[0] * WORLD_W for _ in range(WORLD_H)]
@@ -219,24 +232,18 @@ def main():
                 cache[rgb] = nearest(pal, rgb)
             idx[y][x] = cache[rgb]
 
-    # A checkerboard of grey -- (x + y) even, fixed to the world -- but for a hole.
-    def checker(x0, y0, x1, y1, hx0=1, hy0=1, hx1=0, hy1=0):
-        for y in range(y0, y1 + 1):
-            for x in range(x0, x1 + 1):
-                if hx0 <= x <= hx1 and hy0 <= y <= hy1:
-                    continue
-                if (x + y) % 2 == 0:
-                    idx[y][x] = GLASS_GREY
-    checker(gx0 + 1, TOP, LEFT - 1, BOTTOM)         # the left side
-    checker(RIGHT + 1, TOP, gx1 - 1, BOTTOM)        # the right side
-    for y in range(TOP, BOTTOM + 1):
-        idx[y][gx0] = idx[y][gx1] = GLASS_RIM
-
     if args.amiga:
-        # The glass at the ends, the same checkerboard (the pattern the Amiga's blitter
-        # laid), with the goals' holes clear: the floor behind the top goal line (the fans
-        # above it are the greyed tiles below), and the court's last GLASS_H rows, its
-        # light rim along the goal line.
+        # The glass at the ends as a checkerboard of grey -- (x + y) even, the pattern the
+        # Amiga's blitter laid -- with the goals' holes clear: the floor behind the top
+        # goal line (the fans above it are the greyed tiles below), and the court's last
+        # GLASS_H rows, its light rim along the goal line.
+        def checker(x0, y0, x1, y1, hx0, hy0, hx1, hy1):
+            for y in range(y0, y1 + 1):
+                for x in range(x0, x1 + 1):
+                    if hx0 <= x <= hx1 and hy0 <= y <= hy1:
+                        continue
+                    if (x + y) % 2 == 0:
+                        idx[y][x] = GLASS_GREY
         gtop = (CROWD_TOP_ROW + CROWD_ROWS) * 16
         checker(gx0, gtop, gx1, TOP - 1, HOLE_X0, TOP - HOLE_H_TOP, HOLE_X1, TOP - 1)
         checker(gx0, BOTTOM - GLASS_H, gx1, BOTTOM, HOLE_X0, BOTTOM - HOLE_H_BOTTOM, HOLE_X1, BOTTOM)

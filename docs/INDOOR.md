@@ -1,6 +1,6 @@
 # INDOOR.md — six a side in a hall
 
-> **Status (2026-11-02): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2 and 5.3 (the owner's lists after playing); phase 6 (online) open.** This fork's own
+> **Status (2026-11-03): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2, 5.3 and 5.4 (the owner's lists after playing); phase 6 (online) open.** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -155,7 +155,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
       foul a red card, the computer's players included (the original sends off only a side with
       a human controller), so a CPU match shows it: `[indoor] time penalty` lines in `SWOS.log`.
    5. **A wall of two:** the back pair (ordinals 2–3) in the middle two of the outdoor wall's four
-      places, re-centred when one is off, at the indoor distance (offsets × 52/65).
+      places, re-centred when one is off, at the indoor distance (offsets × 52/65). Replaced in
+      5.4: those places, made for the big pitch, could stand it beside the line to goal.
    6. **The hall's sides.** A two-column stand along each side between the end stands (the top
       team's fans 1/3 on the left, the bottom team's 17/19 on the right, a stair every ten rows),
       animated (every other fan pick is a side cell on screen); the bench's two dugouts (our own
@@ -193,7 +194,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      at the bottom one: the top goal, a keeper on the bottom line). The players are in front of
      the top wall (drawn before the sprites, `Indoor_DrawGlassBehind`) and behind the bottom one
      (after them, `Indoor_DrawGlassFront`), whose light rim runs along its foot, the goal line.
-     The PC greys through a colour table from the palette on screen (rebuilt when it changes).
+     The PC greyed through a colour table from the palette on screen until 5.4, when it took
+     the Amiga's checkerboard (below).
      The Amiga cannot lay a wall a frame (the blitter doing it was more than a frame's chip bus:
      the owner's A1200 crawled with a wall in view), so its map, `LINO_A.MAP`
      (`make_indoor_hall.py --amiga`), has the glass baked in as a checkerboard of grey (0x555,
@@ -224,6 +226,31 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    - **Players held by the glass at stoppages too** (`Indoor_KeepPlayersInside`): a slide or a
      dive the whistle stops used to carry on through it; not during the walk-on, half time, the
      end or a substitution.
+5.4. **The owner's fourth list** (2026-11-03) — done:
+   - **The little pitch** without the four corner arcs and the two arcs on the penalty areas:
+     their pixels in sprite 225 painted the court's colour indoors (only where they have the
+     lines' colour), what was there saved and put back for an outdoor match
+     (`side_pitch_arcs`, both targets: chunky on the PC, planar on the Amiga).
+   - **The glass a checkerboard on both targets** and lighter: palette 53 (0x777, was 0x555)
+     on every other pixel ((x + y) even in the world), the side glass in `LINO.MAP` /
+     `LINO_A.MAP` too; the PC lays the end walls each frame the same way
+     (`glass_band`, its grey the palette's nearest to 0x777).
+   - **Defenders further from the keeper** (`make_indoor_tactics.py`, `DEFENDERS`): in 2-2-1,
+     2-1-2, 1-2-2 and 1-3-1 the defenders are moved out from the middle ×1.8 and a grid row up
+     (never below row 2), in every ball sector -- the keeper holding the ball included (that
+     is the tactic too). 3-1-1, which the owner liked, is as it was. At restarts (kick-off, free
+     kicks) indoor 2 and 3 take the outdoor full backs' places, 2 and 5, not the centre backs'
+     (`Indoor_RestartOrdinal`).
+   - **The wall on the line to goal** (`Indoor_WallSpot`, from `UpdatePlayers`): for every free
+     kick against them (all seven `ST_FREE_KICK_*`, the two widest included), the back pair
+     stand on the line from the ball to their goal's middle, just past the free-kick distance
+     (62 px), 10 px apart across it; one alone when the other is off.
+   - **The line-up by side and by strength** (`sort_line_up`): after the places are filled, a
+     forward on the bench worth at least 5 more (`FORWARD_FOR_MIDFIELDER`) than a midfielder
+     takes his place (Croatia: Suker for Prosinecki; 49 of the 1,711 teams change). Then
+     each line's players go onto its places by side: places and players (RB/RW right, LB/LW
+     left, the rest the middle) both in side order, paired off. A `[indoor] <team> line-up`
+     line in `SWOS.log` names the six.
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 

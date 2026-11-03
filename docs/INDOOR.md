@@ -192,11 +192,13 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      hole where its goal stands (x 300..372; 24 px at the top line, the bottom goal frame's 18 px
      at the bottom one: the top goal, a keeper on the bottom line). The players are in front of
      the top wall (drawn before the sprites, `Indoor_DrawGlassBehind`) and behind the bottom one
-     (after them, `Indoor_DrawGlassFront`), whose light rim runs along its foot, the goal line. The
-     PC draws that over every frame after the sprites (`Indoor_DrawGlass`: a colour table from
-     the palette on screen, rebuilt when it changes); the Amiga cannot afford it a frame and
-     loads `LINO_A.MAP` (`make_indoor_hall.py --amiga`), the floor of both ends greyed, the
-     players and fans not.
+     (after them, `Indoor_DrawGlassFront`), whose light rim runs along its foot, the goal line.
+     The PC greys through a colour table from the palette on screen (rebuilt when it changes);
+     the Amiga lays a checkerboard of grey (0x555) by the blitter, plane by plane (minterm 0xCA),
+     into both copies of a row of its 2x-tall frontbuffer -- a full wall in view costs it roughly
+     10-15 ms a frame by estimate, not yet measured.
+   - **Court markings:** the penalty areas and the centre circle a lighter blue (palette 76,
+     0x66E; the court 0x22C) inside clear white lines.
    - **Sorted line-up** (`install_tactics` → `sort_line_up`): the keeper, then each of the
      tactic's outfield places (2-2-1: D D M M A, 2-1-2: D D M A A, 1-2-2: D M M A A, 3-1-1:
      D D D M A, 1-3-1: D M M M A) by the BEST player left who plays it (RB/LB/CD, RW/LW/MF, ST)

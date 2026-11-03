@@ -970,6 +970,8 @@ void FixupAndColorPitchFile(void)
         PitchMap_Bake();
 #endif
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* INDOOR: the fans behind the top wall, greyed, from the coloured ones */
+    Indoor_GlassCrowdTiles(_pitchDatBuffer + PITCH_POINTER_COUNT * 4);
     copyPitchTilesToFast();     /* the fans are coloured: the tiles are final */
 #endif
 }

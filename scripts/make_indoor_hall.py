@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """make_indoor_hall.py -- the INDOOR hall's floor as a pitch map (docs/INDOOR.md, phase 5).
 
-    python3 scripts/make_indoor_hall.py [--src playground_v2.png] [--preview out.png]
+    python3 scripts/make_indoor_hall.py [--src playground_v2.png] [--preview out.png] [--amiga]
 
 Writes bin/grafs_indoor/LINO.MAP: the blue linoleum court in a parquet hall, in the
 format of the game's own pitch maps (an 8-bitplane .MAP like grafs_aga/P2020_n.MAP), which
@@ -44,6 +44,7 @@ from PIL import Image, ImageDraw
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SWIS = os.path.expanduser("~/zz_max/projects/libgdx-swis-2022/core/assets/images/swis/hall/playground_v2.png")
 OUT = os.path.join(REPO, "bin", "grafs_indoor", "LINO.MAP")
+OUT_AMIGA = os.path.join(REPO, "bin", "grafs_indoor", "LINO_A.MAP")
 
 # include/indoor.h -- keep in step.
 HALF_W, HALF_L = 159, 241
@@ -73,6 +74,16 @@ WORLD_W, WORLD_H = 672, 880
 COLS, ROWS = 42, 55
 RESERVED = {0, 7, 9, 78, 79, 80, 81, 106, 107, 10, 11} | set(range(112, 128)) | set(range(240, 256))
 FAN_TILES = 27      # tile 0 and the crowd's 1-26, blank
+# The Amiga's map (--amiga, LINO_A.MAP) has the glass at the ends baked in as a checkerboard
+# (indoor.h: its blitter could not lay it a frame), and 26 more blanks after the crowd's:
+# tiles 27-52, the crowd seen through the top wall, filled at load from 1-26 (indoor.c,
+# Indoor_GlassCrowdTiles) -- the three rows of fans behind it use them, still.
+GLASS_CROWD = 26
+GLASS_GREY = 52                     # palette 52, 0x555 (indoor.c's)
+GLASS_RIM = 56                      # 0xBBB
+GLASS_H = 80                        # INDOOR_GLASS_HEIGHT
+HOLE_X0, HOLE_X1 = 300, 372         # INDOOR_GLASS_HOLE_X0 / X1
+HOLE_H_TOP, HOLE_H_BOTTOM = 24, 18  # INDOOR_GLASS_HOLE_H_TOP / _BOTTOM
 
 # The crowd's cells, as every SWOS pitch lays them out (tile numbers of the bank): row 0 the
 # list the kit colours are applied through (cells 0-20 one team's, 21-41 the other's), the
@@ -116,6 +127,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default=SWIS)
     ap.add_argument("--preview", help="also write the floor as a PNG (in the game's colours)")
+    ap.add_argument("--amiga", action="store_true",
+                    help="the Amiga's map, LINO_A.MAP: the glass at the ends baked in")
     args = ap.parse_args()
 
     pal = game_palette()
@@ -193,8 +206,8 @@ def main():
     # to the court, with a light rim on its outside. The glass at the ends is seen in
     # perspective -- the top wall hides what is behind it, the top goal, the floor and the
     # nearest fans, the bottom one the court's last strip and the players there -- which
-    # the game draws over each frame (indoor.c, Indoor_DrawGlassBehind / _Front: the PC
-    # through a colour table, the Amiga as a checkerboard by the blitter).
+    # the PC draws over each frame (indoor.c, Indoor_DrawGlassBehind / _Front, a colour
+    # table); the Amiga has it baked into its map (--amiga, below).
     gx0, gx1 = 336 - HALF_W - GLASS_LEFT, 336 + HALF_W + GLASS_RIGHT
     def glass(box, hole=None):
         x0, y0, x1, y1 = box
@@ -219,8 +232,28 @@ def main():
                 cache[rgb] = nearest(pal, rgb)
             idx[y][x] = cache[rgb]
 
-    # Tiles: FAN_TILES blanks, then each distinct tile in map order.
-    tiles = [bytes(256)] * FAN_TILES
+    if args.amiga:
+        # The glass at the ends as a checkerboard of grey -- (x + y) even, the pattern the
+        # Amiga's blitter laid -- with the goals' holes clear: the floor behind the top
+        # goal line (the fans above it are the greyed tiles below), and the court's last
+        # GLASS_H rows, its light rim along the goal line.
+        def checker(x0, y0, x1, y1, hx0, hy0, hx1, hy1):
+            for y in range(y0, y1 + 1):
+                for x in range(x0, x1 + 1):
+                    if hx0 <= x <= hx1 and hy0 <= y <= hy1:
+                        continue
+                    if (x + y) % 2 == 0:
+                        idx[y][x] = GLASS_GREY
+        gtop = (CROWD_TOP_ROW + CROWD_ROWS) * 16
+        checker(gx0, gtop, gx1, TOP - 1, HOLE_X0, TOP - HOLE_H_TOP, HOLE_X1, TOP - 1)
+        checker(gx0, BOTTOM - GLASS_H, gx1, BOTTOM, HOLE_X0, BOTTOM - HOLE_H_BOTTOM, HOLE_X1, BOTTOM)
+        for x in range(gx0, gx1 + 1):
+            if not HOLE_X0 <= x <= HOLE_X1:
+                idx[BOTTOM][x] = GLASS_RIM
+
+    # Tiles: the blanks, then each distinct tile in map order.
+    blanks = FAN_TILES + (GLASS_CROWD if args.amiga else 0)
+    tiles = [bytes(256)] * blanks
     seen = {}
     cells = []
     for r in range(ROWS):
@@ -240,6 +273,8 @@ def main():
     top = [TOP_STAND[1], TOP_STAND[2]] + TOP_STAND
     bottom = BOTTOM_STAND + [BOTTOM_STAND[1], BOTTOM_STAND[2]]
     for i, row in enumerate(top[-CROWD_ROWS:]):
+        if args.amiga and i >= CROWD_ROWS - 3:      # behind the top wall: the greyed fans
+            row = [t + GLASS_CROWD if t else 0 for t in row]
         put(CROWD_TOP_ROW + i, row)
     for i, row in enumerate(bottom[:CROWD_ROWS]):
         put(CROWD_BOTTOM_ROW + i, row)
@@ -268,13 +303,13 @@ def main():
 
     data = b"".join((n * 256).to_bytes(4, "big") for n in cells)
     data += b"".join(planar(t) for t in tiles)
-    out = OUT
+    out = OUT_AMIGA if args.amiga else OUT
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "wb").write(data)
-    used = sorted({v for t in tiles[FAN_TILES:] for v in t})
+    used = sorted({v for t in tiles[blanks:] for v in t})
     print("wrote %s: %d bytes, %d tiles (%d unique + %d blanks), palette entries %s"
-          % (os.path.relpath(out, REPO), len(data), len(tiles), len(tiles) - FAN_TILES,
-             FAN_TILES, used))
+          % (os.path.relpath(out, REPO), len(data), len(tiles), len(tiles) - blanks,
+             blanks, used))
 
     if args.preview:
         prev = Image.new("RGB", (WORLD_W, WORLD_H))

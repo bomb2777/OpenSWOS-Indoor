@@ -242,6 +242,11 @@ static void swapPlayerNameData(int16_t enterIndex, int16_t leaveIndex);
 static PlayerInfo *getBenchPlayerPointer(uint16_t index, uint16_t *outOrdinal);
 static void drawOpponentsBench(void);
 static void drawBenchPlayersAndCoach(TeamGame *teamGame, TeamGeneralInfo *team, uint16_t x, uint16_t y);
+/* INDOOR, the Amiga: how many of the bench's seats drawBenchPlayersAndCoach fills during play
+ * (0 = all). An indoor bench is ten, two benches and coaches some twenty-two bobs a frame,
+ * which the A1200 felt; during play it shows the coach and four (the owner's choice), the
+ * substitutes menu all of them. */
+static uint16_t s_benchSeats;
 static void drawSubstitutesMenu(void);
 static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t selectedIndex,
                                      uint8_t *charsTable, TeamGame *teamGame, uint16_t *playerOffsets);
@@ -1790,10 +1795,13 @@ DrawBenchAndSubsMenu(void)
         }
 #else
         /* INDOOR: on the Amiga too -- the bench is beside the court, in view during play.
-         * Only when the dugouts are on screen, not just their edge: two benches are some
-         * twenty more bobs a frame, which the Amiga feels. */
-        if (_gIndoor && (int16_t)(BENCH_X_LIMIT_PLAY - 8) > Render_CameraX())
+         * Only when the dugouts are on screen, not just their edge, and each with its coach
+         * and four (s_benchSeats): two full benches are some twenty more bobs a frame. */
+        if (_gIndoor && (int16_t)(BENCH_X_LIMIT_PLAY - 8) > Render_CameraX()) {
+            s_benchSeats = 4;
             draw_bench_occupants_only();
+            s_benchSeats = 0;
+        }
 #endif
         return;
     }
@@ -2040,7 +2048,7 @@ skip_coach:
         pi += 4; /* advance by 4 more players = player 15 */
     }
 
-    for (d7 = 1; d7 <= (uint16_t)Indoor_BenchSize(); d7++) {
+    for (d7 = 1; d7 <= (uint16_t)Indoor_BenchSize() && (s_benchSeats == 0 || d7 <= s_benchSeats); d7++) {
         /* check if player is valid to draw */
         if (pi->skip != 0)
             goto next_player;

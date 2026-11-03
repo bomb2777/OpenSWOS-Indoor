@@ -308,6 +308,11 @@ static int32_t bench_top(uint16_t engineY, int32_t trainingTop)
 {
     return _trainingGame ? trainingTop != 0 : engineY < 437;
 }
+/* INDOOR, the Amiga: how many of the bench's seats drawBenchPlayersAndCoach fills during play
+ * (0 = all). An indoor bench is ten, two benches and coaches some twenty-two bobs a frame,
+ * which the A1200 felt; during play it shows the coach and four (the owner's choice), the
+ * substitutes menu all of them. */
+static uint16_t s_benchSeats;
 static void drawSubstitutesMenu(void);
 static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t selectedIndex,
                                      uint8_t *charsTable, TeamGame *teamGame, uint16_t *playerOffsets);
@@ -1895,10 +1900,13 @@ DrawBenchAndSubsMenu(void)
         }
 #else
         /* INDOOR: on the Amiga too -- the bench is beside the court, in view during play.
-         * Only when the dugouts are on screen, not just their edge: two benches are some
-         * twenty more bobs a frame, which the Amiga feels. */
-        if (_gIndoor && (int16_t)(BENCH_X_LIMIT_PLAY - 8) > Render_CameraX())
+         * Only when the dugouts are on screen, not just their edge, and each with its coach
+         * and four (s_benchSeats): two full benches are some twenty more bobs a frame. */
+        if (_gIndoor && (int16_t)(BENCH_X_LIMIT_PLAY - 8) > Render_CameraX()) {
+            s_benchSeats = 4;
             draw_bench_occupants_only();
+            s_benchSeats = 0;
+        }
 #endif
         return;
     }
@@ -2175,7 +2183,7 @@ skip_coach:
     const uint16_t frontRow = (uint16_t)LongBench_FrontRow();
     const uint16_t last = frontRow ? (uint16_t)(first + LongBench_Last() - 1) : (uint16_t)(first + Indoor_BenchSize() - 1);   /* 5; INDOOR 11 */
     const uint16_t backY = d2;
-    for (d7 = first; d7 <= last; d7++) {
+    for (d7 = first; d7 <= last && (s_benchSeats == 0 || d7 <= s_benchSeats); d7++) {   /* INDOOR, the Amiga: s_benchSeats */
         pi = LongBench_Player(teamGame, (uint16_t)place);
         /* check if player is valid to draw */
         if (pi->skip != 0)

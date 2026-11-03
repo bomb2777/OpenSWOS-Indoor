@@ -1155,6 +1155,7 @@ static void glass_box(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0
 }
 
 extern Sprite _ballSprite;
+extern Sprite _refereeSprite;
 
 /* A sprite's box -- left/right of its x, up/down of its foot -- through the bottom wall,
  * where it is inside it. */
@@ -1186,6 +1187,7 @@ void Indoor_DrawGlassFront(void)
         for (int16_t i = 0; i < INDOOR_PLAYERS; i++)
             glass_sprite(tbl[i]->x.s.i, tbl[i]->y.s.i, 10, 12, 26, 5);
     }
+    glass_sprite(_refereeSprite.x.s.i, _refereeSprite.y.s.i, 10, 12, 26, 5);   /* as the PC greys him */
     glass_sprite(_ballSprite.x.s.i, (int16_t)(_ballSprite.y.s.i - _ballSprite.z.s.i), 5, 7, 8, 7);
 }
 

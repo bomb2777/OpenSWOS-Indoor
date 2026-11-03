@@ -1779,8 +1779,10 @@ DrawBenchAndSubsMenu(void)
             draw_bench_occupants_only();
         }
 #else
-        /* INDOOR: on the Amiga too -- the bench is beside the court, in view during play. */
-        if (_gIndoor && bench_occupants_visible())
+        /* INDOOR: on the Amiga too -- the bench is beside the court, in view during play.
+         * Only when the dugouts are on screen, not just their edge: two benches are some
+         * twenty more bobs a frame, which the Amiga feels. */
+        if (_gIndoor && (int16_t)(BENCH_X_LIMIT_PLAY - 8) > Render_CameraX())
             draw_bench_occupants_only();
 #endif
         return;

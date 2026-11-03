@@ -1189,6 +1189,17 @@ void Indoor_DrawGlassFront(void)
     glass_sprite(_ballSprite.x.s.i, (int16_t)(_ballSprite.y.s.i - _ballSprite.z.s.i), 5, 7, 8, 7);
 }
 
+void Indoor_GlassReplaySprite(uint16_t sprIdx, int16_t worldX, int16_t worldY)
+{
+    const SpriteGraphics *g;
+    if (!_gIndoor || !INDOOR_GLASS_SPRITES)
+        return;
+    g = ((SpriteGraphics **)_spriteGraphicsPtr)[sprIdx];
+    if (!g || worldY + g->nlines <= INDOOR_BOTTOM - INDOOR_GLASS_HEIGHT || worldY > INDOOR_BOTTOM)
+        return;
+    glass_sprite(worldX, worldY, 0, (int16_t)(g->pixWidth - 1), 0, (int16_t)(g->nlines - 1));
+}
+
 /* The fans behind the top wall, greyed: tiles 27-52 of LINO_A.MAP are 1-26 (the crowd, kit
  * coloured by now) under the checkerboard -- (x + y) even, as in the map: in a tile's row r
  * the pixels of the parity of r. 8-plane tiles, a row of eight plane words. Once, after
@@ -1227,6 +1238,11 @@ void Indoor_DrawGlassBehind(void)
 
 /* The bottom wall, after the sprites: the players on the court's last rows are behind it.
  * As high as the top one, up from the goal line; its rim along its foot, the goal line. */
+void Indoor_GlassReplaySprite(uint16_t sprIdx, int16_t worldX, int16_t worldY)
+{
+    (void)sprIdx; (void)worldX; (void)worldY;
+}
+
 void Indoor_DrawGlassFront(void)
 {
     if (!_gIndoor)
@@ -1238,6 +1254,11 @@ void Indoor_DrawGlassFront(void)
 #elif !defined(AGA)
 void Indoor_DrawGlassBehind(void)
 {
+}
+
+void Indoor_GlassReplaySprite(uint16_t sprIdx, int16_t worldX, int16_t worldY)
+{
+    (void)sprIdx; (void)worldX; (void)worldY;
 }
 
 void Indoor_DrawGlassFront(void)

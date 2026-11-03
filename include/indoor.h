@@ -256,6 +256,10 @@ int16_t Indoor_GoalY(int16_t y);
 #define INDOOR_GLASS_HOLE_H_BOTTOM 18   /* (net to the line) and the bottom one's frame */
 void Indoor_DrawGlassBehind(void);
 void Indoor_DrawGlassFront(void);
+/* A replay's frame (highlight.c DrawReplayFrame): the Amiga greys each recorded sprite's box
+ * (top-left world x, y) inside the bottom wall, as Indoor_DrawGlassFront does the live ones;
+ * the PC lays the whole wall after the sprites (Indoor_DrawGlassFront) and does nothing here. */
+void Indoor_GlassReplaySprite(uint16_t sprIdx, int16_t worldX, int16_t worldY);
 /* The Amiga: the greyed fans behind the top wall, tiles 27-52 of LINO_A.MAP from 1-26 (the
  * crowd), made once the crowd has its kit colours (FixupAndColorPitchFile). */
 void Indoor_GlassCrowdTiles(uint8_t *tiles);

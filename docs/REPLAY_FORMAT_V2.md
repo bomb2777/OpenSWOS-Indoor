@@ -122,11 +122,11 @@ or CRC is refused with a reason rather than played.
 Version, screen width the recording was made on, gameplay flags (1 DOS
 gameplay, 2 DOS graphics, 4 arcade, 8 the DOS view, 16 the view is recorded -- a file
 without 16 predates it, and the viewer works the view out: docs/PLAYBACK.md, "A recording
-is shown in the view it was played in"; 32 the XBOX gameplay style, since 2026-11-02), then (since 2026-09-30, in what was a reserved word)
+is shown in the view it was played in"; 32 the XBOX gameplay style, since 2026-11-02; 64 INDOOR -- this fork's, OpenSWOS-Indoor, docs/INDOOR.md: the match was played in the hall, and the word after `gameMaxSubstitutes`, reserved upstream, holds its floor), then (since 2026-09-30, in what was a reserved word)
 the view HEIGHT the match was simulated in -- 200 DOS, 272 Amiga; 0 in older files --
 which playback maps the camera from onto its own picture (docs/WIDESCREEN.md "The DOS
 view"), the UTC time, the 32-character build
-stamp, the final score, `pitchNumberAndType`, `gameMaxSubstitutes`, the
+stamp, the final score, `pitchNumberAndType`, `gameMaxSubstitutes`, a reserved word (the INDOOR floor), the
 competition name and round, and the two teams as the `.HIL` header holds them
 (1018 bytes each, the 11 int16 kit words big-endian).
 

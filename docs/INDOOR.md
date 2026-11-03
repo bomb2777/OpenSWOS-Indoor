@@ -259,6 +259,19 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      recordings player) shows it in the hall (`ReplayV2_UseRecordedIndoor`, before the pitch
      is loaded; undone in `ReplayV2_RestoreView`). A `.HIL` saved from an indoor match does
      not say so: it plays on the outdoor pitch. The bench figures are not in a recording.
+5.5. **The owner's fifth list** (2026-11-03):
+   - **Substitutions as in futsal, within SWOS's menu** (`bench_subs.c`): indoors the bench
+     can substitute while a keeper holds the ball (outdoors that stoppage allows only
+     tactics), without a limit (`_maxSubsPerTeam` not checked), and a substituted player may
+     come back on (his position is not set to 0xFF). Never the keeper holding the ball
+     (`holding_keeper`: he does not walk off with it, and the substitution waited for
+     ever); bench slot 11 is an outfield substitute, not the reserve keeper. The substitute
+     walks on from the indoor dugout. True flying substitutions in play were turned down
+     (the owner: "a mess and a fun killer"). `[indoor] substitution` lines in `SWOS.log`;
+     `SWOS_INDOOR_TEST_SUB=1` (PC) makes each keeper's side substitute whenever he holds the
+     ball, through the menu's own controls -- the 1st, 2nd, 3rd substitute in turn.
+   - **PC and Amiga alike:** the Amiga greys the referee behind the bottom wall too, and
+     draws the bench figures from the moment a dugout's edge is in view, as the PC.
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 

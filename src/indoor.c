@@ -170,10 +170,30 @@ static int16_t best_left(const TeamFileEx *t, const uint8_t *used, int16_t group
     return best;
 }
 
+/* A player's side from his position: 0 right (RB RW), 2 left (LB LW), 1 the middle. */
+static int16_t position_side(const TeamFileEx *t, uint8_t fileIndex)
+{
+    int16_t pos = (int16_t)((t->players[fileIndex].positionAndFace & PF_POSITION_MASK) >> PF_POSITION_SHIFT);
+    if (pos == 1 || pos == 4) return 0;
+    if (pos == 2 || pos == 5) return 2;
+    return 1;
+}
+
+static int16_t slot_price(const TeamFileEx *t, int16_t slot)
+{
+    return (int16_t)(uint8_t)t->players[t->team.playerNumbers[slot]].price;
+}
+
+/* How much more a forward must be worth to take a midfield place (phase 5.4: the owner,
+ * "Davor Suker must start for Croatia -- he could replace an offensive midfielder"; 49 of
+ * the 1,711 teams). */
+#define FORWARD_FOR_MIDFIELDER 5
+
 static void sort_line_up(TeamFileEx *t)
 {
     /* The outfield places of each indoor tactic, ordinals 2-6 (make_indoor_tactics.py's
-     * ROLES): 1 defence, 2 midfield, 3 attack. */
+     * ROLES): 1 defence, 2 midfield, 3 attack; and the side each stands on, from its
+     * average x on the tactics grid (0 right, x < 6; 2 left, x > 8; 1 the middle). */
     static const uint8_t kPlaces[INDOOR_TACTICS][INDOOR_PLAYERS - 1] = {
         { 1, 1, 2, 2, 3 },      /* 2-2-1 */
         { 1, 1, 2, 3, 3 },      /* 2-1-2 */
@@ -181,8 +201,16 @@ static void sort_line_up(TeamFileEx *t)
         { 1, 1, 1, 2, 3 },      /* 3-1-1 */
         { 1, 2, 2, 2, 3 },      /* 1-3-1 */
     };
+    static const uint8_t kSides[INDOOR_TACTICS][INDOOR_PLAYERS - 1] = {
+        { 0, 2, 0, 2, 1 },
+        { 0, 2, 1, 0, 2 },
+        { 1, 0, 2, 0, 2 },
+        { 0, 1, 2, 1, 1 },
+        { 1, 0, 1, 2, 1 },
+    };
     uint8_t order[16], used[16];
-    int16_t n = 0, i, k, g;
+    int16_t place[INDOOR_PLAYERS];      /* the slot (in the team's order) on each place */
+    int16_t n = 0, i, j, k, g;
     uint8_t tactic = t->team.tactics < INDOOR_TACTICS ? t->team.tactics : 0;
 
     for (i = 0; i < 16; i++)
@@ -196,8 +224,43 @@ static void sort_line_up(TeamFileEx *t)
             for (pick = 0; used[pick]; pick++)
                 ;
         used[pick] = 1;
-        order[n++] = t->team.playerNumbers[pick];
+        place[k] = pick;
     }
+    /* A forward on the bench clearly better than a midfielder takes his place. */
+    for (k = 1; k < INDOOR_PLAYERS; k++) {
+        int16_t fw;
+        if (kPlaces[tactic][k - 1] != 2 || (fw = best_left(t, used, 3, 0)) < 0)
+            continue;
+        if (slot_price(t, fw) >= slot_price(t, place[k]) + FORWARD_FOR_MIDFIELDER) {
+            used[place[k]] = 0;
+            used[fw] = 1;
+            place[k] = fw;
+        }
+    }
+    /* Each line's players onto its places by side (the owner: a left winger played on the
+     * right): its places and its players both put in side order, right to left, and paired
+     * off; players of one side keep their order by value. */
+    for (g = 1; g <= 3; g++) {
+        int16_t pl[INDOOR_PLAYERS], ps[INDOOR_PLAYERS], np = 0, tmp;
+        for (k = 1; k < INDOOR_PLAYERS; k++)
+            if (kPlaces[tactic][k - 1] == g)
+                pl[np++] = k;
+        for (j = 0; j < np; j++)
+            ps[j] = place[pl[j]];
+        for (i = 1; i < np; i++)            /* (insertion sorts of two or three) */
+            for (j = i; j > 0 && kSides[tactic][pl[j - 1] - 1] > kSides[tactic][pl[j] - 1]; j--) {
+                tmp = pl[j]; pl[j] = pl[j - 1]; pl[j - 1] = tmp;
+            }
+        for (i = 1; i < np; i++)
+            for (j = i; j > 0 && position_side(t, t->team.playerNumbers[ps[j - 1]]) >
+                                 position_side(t, t->team.playerNumbers[ps[j]]); j--) {
+                tmp = ps[j]; ps[j] = ps[j - 1]; ps[j - 1] = tmp;
+            }
+        for (j = 0; j < np; j++)
+            place[pl[j]] = ps[j];
+    }
+    for (k = 0; k < INDOOR_PLAYERS; k++)
+        order[n++] = t->team.playerNumbers[place[k]];
     for (g = 0; g <= 3; g++) {
         int16_t pick;
         while ((pick = best_left(t, used, g, 0)) >= 0) {
@@ -208,6 +271,12 @@ static void sort_line_up(TeamFileEx *t)
     for (i = 0; i < 16; i++)
         t->team.playerNumbers[i] = order[i];
     t->team.playerValuesDirty = TEAM_VALUES_DIRTY;  /* as the line-up screen's swap does */
+#ifdef SWOS_SDL_BUILD
+    fprintf(stderr, "[indoor] %.17s line-up (tactic %d):", (const char *)t->team.teamName, tactic);
+    for (k = 0; k < INDOOR_PLAYERS; k++)
+        fprintf(stderr, "%s %.23s", k ? "," : "", (const char *)t->players[order[k]].playerName);
+    fprintf(stderr, "\n");
+#endif
 }
 
 static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
@@ -314,12 +383,47 @@ void Indoor_ParkPlayers(void)
     }
 }
 
+/* The outdoor player whose place an indoor one takes at a restart (kick-off, free kick,
+ * penalty): 2 and 3 the full backs 2 and 5 (phase 5.4; the centre backs 3 and 4 until then
+ * stood beside the keeper), 4 the middle, 5 and 6 the forwards who take the kick-off. */
 int16_t Indoor_RestartOrdinal(int16_t ordinal)
 {
-    static const int16_t kRole[INDOOR_PLAYERS + 1] = { 0, 1, 3, 4, 8, 10, 11 };
+    static const int16_t kRole[INDOOR_PLAYERS + 1] = { 0, 1, 2, 5, 8, 10, 11 };
     if (!_gIndoor || ordinal < 1 || ordinal > INDOOR_PLAYERS)
         return ordinal;
     return kRole[ordinal];
+}
+
+static int32_t isqrt32(int32_t v)
+{
+    int32_t r = 0, bit = 1L << 30;
+    while (bit > v)
+        bit >>= 2;
+    while (bit) {
+        if (v >= r + bit) {
+            v -= r + bit;
+            r = (r >> 1) + bit;
+        } else {
+            r >>= 1;
+        }
+        bit >>= 2;
+    }
+    return r;
+}
+
+#define WALL_GAP 5                      /* half the space between the two, as outdoors */
+
+__attribute__((noinline)) void Indoor_WallSpot(int16_t ballX, int16_t ballY, int16_t goalY, int16_t slot,
+                                               int16_t inWall, int16_t *x, int16_t *y)
+{
+    const int32_t vx = 336 - ballX, vy = goalY - ballY;
+    const int32_t d = INDOOR_FREE_KICK_DISTANCE + 2;    /* (outside the distance kept) */
+    int32_t len = isqrt32(vx * vx + vy * vy), side;
+    if (len < 1)
+        len = 1;
+    side = inWall < 2 ? 0 : (slot ? WALL_GAP : -WALL_GAP);
+    *x = (int16_t)(ballX + (vx * d - vy * side) / len);
+    *y = (int16_t)(ballY + (vy * d + vx * side) / len);
 }
 
 int16_t Indoor_IsParkedSlot(uint16_t slot)

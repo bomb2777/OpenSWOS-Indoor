@@ -286,11 +286,11 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      bounce sample (`PlaySfxSample16`, the PC sound too). Until 2026-11-04 the struck piece of glass lit up
      as a fading white checkerboard instead (the owner: "looks odd"). The corner flag's z goes
      back to 0 at the final whistle (`Indoor_ClearMarker` from `Indoor_EndMatch`; outdoors
-     nothing sets it);
-     a post or the bar (`Indoor_Woodwork`, where `UpdateBall` plays the woodwork sample)
-     blinks red three times (48 frames). One marker, the latest hit. Its eight pictures are
-     made at kick-off in sprite table slots 1684..1691 (`INDOOR_MARK_SPRITE_FIRST`; the table
-     grew from 1684 to 1692) -- chunky on the PC, planar with a mask in chip RAM on the Amiga
+     nothing sets it). A post or the bar blinked red three times as in SWIS
+     (`Indoor_Woodwork`, from `UpdateBall`'s woodwork) until 2026-11-04, when the owner had it
+     removed; the woodwork keeps only its sound. One marker, the latest hit. Its six pictures
+     are made at kick-off in sprite table slots 1684..1689 (`INDOOR_MARK_SPRITE_FIRST`; the
+     table grew from 1684 to 1690) -- chunky on the PC, planar with a mask in chip RAM on the Amiga
      -- and shown by the corner flag's sprite, which a hall has no use for: indoors
      `UpdateCornerFlagSprite` hands it to `Indoor_UpdateMarker` (the marker or nothing; until
      then nothing hid the outdoor flag indoors). So the Amiga undraws it as any bob and
@@ -319,6 +319,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      match), and from that sent the colours to the wrong ones -- after a goal's replay the
      bottom wall showed solid white in a screenshot. A fade scales every colour alike, so the
      bright palette's table stays right through it.
+   - **No red blink on a post or the bar any more** (the owner): `Indoor_Woodwork` and its
+     two pictures removed, the sprite table 1690 again; `ball_physics.c` as upstream's there.
    - README: the fork's own block at its top, a screenshot of an indoor match
      (`docs/images/screenshots/indoor_01.png`).
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;

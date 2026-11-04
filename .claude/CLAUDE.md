@@ -192,7 +192,8 @@ teams through the rule and the file; run it after touching either.
 FRIENDLY can be played six a side in a hall with glass walls (the ball never goes out; goals,
 fouls, the keeper's throw over the halfway line and half time are the only stoppages), 2 x 20
 minutes, a red card a 5-minute time penalty, its floor deciding the pitch type (wood/linoleum
-HARD, stone FROZEN, sand MUDDY; only blue linoleum so far). The hall is laid out for 4:3 and the
+HARD, stone FROZEN, sand MUDDY; only linoleum so far, its court teal: palette entries 75/76 retinted
+for the match, `Indoor_CourtPalette`). The hall is laid out for 4:3 and the
 Amiga only (no widescreen). The FRIENDLY screen's INDOOR row
 (entries 11-12, `FriendlyIndoorProc` in `src/menus.c`, both targets) sets `_gIndoorFriendlyFloor`;
 `Indoor_BeginMatch` (`src/indoor.c`, from `InitAndPlayGame`) makes `_gIndoor` 1 for that match

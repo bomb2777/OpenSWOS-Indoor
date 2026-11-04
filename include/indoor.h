@@ -39,6 +39,10 @@ const char *Indoor_FloorName(int16_t floor);
 /* The FRIENDLY screen's choice, as the next press of its INDOOR button makes it. */
 int16_t Indoor_NextFriendlyFloor(int16_t floor);
 int32_t Indoor_MenuMusic(void);         /* the menus play the hall's music (SDL) */
+void Indoor_CourtPalette(uint16_t *pal);    /* the court teal in an indoor match, else as it was */
+#ifdef SWOS_SDL_BUILD
+void Indoor_CourtPaletteRGB(uint8_t *rgb);  /* the same into a PC style's 256 x RGB palette */
+#endif
 
 /* InitAndPlayGame, first thing: make this match indoor if it is a friendly and the
  * FRIENDLY screen (or SWOS_INDOOR=1, for a test) says so; anything else leaves

@@ -491,11 +491,10 @@ void Indoor_StadiumRows(struct MenuEntry *first)
     }
 }
 
-extern void ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable);
 #define SPR_SIDE_PITCH 225              /* the line-up screen's little pitch */
 extern uint8_t *_spriteGraphicsPtr;
 
-static int16_t s_sidePitchBlue;         /* sprite 225 has its colours swapped */
+static int16_t s_sidePitchBlue;         /* sprite 225 is the hall's (its court mixed, no arcs) */
 
 /* The markings a hall does not have (phase 5.4): the four corner arcs and the two arcs on
  * the penalty areas. Spans (y, x0, x1) of the top-left quarter of the sprite; the others
@@ -575,22 +574,104 @@ static void side_pitch_arcs(int16_t hide)
             }
 }
 
+/* The court's teal on the little pitch: the menus have 16 colours and no teal, so every
+ * other pixel of its grass (14, green) becomes the blue (11) -- a checkerboard of the two,
+ * which reads as teal at that size (the owner's idea). Which pixels changed is kept, so
+ * outdoors gets exactly its grass back. */
+#define SIDE_W 132
+#define SIDE_H 115
+static uint8_t s_sideMixed[(SIDE_W * SIDE_H + 7) / 8];
+
+static void side_pitch_mix(int16_t on)
+{
+    SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[SPR_SIDE_PITCH];
+    if (!spr || !spr->sprData || spr->wquads * 16 < SIDE_W || spr->nlines < SIDE_H)
+        return;
+    for (int16_t y = 0; y < SIDE_H; y++)
+        for (int16_t x = 0; x < SIDE_W; x++) {
+            const int32_t i = (int32_t)y * SIDE_W + x;
+            if (on) {
+                const uint8_t mixed = (uint8_t)(((x + y) & 1) && side_pixel(spr, x, y) == 14);
+                s_sideMixed[i >> 3] = (uint8_t)((s_sideMixed[i >> 3] & ~(1u << (i & 7))) | (mixed << (i & 7)));
+                if (mixed)
+                    set_side_pixel(spr, x, y, 11);
+            } else if (s_sideMixed[i >> 3] & (1u << (i & 7))) {
+                set_side_pixel(spr, x, y, 14);
+            }
+        }
+}
+
 void Indoor_SidePitchColours(void)
 {
-    static uint16_t swap[16];
     if (s_sidePitchBlue == (_gIndoor != 0))
         return;
-    if (!_gIndoor)
-        side_pitch_arcs(0);             /* (the arcs back before the colours) */
-    for (int16_t i = 0; i < 16; i++)
-        swap[i] = (uint16_t)i;
-    swap[14] = 11;                      /* grass -> blue */
-    swap[11] = 14;                      /* (and back) */
-    ConvertSpriteColors(SPR_SIDE_PITCH, swap);
-    if (_gIndoor)
-        side_pitch_arcs(1);
+    if (_gIndoor) {
+        side_pitch_arcs(1);             /* (the arcs off while the grass is still one colour) */
+        side_pitch_mix(1);
+    } else {
+        side_pitch_mix(0);
+        side_pitch_arcs(0);
+    }
     s_sidePitchBlue = (_gIndoor != 0);
 }
+
+/* The court's colours (2026-11-04: teal, the owner -- the blue hid blue kits). LINO.MAP draws
+ * the court in palette entry 75 and its penalty areas and centre circle in 76 (blue there,
+ * 0x22C and 0x66E); in an indoor match they are teal instead. Nothing else in an indoor
+ * match draws in them: the players, the ball, the referee and the HUD are 16-colour sprites
+ * (0-15), and the crowd tiles taken from the player's pitch use 0-15 too (measured in the
+ * Amiga, PC and 2020 styles). Set with the pitch type's colours (ApplyPitchPaletteAndFactors,
+ * live and in the replay viewer), given back outdoors; the PC styles that build their own
+ * palette each frame get them too (Indoor_CourtPaletteRGB). */
+/* The PC's glass sees the floor through a colour table (nearest entry to 60 % grey over each
+ * colour, glass_table): the palette has no grey teal, so the court behind the bottom wall
+ * came out plain grey. Two entries no indoor match draws in (77, 82: not in the hall map,
+ * the crowd or a sprite; not 16-31, the Amiga's sprite colours) hold the court's and the
+ * areas' teal through the glass, and the table finds them. The PC only: the Amiga's glass
+ * is a checkerboard, the floor's own colour between. */
+#ifdef SWOS_SDL_BUILD
+#define COURT_ENTRIES 4
+#else
+#define COURT_ENTRIES 2
+#endif
+static const uint8_t  kCourtEntry[4] = { 75, 76, 77, 82 };
+static const uint16_t kCourtTeal[4]  = { 0x188,     /* the court, #118888 */
+                                         0x3AA,     /* its areas, #33AAAA */
+                                         0x477,     /* the court through the glass */
+                                         0x588 };   /* the areas through it */
+static uint16_t s_courtSaved[4];
+static int16_t  s_courtTeal;
+
+void Indoor_CourtPalette(uint16_t *pal)
+{
+    if (_gIndoor) {
+        for (int16_t k = 0; k < COURT_ENTRIES; k++) {
+            if (!s_courtTeal)
+                s_courtSaved[k] = pal[kCourtEntry[k]];
+            pal[kCourtEntry[k]] = kCourtTeal[k];
+        }
+        s_courtTeal = 1;
+    } else if (s_courtTeal) {
+        for (int16_t k = 0; k < COURT_ENTRIES; k++)
+            pal[kCourtEntry[k]] = s_courtSaved[k];
+        s_courtTeal = 0;
+    }
+}
+
+#ifdef SWOS_SDL_BUILD
+void Indoor_CourtPaletteRGB(uint8_t *rgb)
+{
+    const uint16_t *c = kCourtTeal;
+    const uint8_t *e = kCourtEntry;
+    if (!_gIndoor)
+        return;
+    for (int16_t k = 0; k < COURT_ENTRIES; k++) {
+        rgb[e[k] * 3 + 0] = (uint8_t)(((c[k] >> 8) & 15) * 17);
+        rgb[e[k] * 3 + 1] = (uint8_t)(((c[k] >> 4) & 15) * 17);
+        rgb[e[k] * 3 + 2] = (uint8_t)((c[k] & 15) * 17);
+    }
+}
+#endif
 
 void Indoor_MenuSpritesReloaded(void)
 {

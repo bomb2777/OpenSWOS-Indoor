@@ -141,6 +141,8 @@ def main():
     # The penalty areas and the centre circle a lighter blue than the court, inside clear
     # white lines (the owner, 5.3: the hall's grey-blue areas read as glass).
     # Palette entry 76, 0x66E: the court is 0x22C; 0x55C, nearer, is the grey-blue it replaces.
+    # A match shows both TEAL (indoor.c Indoor_CourtPalette, 2026-11-04): keep the court and
+    # its areas in exactly these two entries.
     light = (0x66, 0x66, 0xEE)
     line = (255, 255, 255)
     court_shadow = (17, 17, 136)             # the net's inside at the line: a dark floor blue

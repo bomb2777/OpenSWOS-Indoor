@@ -58,6 +58,13 @@ int16_t Indoor_NextFriendlyFloor(int16_t floor)
     return floor == INDOOR_OFF ? INDOOR_LINOLEUM : INDOOR_OFF;
 }
 
+/* The menus play the hall's music while the FRIENDLY screen's INDOOR row shows a floor
+ * (SDL: TryPlayMusic, sound_indoor/menu.mp3; the Amiga keeps its menu song). */
+int32_t Indoor_MenuMusic(void)
+{
+    return _gIndoorFriendlyFloor != INDOOR_OFF;
+}
+
 static void install_tactics(TeamFileEx *team1, TeamFileEx *team2);
 static void release_tactics(void);
 static void install_court(void);

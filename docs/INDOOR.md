@@ -1,6 +1,6 @@
 # INDOOR.md — six a side in a hall
 
-> **Status (2026-11-03): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2, 5.3 and 5.4 (the owner's lists after playing); phase 6 (online) open.** This fork's own
+> **Status (2026-11-04): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2-5.5 (the owner's lists after playing), 5.6 (the hall's menu music, PC); phase 6 (online) open.** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -287,6 +287,17 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      then nothing hid the outdoor flag indoors). So the Amiga undraws it as any bob and
      a replay records it (the viewer makes the pictures for an indoor recording). The PC's
      bottom wall leaves its box bright (`Indoor_MarkerBox`).
+5.6. **The hall's menu music** (2026-11-04, PC only): while the FRIENDLY screen's INDOOR
+   row shows a floor, the menus play the owner's own track, `bin/sound_indoor/menu.mp3`
+   (his "liquid" drum & bass, 51 s, looped; streamed by `src/music_stream.c` with dr_mp3),
+   whatever `[audio] music` says; OFF gives the normal menu music back. Switching the row
+   cuts the song playing and starts the other (`SwitchMenuMusic`, src/audio.c), when menu
+   music is on at all; `TryPlayMusic` picks it by `Indoor_MenuMusic()`, so it also plays in
+   the other menus and after the match while the row stays on. `[indoor] menu music` in
+   `SWOS.log`. `sound_indoor` ships with every PC drop (build_dist.sh, the installer, the
+   .app, WASM), not the Amiga drawer: the Amiga keeps its menu song (the owner: "not so
+   important" -- its chip RAM has no room for the track, it would have to be streamed from
+   fast RAM).
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 

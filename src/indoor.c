@@ -1293,12 +1293,12 @@ void Indoor_DrawGlassFront(void)
 
 /* ---- The marker on the glass and the woodwork (phase 5.5) ----------------------------- *
  * The owner's SWIS marks where the ball hits the glass and blinks a post or the bar red;
- * here as there (its WallImpact, at a third of its size: its ball is 16 px, ours 5): a hard
- * hit (INDOOR_MARK_SPEED) draws a red ring that grows from 2 to 10 px and fades, over a
- * white cross with a red centre that stays for two thirds of the second and then fades --
- * where the ball is SEEN, its height above the floor too (the ends' glass stands 80 px
- * high in the picture) -- with the ball's bounce sample; a post or the bar blinks red three
- * times. (Until 2026-11-04 the struck piece of glass lit up as a checkerboard: "looks odd".) One marker, the latest hit: a world sprite of its own pictures (sprite table
+ * here as there (its WallImpact, at a third of its size: its ball is 16 px, ours 5): every
+ * touch draws a red ring that grows from 2 to 10 px and fades, over a white cross with a
+ * red centre that stays for two thirds of the second and then fades -- at an end where the
+ * ball is SEEN, its height above the floor too (the ends' glass stands 80 px high in the
+ * picture), at a side on the white side line -- and a hard hit (INDOOR_MARK_SPEED) thuds
+ * with the ball's bounce sample; a post or the bar blinks red three times. (Until 2026-11-04 the struck piece of glass lit up as a checkerboard: "looks odd".) One marker, the latest hit: a world sprite of its own pictures (sprite table
  * slots INDOOR_MARK_SPRITE_FIRST..), shown by the corner flag's sprite, which a hall has
  * no use for (indoors it is the marker or hidden). So it is drawn, undrawn on the Amiga
  * and recorded in a replay like any sprite; it is not match state but the corner flag's
@@ -1439,22 +1439,22 @@ static void mark(int16_t kind, int16_t x, int16_t y, int16_t z, int16_t frames)
     s_markTimer = frames;
 }
 
-/* The ball off the glass (Indoor_BallAtWall): at a side (x past the court) or an end. The
- * mark is where the ball is seen: on the glass's line, as high as the ball (a sprite's z
- * lifts it, as the ball's lifts the ball) -- at the ends up the glass that stands there,
- * no higher than its top; at the sides, whose glass lies in the floor, over it likewise. */
+/* The ball off the glass (Indoor_BallAtWall), every touch: at a side (x past the court) or
+ * an end. At an end the mark is where the ball is seen: on the line, as high as the ball
+ * (a sprite's z lifts it, as the ball's lifts the ball) up the glass that stands there, no
+ * higher than its top. At a side, whose glass lies in the floor, it is on the floor, on the
+ * white side line where the glass begins (the owner). Only a hard hit (INDOOR_MARK_SPEED)
+ * thuds. */
 static void mark_glass(Sprite *ball, int16_t side)
 {
     int16_t z = ball->z.s.i;
-    if (ball->speed < INDOOR_MARK_SPEED)
-        return;
     if (z < 0) z = 0;
     if (z > MARK_MAX_Z) z = MARK_MAX_Z;
     if (side) {
         int16_t y = ball->y.s.i;
         if (y < INDOOR_TOP) y = INDOOR_TOP;
         if (y > INDOOR_BOTTOM) y = INDOOR_BOTTOM;
-        mark(MARK_GLASS, ball->x.s.i < 336 ? (int16_t)(INDOOR_LEFT - 5) : (int16_t)(INDOOR_RIGHT + 6), y, z,
+        mark(MARK_GLASS, ball->x.s.i < 336 ? (int16_t)INDOOR_LEFT : (int16_t)INDOOR_RIGHT, y, 0,
              MARK_GLASS_FRAMES);
     } else {
         int16_t x = ball->x.s.i;
@@ -1462,7 +1462,8 @@ static void mark_glass(Sprite *ball, int16_t side)
         if (x > INDOOR_GLASS_X1 - MARK_RING_MAX) x = INDOOR_GLASS_X1 - MARK_RING_MAX;
         mark(MARK_GLASS, x, ball->y.s.i <= 449 ? INDOOR_TOP : INDOOR_BOTTOM, z, MARK_GLASS_FRAMES);
     }
-    PlaySfxSample16();                  /* the thud: the ball's bounce */
+    if (ball->speed >= INDOOR_MARK_SPEED)
+        PlaySfxSample16();              /* the thud: the ball's bounce */
 }
 
 void Indoor_Woodwork(Sprite *ball, int16_t post)

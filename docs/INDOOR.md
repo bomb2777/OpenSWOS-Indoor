@@ -275,9 +275,17 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    - **The marker** (his SWIS marks a hit on the glass with a ring and a cross and blinks a post
      or the bar red; here in the game's pixels): a hit on the glass at `ball->speed` >=
      `INDOOR_MARK_SPEED` (1300: shots and clearances, not passes -- a CPU match hits the glass
-     some 30 times, the hard hits about a third) lights the struck piece -- a side's 10 x 24,
-     an end's 24 x 12 up from its foot -- as a white checkerboard that fades to grey in three
-     steps (24 frames), with the ball's bounce sample (`PlaySfxSample16`, the PC sound too);
+     some 30 times, the hard hits about a third) draws SWIS's mark (its `WallImpact`, at a
+     third of its size: its ball is 16 px, ours 5) -- a red ring growing from 2 to 10 px and
+     fading (dotted, then every third pixel), over a white cross 3 px each way with a red
+     centre, white for two thirds of the second, then grey (six pictures of 21 x 21, 48
+     frames) -- WHERE THE BALL IS SEEN: on the glass's line, lifted by the ball's height (the
+     sprite's z, as the ball's own; on the ends' glass, which stands 80 px high in the
+     picture, no higher than its top less the ring), with the ball's bounce sample
+     (`PlaySfxSample16`, the PC sound too). Until 2026-11-04 the struck piece of glass lit up
+     as a fading white checkerboard instead (the owner: "looks odd"). The corner flag's z goes
+     back to 0 at the final whistle (`Indoor_ClearMarker` from `Indoor_EndMatch`; outdoors
+     nothing sets it);
      a post or the bar (`Indoor_Woodwork`, where `UpdateBall` plays the woodwork sample)
      blinks red three times (48 frames). One marker, the latest hit. Its eight pictures are
      made at kick-off in sprite table slots 1684..1691 (`INDOOR_MARK_SPRITE_FIRST`; the table
@@ -286,7 +294,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      `UpdateCornerFlagSprite` hands it to `Indoor_UpdateMarker` (the marker or nothing; until
      then nothing hid the outdoor flag indoors). So the Amiga undraws it as any bob and
      a replay records it (the viewer makes the pictures for an indoor recording). The PC's
-     bottom wall leaves its box bright (`Indoor_MarkerBox`).
+     bottom wall leaves its pixels bright (`Indoor_MarkerBox`, `marker_opaque`: not its
+     whole box, which showed as a bright square around the ring).
 5.6. **The hall's menu music** (2026-11-04, PC only): while the FRIENDLY screen's INDOOR
    row shows a floor, the menus play the owner's own track, `bin/sound_indoor/menu.mp3`
    (his "liquid" drum & bass, 51 s, looped; streamed by `src/music_stream.c` with dr_mp3),

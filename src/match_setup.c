@@ -859,6 +859,7 @@ void ApplyPitchPaletteAndFactors(void)
             }
             if (_gImprovedPitchPalette && (pitchIdx == 2 || pitchIdx == 3))   /* (launcher options, agent B) */
                 ((uint16_t *)_gamePalette)[_paletteIndices[2]] = pitchIdx == 2 ? 0x03A0 : 0x0380;
+            Indoor_CourtPalette((uint16_t *)_gamePalette);     /* INDOOR: the court teal */
         }
 #else
         {

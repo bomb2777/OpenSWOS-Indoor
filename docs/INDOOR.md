@@ -321,6 +321,20 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      bright palette's table stays right through it.
    - **No red blink on a post or the bar any more** (the owner): `Indoor_Woodwork` and its
      two pictures removed, the sprite table 1690 again; `ball_physics.c` as upstream's there.
+   - **The court teal** (`#118888`, its areas `#33AAAA`; the owner: the blue hid blue kits, and
+     of the candidates drawn with every kit colour on them teal kept them all apart). The
+     palette has no teal and is full, so the hall's map still draws the court in entries 75
+     and 76 (blue, 0x22C / 0x66E) and an indoor match makes them teal: `Indoor_CourtPalette`
+     from `ApplyPitchPaletteAndFactors` (live and the replay viewer; given back outdoors) and
+     `Indoor_CourtPaletteRGB` for the PC styles that build their palette each frame. Safe
+     because nothing else in an indoor match draws in them: sprites are 0-15, and the crowd
+     tiles taken from the player's pitch use 0-15 too (measured in the Amiga, PC and 2020
+     styles). The PC's glass needs a grey teal to see the floor through (its colour table
+     found only plain grey): entries 77 and 82, unused in an indoor match, hold it (PC only;
+     the Amiga's glass is a checkerboard). The shadow inside the top goal (203) stays dark
+     blue. The little pitch on PLAY MATCH has the menus' 16 colours and no teal: its grass is
+     a checkerboard of their green and blue (`side_pitch_mix`; the owner's idea), which also
+     dots the centre circle's line where it was drawn in the grass colour.
    - README: the fork's own block at its top, a screenshot of an indoor match
      (`docs/images/screenshots/indoor_01.png`).
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;

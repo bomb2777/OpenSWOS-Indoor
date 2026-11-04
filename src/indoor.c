@@ -19,6 +19,11 @@
 int16_t _gIndoor;
 int16_t _gIndoorFloor = INDOOR_LINOLEUM;
 int16_t _gIndoorFriendlyFloor = INDOOR_OFF;
+int16_t _gIndoorOnlineFloor = INDOOR_OFF;
+
+/* What an indoor match changes as it is played, in the rollback registry (sim_state.c):
+ * a time penalty, the keeper's throw, the glass marker. */
+IndoorSimState g_indoorSim = { .markKind = -1 };
 
 extern const char _aOff[];
 extern char _aWood[], _aLinoleum[], _aStone[], _aBeachSand[];
@@ -88,13 +93,16 @@ void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
             floor = INDOOR_OFF;
     }
     extern int _gArcadeMode;
-    /* An online match plays by the host's rules, which have no INDOOR yet. */
-    if (_gArcadeMode || NetplayMatch_Enabled())
+    /* An online match plays the host's floor (the lobby's PITCH TYPE row, carried in the
+     * match setup: netplay_setup.c version 5), never this machine's own choice. */
+    if (NetplayMatch_Enabled())
+        floor = _gIndoorOnlineFloor;
+    if (_gArcadeMode)
         floor = INDOOR_OFF;
 #endif
     if (_gameType != 0 || _trainingGame != 0)
         floor = INDOOR_OFF;
-    if (floor == INDOOR_OFF)
+    if (floor != INDOOR_LINOLEUM)       /* (the one floor drawn so far) */
         return;
 
     _gIndoor = 1;
@@ -126,6 +134,7 @@ void Indoor_EndMatch(void)
     release_court();
     release_tactics();
     _gIndoor = 0;
+    _gIndoorOnlineFloor = INDOOR_OFF;   /* (set again by the next online match's start) */
 }
 
 /* ---- Tactics -------------------------------------------------------------------- */
@@ -859,22 +868,19 @@ extern TeamGeneralInfo  _topTeamData;
 extern void StopAllPlayers(void);
 extern void PlayFoulWhistleSample(void);
 
-static Sprite          *s_keeperReleaser;   /* the keeper whose throw is in the air; 0 = none */
-static TeamGeneralInfo *s_keeperTeam;
-static int16_t          s_keeperBallY;      /* the ball's y when last looked at */
 
 static void keeper_rule_disarm(void)
 {
-    s_keeperReleaser = 0;
+    g_indoorSim.keeperReleaser = 0;
 }
 
 void Indoor_KeeperReleased(Sprite *player, TeamGeneralInfo *team)
 {
     if (!_gIndoor || _gameState != ST_KEEPER_HOLDS_BALL || player->playerOrdinal != 1)
         return;
-    s_keeperReleaser = player;
-    s_keeperTeam = team;
-    s_keeperBallY = player->y.s.i;      /* the ball is in his hands */
+    g_indoorSim.keeperReleaser = player;
+    g_indoorSim.keeperTeam = team;
+    g_indoorSim.keeperBallY = player->y.s.i;      /* the ball is in his hands */
 }
 
 /* A free kick to the side that did not break the rule, at (x, y): a foul's stoppage
@@ -903,15 +909,15 @@ void Indoor_KeeperRuleCheck(const Sprite *ball)
 {
     int16_t y;
 
-    if (!_gIndoor || !s_keeperReleaser || _gameStatePl != ST_GAME_IN_PROGRESS)
+    if (!_gIndoor || !g_indoorSim.keeperReleaser || _gameStatePl != ST_GAME_IN_PROGRESS)
         return;
-    if (_lastPlayerPlayed != s_keeperReleaser) {    /* someone else has played it */
+    if (_lastPlayerPlayed != g_indoorSim.keeperReleaser) {    /* someone else has played it */
         keeper_rule_disarm();
         return;
     }
     y = ball->y.s.i;
-    if ((s_keeperBallY <= 449) != (y <= 449)) {
-        TeamGeneralInfo *offender = s_keeperTeam;
+    if ((g_indoorSim.keeperBallY <= 449) != (y <= 449)) {
+        TeamGeneralInfo *offender = g_indoorSim.keeperTeam;
         keeper_rule_disarm();
 #ifdef SWOS_SDL_BUILD
         fprintf(stderr, "[indoor] the keeper's throw crossed the halfway line untouched: "
@@ -920,7 +926,7 @@ void Indoor_KeeperRuleCheck(const Sprite *ball)
         award_free_kick(offender, ball->x.s.i, 449);
         return;
     }
-    s_keeperBallY = y;
+    g_indoorSim.keeperBallY = y;
 }
 
 /* ---- The time penalty (phase 5.1) ------------------------------------------------ */
@@ -938,17 +944,11 @@ static int16_t clock_minute(void)
 
 /* Two a side can sit out at once: a third red before the first is back is still a
  * send-off, only for the rest of the match. */
-#define INDOOR_PENALTY_SLOTS 4
-static struct {
-    Sprite          *player;    /* 0 = free */
-    TeamGeneralInfo *team;
-    int16_t          backAt;    /* the clock minute he comes back on */
-} s_penalties[INDOOR_PENALTY_SLOTS];
 
 static void time_penalties_clear(void)
 {
     for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++)
-        s_penalties[i].player = 0;
+        g_indoorSim.penalties[i].player = 0;
 }
 
 extern TeamGame _topTeamInGame;
@@ -974,13 +974,13 @@ void Indoor_TimePenalty(Sprite *player, TeamGeneralInfo *team)
     player->destX = INDOOR_BENCH_X + 10;
     player->destY = (int16_t)(team_bench_y(team) + 20);
     for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++) {
-        if (!s_penalties[i].player) {
-            s_penalties[i].player = player;
-            s_penalties[i].team = team;
-            s_penalties[i].backAt = (int16_t)(clock_minute() + INDOOR_PENALTY_MINUTES);
+        if (!g_indoorSim.penalties[i].player) {
+            g_indoorSim.penalties[i].player = player;
+            g_indoorSim.penalties[i].team = team;
+            g_indoorSim.penalties[i].backAt = (int16_t)(clock_minute() + INDOOR_PENALTY_MINUTES);
 #ifdef SWOS_SDL_BUILD
             fprintf(stderr, "[indoor] time penalty: player %d sits out from minute %d to %d\n",
-                    player->playerOrdinal, clock_minute(), s_penalties[i].backAt);
+                    player->playerOrdinal, clock_minute(), g_indoorSim.penalties[i].backAt);
 #endif
             return;
         }
@@ -991,18 +991,18 @@ static void time_penalties_end(void)
 {
     int16_t now = clock_minute();
     for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++) {
-        Sprite *p = s_penalties[i].player;
+        Sprite *p = g_indoorSim.penalties[i].player;
         PlayerInfo *pi;
-        if (!p || now < s_penalties[i].backAt)
+        if (!p || now < g_indoorSim.penalties[i].backAt)
             continue;
-        s_penalties[i].player = 0;
+        g_indoorSim.penalties[i].player = 0;
         if (!p->sentAway)
             continue;               /* already back some other way */
         /* Back on, booked: one more yellow is another red. Positioning walks him from
          * the bench to his place in the formation. */
         p->sentAway = 0;
         p->cards = 1;
-        pi = GetPlayerPointerFromShirtNumber(p, s_penalties[i].team);
+        pi = GetPlayerPointerFromShirtNumber(p, g_indoorSim.penalties[i].team);
         if (pi)
             pi->numYellowCards = 1;
 #ifdef SWOS_SDL_BUILD
@@ -1017,7 +1017,7 @@ void Indoor_DrawPenaltyCards(void)
     if (!_gIndoor)
         return;
     for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++) {
-        const Sprite *p = s_penalties[i].player;
+        const Sprite *p = g_indoorSim.penalties[i].player;
         if (p && p->sentAway)
             DrawSpriteHotspotInCameraView(SPR_RED_CARD_SMALL, p->x.s.i, (int16_t)(p->y.s.i - 22));
     }
@@ -1420,7 +1420,6 @@ static uint8_t s_markPix[MARK_SPRITES][MARK_MAX_LINES * MARK_MAX_WQ * 16];
 SWOS_CHIP_BSS static uint16_t s_markPix[MARK_SPRITES][MARK_MAX_LINES * MARK_MAX_WQ * 4 * 2];
 #endif
 static int16_t s_markBuilt;
-static int16_t s_markKind = -1, s_markTimer, s_markX, s_markY, s_markZ;
 
 /* A marker picture's colour at (x, y): 0 clear, 2 white, 1 grey, 10 red. SWIS fades with
  * alpha; here a fading line keeps every other pixel, then every third. */
@@ -1514,11 +1513,11 @@ void Indoor_BuildMarkSprites(void)
 static void mark(int16_t kind, int16_t x, int16_t y, int16_t z, int16_t frames)
 {
     Indoor_BuildMarkSprites();
-    s_markKind = kind;
-    s_markX = x;
-    s_markY = y;
-    s_markZ = z;
-    s_markTimer = frames;
+    g_indoorSim.markKind = kind;
+    g_indoorSim.markX = x;
+    g_indoorSim.markY = y;
+    g_indoorSim.markZ = z;
+    g_indoorSim.markTimer = frames;
 }
 
 /* The ball off the glass (Indoor_BallAtWall), every touch: at a side (x past the court) or
@@ -1552,8 +1551,8 @@ static void mark_glass(Sprite *ball, int16_t side)
  * z is 0 outdoors, which never sets it). */
 void Indoor_ClearMarker(void)
 {
-    s_markTimer = 0;
-    s_markKind = -1;
+    g_indoorSim.markTimer = 0;
+    g_indoorSim.markKind = -1;
     _cornerFlagSprite.z.raw = 0;
 }
 
@@ -1565,12 +1564,12 @@ void Indoor_UpdateMarker(void)
 #ifdef SWOS_SDL_BUILD
     _cornerFlagSprite2.imageIndex = -1;
 #endif
-    if (s_markTimer > 0) {
-        const int16_t t = --s_markTimer;
-        image = (int16_t)(INDOOR_MARK_SPRITE_FIRST + s_markKind + (MARK_GLASS_FRAMES - 1 - t) / 8);
-        spr->x.s.i = s_markX;
-        spr->y.s.i = s_markY;
-        spr->z.raw = (int32_t)s_markZ << 16;
+    if (g_indoorSim.markTimer > 0) {
+        const int16_t t = --g_indoorSim.markTimer;
+        image = (int16_t)(INDOOR_MARK_SPRITE_FIRST + g_indoorSim.markKind + (MARK_GLASS_FRAMES - 1 - t) / 8);
+        spr->x.s.i = g_indoorSim.markX;
+        spr->y.s.i = g_indoorSim.markY;
+        spr->z.raw = (int32_t)g_indoorSim.markZ << 16;
     }
     spr->imageIndex = image;
 }
@@ -1591,7 +1590,7 @@ int16_t Indoor_MarkerBox(int16_t *x0, int16_t *y0, int16_t *x1, int16_t *y1)
 {
     const Sprite *spr = &_cornerFlagSprite;
     int16_t k;
-    if (!_gIndoor || s_markTimer <= 0 || spr->imageIndex < INDOOR_MARK_SPRITE_FIRST)
+    if (!_gIndoor || g_indoorSim.markTimer <= 0 || spr->imageIndex < INDOOR_MARK_SPRITE_FIRST)
         return 0;
     k = (int16_t)(spr->imageIndex - INDOOR_MARK_SPRITE_FIRST);
     *x0 = (int16_t)(spr->x.s.i - kMarkSize[k].cx);

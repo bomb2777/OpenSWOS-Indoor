@@ -35,6 +35,7 @@
 #include "input_text.h"
 #include "p2p_link.h"         /* the peer connection the handoff makes */
 #include "netplay_lobby.h"    /* where the two players set the match up */
+#include "indoor.h"           /* INDOOR online: the PITCH TYPE row's floor */
 #include "netplay_match.h"    /* the live GGPO session */
 #include "netplay_setup.h"    /* the cup rules a match takes at kick-off */
 #include "game_types.h"       /* TeamFileEx, for the match the handoff starts */
@@ -1055,7 +1056,8 @@ static void lobby_frame_hook(void)
  * after a match -- SWOS_LOBBY_START=1 has the host press START the moment it can, and
  * SWOS_LOBBY_MATCHES=N has both leave the game after N matches, the host once the lobby
  * is back up and the joiner when the host has gone. SWOS_LOBBY_SWITCHES=<hex> sets the
- * host's switches (NETPLAY_SW_*, netplay_match.h). */
+ * host's switches (NETPLAY_SW_*, netplay_match.h). SWOS_LOBBY_INDOOR=1 (OpenSWOS-Indoor)
+ * has the host choose LINOLEUM on PITCH TYPE, as the row's button does. */
 static int32_t s_lobbyAgain;        /* run_live_match: show the lobby again, for a rematch */
 static int32_t s_lobbyMatches;      /* matches played from this lobby */
 static int32_t s_testReady;         /* SWOS_LOBBY_READY: say ready once the lobby is open */
@@ -1063,6 +1065,8 @@ static int32_t s_matchEndedEarly;   /* the last match was cut short: its notice 
 
 static void lineup_test_swap(void);    /* SWOS_LOBBY_LINEUP_SWAP, beside the TACTICS screen */
 static void lineup_screen(void);       /* the team screen, from TEAMS and TACTICS */
+
+static void next_pitch(LobbyRules *r);   /* (the PITCH TYPE row; SWOS_LOBBY_INDOOR) */
 
 static void lobby_test_knobs(void)
 {
@@ -1089,6 +1093,13 @@ static void lobby_test_knobs(void)
         LobbyRules r = *NetplayLobby_Rules();
         r.mode = (uint16_t)(!strcmp(mode, "ranked") ? LOBBY_MODE_RANKED :
                             !strcmp(mode, "league") ? LOBBY_MODE_LEAGUE : LOBBY_MODE_FRIENDLY);
+        NetplayLobby_SetRules(&r);
+    }
+
+    if (getenv("SWOS_LOBBY_INDOOR") && atoi(getenv("SWOS_LOBBY_INDOOR")) == 1 && NetplayLobby_IsHost()) {
+        LobbyRules r = *NetplayLobby_Rules();
+        r.pitchType = 0xFFFF;
+        next_pitch(&r);                             /* RANDOM -> LINOLEUM, 5 FROM 5 */
         NetplayLobby_SetRules(&r);
     }
 
@@ -1241,6 +1252,8 @@ static const char *pitch_name(uint16_t pitch)
     extern const char _aRandom[], _aFrozen[], _aMuddy[], _aWet[], _aSoft[];
     extern const char _aNormal[], _aDry[], _aHard[];
     static const char *const names[7] = { _aFrozen, _aMuddy, _aWet, _aSoft, _aNormal, _aDry, _aHard };
+    if (pitch >= LOBBY_PITCH_INDOOR && pitch != 0xFFFF)  /* INDOOR: the hall's floor */
+        return Indoor_FloorName((int16_t)(pitch - LOBBY_PITCH_INDOOR));
     return pitch < 7 ? names[pitch] : _aRandom;
 }
 
@@ -2210,10 +2223,22 @@ static void change_rules(void (*edit)(LobbyRules *r))
 
 static void next_length(LobbyRules *r) { r->gameLength = (uint16_t)((r->gameLength + 1) % 4); }
 
-/* RANDOM, FROZEN .. HARD, RANDOM: the friendly menu's order (FriendlyPitchTypeProc). */
+/* RANDOM, FROZEN .. HARD, RANDOM: the friendly menu's order (FriendlyPitchTypeProc); then
+ * (OpenSWOS-Indoor) LINOLEUM, the hall, which sets SUBSTITUTES to 5 FROM 5 as the FRIENDLY
+ * screen's INDOOR row does, and leaving it the lobby's 2 FROM 5. */
 static void next_pitch(LobbyRules *r)
 {
-    r->pitchType = r->pitchType == 0xFFFF ? 0 : r->pitchType >= 6 ? 0xFFFF : (uint16_t)(r->pitchType + 1);
+    if (r->pitchType == 0xFFFF) {
+        r->pitchType = LOBBY_PITCH_INDOOR + INDOOR_LINOLEUM;
+        r->minSubs = 5;
+        r->maxSubs = 5;
+    } else if (r->pitchType >= LOBBY_PITCH_INDOOR) {
+        r->pitchType = 0;
+        r->minSubs = 2;
+        r->maxSubs = 5;
+    } else {
+        r->pitchType = r->pitchType >= 6 ? 0xFFFF : (uint16_t)(r->pitchType + 1);
+    }
 }
 
 /* The friendly menu's substitutes rules (MinSubstitutes / MaxSubstitutes, menus.c). */

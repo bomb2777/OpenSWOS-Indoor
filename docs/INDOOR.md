@@ -1,6 +1,6 @@
 # INDOOR.md — six a side in a hall
 
-> **Status (2026-11-04): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2-5.5 (the owner's lists after playing), 5.6 (the hall's menu music, PC), 5.7; phase 6 (online) open.** This fork's own
+> **Status (2026-11-04): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2-5.5 (the owner's lists after playing), 5.6 (the hall's menu music, PC), 5.7, 6 (online, by direct IP, fork builds only).** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -36,8 +36,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
 - **The match:** `Indoor_BeginMatch()` (`src/indoor.c`), called by `InitAndPlayGame`
   (`src/game_init.c`) just before kick-off, sets `_gIndoor`/`_gIndoorFloor` and pins
   `_gamePitchType` to the floor's type; `Indoor_EndMatch()` clears it when the match is over.
-  It stays 0 for anything but a friendly: competitions, career, training, arcade and online
-  matches (the lobby has no INDOOR yet — phase 6).
+  It stays 0 for anything but a friendly: competitions, career, training and arcade
+  matches. An online match plays the HOST's floor from the lobby (phase 6).
 - **For a test:** `SWOS_INDOOR=1` plays every friendly indoors (=0 none), whatever the screen
   says. `SWOS.log` says `[indoor] this friendly is played indoors: ...`.
 - Two flags, kept apart: `_gIndoorFriendlyFloor` is the screen's choice, `_gIndoor` the match
@@ -337,8 +337,47 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      dots the centre circle's line where it was drawn in the grass colour.
    - README: the fork's own block at its top, a screenshot of an indoor match
      (`docs/images/screenshots/indoor_01.png`).
-6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
-   `NETPLAY_COMPAT` raised and the fork's own online identity.
+6. **Online** (2026-11-04) — done:
+   - **The fork's own identity** (`include/project_identity.h`): `PROJECT_NETPLAY_TAG`
+     `OPENSWOS-INDOOR`, `PROJECT_GGPO_GAME` `openswos-indoor`, and `NETPLAY_COMPAT` from
+     1000 (1001; `include/netplay_compat.h`), where upstream's numbers never reach -- a
+     fork build never meets one that has no INDOOR. A rebase that brings a raise of
+     upstream's raises ours by one. The handshake also compares the rollback state's layout,
+     which the indoor state below changed.
+   - **Direct IP, no server of our own:** the main menu's MULTIPLAYER opens `p2p/p2pMenu`
+     (`MultiplayerMenuSelected`, `src/menus.c`) instead of the login to upstream's server.
+     A connected pair goes to the usual lobby.
+   - **The host chooses it in the lobby**, on PITCH TYPE: ... SPRING, RANDOM, **LINOLEUM**
+     (`next_pitch`, `src/online_menus.c`), which sets SUBSTITUTES to 5 FROM 5 as the
+     FRIENDLY screen's row does (leaving it: 2 FROM 5). The value is
+     `LOBBY_PITCH_INDOOR` + the floor in `LobbyRules.pitchType` (`include/netplay_lobby.h`),
+     so the rules' wire format is unchanged; `clamp_rules` accepts it. At kick-off the lobby
+     sets `_gIndoorOnlineFloor` and the floor's pitch type (`NetplayLobby_ApplyMatch`).
+   - **The match setup carries the floor** (`src/netplay_setup.c`, version 5: one word after
+     the crowd, the floor + 1, 0 outdoors), so the joiner and `--srp-resim` play the hall
+     from the host's data; a version-4 setup is outdoors. `Indoor_BeginMatch` takes
+     `_gIndoorOnlineFloor` while `NetplayMatch_Enabled()` (never this machine's FRIENDLY
+     row or `SWOS_INDOOR`); `Indoor_EndMatch` clears it.
+   - **Rollback state:** what an indoor match changes as it plays -- the time penalties, the
+     keeper's throw, the glass marker -- is one struct, `g_indoorSim` (`IndoorSimState`,
+     `include/indoor.h`), a SIM region of `src/sim_state.c` (all zero outdoors). So are the
+     hall's crowd rows of the pitch tile map (`_pitchDatBuffer:indoor_fans`, rows 6..49:
+     the end stands and the side stands, which the fan animation writes; outdoors only rows
+     1-3 and 51-53 change) -- without them the first rollback of the first online indoor
+     match parted the games at the next fan pick (found by `SWOS_LIVE_DESYNC_DUMP` and
+     `--netplay-state-stream-diff`: `_animatedPatterns`). The rest
+     (tactics, line-up, court tables, glass, palette) is set at kick-off from data both
+     games have, and does not change in play.
+   - `SWOS_LOBBY_INDOOR=1` has a test host choose LINOLEUM. Two players through the lobby
+     with random input on an emulated wifi link (both predict wrong and roll back), no server
+     needed: `HOST_WIDTH=362 JOIN_WIDTH=362 PROFILE=wifi HOST_ENV="SWOS_LOBBY_INDOOR=1
+     SWOS_INDOOR_TEST_RED=1" JOIN_ENV="SWOS_INDOOR_TEST_RED=1" scripts/netplay_lobby_test.sh`
+     -- both peers must end on the same hash (`SWOS_INDOOR_TEST_RED` on BOTH or neither:
+     it changes the match). `SWOS_ASSETS` must point at the assets when HOME is the test's.
+   - The rollback layout changed, so a recording made before it is refused by
+     `--srp-resim` ("laid out differently"). The proof that outdoors is unchanged: the
+     build without the `g_indoorSim` region replays the old live match, every frame as
+     recorded.
 
 ## Tests
 

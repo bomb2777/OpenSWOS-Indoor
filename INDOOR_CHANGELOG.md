@@ -6,6 +6,11 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
 ## 2026-11-04
 
+- **Online play (PC):**
+  - MULTIPLAYER on the main menu connects two players directly by IP address.
+  - In the lobby the host picks LINOLEUM on PITCH TYPE (after RANDOM) to play the match
+    indoors. This sets SUBSTITUTES to 5 FROM 5.
+  - Only builds of this fork play each other. Official OpenSWOS builds are refused.
 - **The court is teal** (`#118888`, the penalty areas and centre circle `#33AAAA`). With the
   blue court, blue kits were hard to see; teal stands out from every kit colour. The little
   pitch on the PLAY MATCH screen is a green and blue checkerboard to match.
@@ -96,7 +101,6 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
 ## Not yet
 
-- **Online play** (the host's INDOOR in the lobby).
 - **More floors:**
   - Wood (HARD).
   - Stone (FROZEN).

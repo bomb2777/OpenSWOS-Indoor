@@ -5,6 +5,9 @@
 > release and has no downloads of its own; everything else is OpenSWOS, rebased onto it
 > regularly. The work is on the `indoor` branch (`main` mirrors upstream).
 >
+> INDOOR is inspired by the indoor mode of *FIFA: Road to World Cup 98* and by *Sensible World
+> of Soccer 96/97*.
+>
 > <p align="center"><img src="docs/images/screenshots/indoor_01.png" alt="An indoor match" width="540"></p>
 >
 > - FRIENDLY → INDOOR: LINOLEUM (the hall's floor decides the pitch)
@@ -12,11 +15,12 @@
 >   time are the only stoppages; 2 x 20 minutes
 > - a red card is a 5-minute time penalty; futsal-style substitutions while the keeper holds
 >   the ball, without a limit
-> - a ring and a cross where the ball hits the glass; a post or the bar blinks red
+> - a ring and a cross where the ball hits the glass
 > - its own menu music (PC)
 > - PC (4:3) and Amiga 1200; no widescreen, offline only so far
 >
-> How it works and what's next: [docs/INDOOR.md](docs/INDOOR.md). Bugs in INDOOR: this fork's
+> What changed: [INDOOR_CHANGELOG.md](INDOOR_CHANGELOG.md). How it works and what's next:
+> [docs/INDOOR.md](docs/INDOOR.md). Bugs in INDOOR: this fork's
 > issues; anything else: [OpenSWOS](https://github.com/benbaker76/OpenSWOS/issues).
 
 ---

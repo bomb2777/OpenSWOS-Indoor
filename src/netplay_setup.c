@@ -46,6 +46,7 @@
  */
 #include "netplay_setup.h"
 #include "pitch.h"            /* the crowd (version 4) */
+#include "indoor.h"           /* the hall's floor (version 5; OpenSWOS-Indoor) */
 
 #ifdef SWOS_SDL_BUILD
 
@@ -106,8 +107,9 @@ extern uint16_t _team1GoalsFirstLeg, _team2GoalsFirstLeg;
 #define NUM_TACTICS   6
 
 #define SETUP_MAGIC   0x53555020u    /* "SUP " */
-#define SETUP_VERSION 4     /* 2: the match-init seeds (_randomSeed and friends); 3: the tie rules;
-                             * 4: the host's crowd (include/pitch.h) */
+#define SETUP_VERSION 5     /* 2: the match-init seeds (_randomSeed and friends); 3: the tie rules;
+                             * 4: the host's crowd (include/pitch.h); 5 (OpenSWOS-Indoor): the
+                             * hall's floor, after the crowd -- docs/INDOOR.md phase 6 */
 
 /* magic, version, then the scalars, then (version 3) the tie rules, then the teams,
  * then the tactics. A version-2 setup -- a recording made before the cup rules --
@@ -121,17 +123,20 @@ extern uint16_t _team1GoalsFirstLeg, _team2GoalsFirstLeg;
 /* (version 4) the count of pitch files, then each one's crowd cells as the host's game
  * loads them: what both games play the crowd animation on (include/pitch.h). */
 #define CROWD_BYTES   (2u + PITCH_CROWD_FILES * PITCH_CROWD_CELLS * 2u)
+/* (version 5) the INDOOR floor the match is played on, plus one (0: outdoors). */
+#define INDOOR_BYTES  2u
 
 uint32_t NetplaySetup_MaxBytes(void)
 {
-    return HEADER_BYTES + SCALAR_BYTES + TEAM_BYTES + TACTIC_TOTAL + CROWD_BYTES + 8;
+    return HEADER_BYTES + SCALAR_BYTES + TEAM_BYTES + TACTIC_TOTAL + CROWD_BYTES + INDOOR_BYTES + 8;
 }
 
 /* The bytes a setup of `version` holds. */
 static uint32_t setup_bytes(uint16_t version)
 {
     return HEADER_BYTES + SCALAR_COUNT * 2u + (version >= 3 ? TIE_WORDS * 2u : 0u) +
-           TEAM_BYTES + TACTIC_TOTAL + (version >= 4 ? CROWD_BYTES : 0u);
+           TEAM_BYTES + TACTIC_TOTAL + (version >= 4 ? CROWD_BYTES : 0u) +
+           (version >= 5 ? INDOOR_BYTES : 0u);
 }
 
 /* The crowd of the last setup applied, and whether the next pitch loaded takes it. */
@@ -246,6 +251,9 @@ int32_t NetplaySetup_Encode(uint8_t *out, uint32_t cap)
         for (c = 0; c < PITCH_CROWD_CELLS; c++, p += 2)
             BE_WRITE_U16(p, ok ? cells[c] : (uint16_t)PITCH_CROWD_KEEP);
     }
+
+    /* (version 5) INDOOR: the host's floor, which the joiner and a re-simulation play on. */
+    BE_WRITE_U16(p, (uint16_t)(_gIndoorOnlineFloor + 1)); p += 2;
 
     return (int32_t)(p - out);
 }
@@ -376,6 +384,17 @@ int32_t NetplaySetup_Apply(const uint8_t *in, uint32_t len)
             for (c = 0; c < PITCH_CROWD_CELLS; c++, p += 2)
                 s_crowd[f][c] = BE_READ_U16(p);
         s_haveCrowd = 1;
+    }
+
+    /* (version 5) INDOOR: the floor, the setup's last word; before it, every online match
+     * was outdoors. */
+    _gIndoorOnlineFloor = INDOOR_OFF;
+    if (version >= 5) {
+        if (!s_haveCrowd)               /* (a crowd of another count: its bytes are there) */
+            p += CROWD_BYTES;
+        if (p + INDOOR_BYTES <= in + len)
+            _gIndoorOnlineFloor = (int16_t)(BE_READ_U16(p) - 1);
+        p += INDOOR_BYTES;
     }
 
     /* Not sent, because they are the same on both sides by definition. */

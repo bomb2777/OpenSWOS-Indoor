@@ -1618,7 +1618,7 @@ SWOS_CHIP_BSS IntroChipRam g_introChipRam;
  * twelve sets, their face icons and the line-up's little players (player_looks.h), then a long
  * bench's names of places 17.. and the front row's mirrored arrow (long_bench.h: LB_NAME_SPRITE_BASE
  * follows the looks' slots -- the two branches had both taken 1684..). Last, INDOOR's marker on
- * the glass and the woodwork (indoor.h INDOOR_MARK_SPRITE_FIRST: this fork's). */
+ * the glass (indoor.h INDOOR_MARK_SPRITE_FIRST: this fork's). */
 #ifdef SWOS_SDL_BUILD
 SWOS_CHIP_BSS char _spriteGraphics[INDOOR_SPRITE_TABLE_END * sizeof(void *)];
 #else

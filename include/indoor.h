@@ -38,6 +38,7 @@ const char *Indoor_FloorName(int16_t floor);
 
 /* The FRIENDLY screen's choice, as the next press of its INDOOR button makes it. */
 int16_t Indoor_NextFriendlyFloor(int16_t floor);
+int32_t Indoor_MenuMusic(void);         /* the menus play the hall's music (SDL) */
 
 /* InitAndPlayGame, first thing: make this match indoor if it is a friendly and the
  * FRIENDLY screen (or SWOS_INDOOR=1, for a test) says so; anything else leaves

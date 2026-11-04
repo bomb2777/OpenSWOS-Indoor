@@ -5987,6 +5987,13 @@ void FriendlyIndoorProc(MenuEntry *entry)
     DrawNumbersOfSubstitutes();
     CallDrawMultipleItems(4, &_menuEntries[3]);    /* pitch rows 3-4, substitutes 5-6 */
     CallDrawMenuItem(entry);
+#ifdef SWOS_SDL_BUILD
+    /* The hall has its own menu music (PC only; the Amiga keeps its song). */
+    if ((was == INDOOR_OFF) != (_gIndoorFriendlyFloor == INDOOR_OFF)) {
+        extern void SwitchMenuMusic(void);
+        SwitchMenuMusic();
+    }
+#endif
 }
 
 /* FriendlyMenuReinit: update pitch/season display state and menu entry visibility. */

@@ -273,16 +273,17 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    - **PC and Amiga alike:** the Amiga greys the referee behind the bottom wall too, and
      draws the bench figures from the moment a dugout's edge is in view, as the PC.
    - **The marker** (his SWIS marks a hit on the glass with a ring and a cross and blinks a post
-     or the bar red; here in the game's pixels): a hit on the glass at `ball->speed` >=
-     `INDOOR_MARK_SPEED` (1300: shots and clearances, not passes -- a CPU match hits the glass
-     some 30 times, the hard hits about a third) draws SWIS's mark (its `WallImpact`, at a
-     third of its size: its ball is 16 px, ours 5) -- a red ring growing from 2 to 10 px and
+     or the bar red; here in the game's pixels): EVERY touch of the glass (a CPU match some 30;
+     until 2026-11-04 only the hard ones, which alone still thud: `ball->speed` >=
+     `INDOOR_MARK_SPEED`, 1300, shots and clearances, about a third) draws SWIS's mark (its
+     `WallImpact`, at a third of its size: its ball is 16 px, ours 5) -- a red ring growing from 2 to 10 px and
      fading (dotted, then every third pixel), over a white cross 3 px each way with a red
      centre, white for two thirds of the second, then grey (six pictures of 21 x 21, 48
-     frames) -- WHERE THE BALL IS SEEN: on the glass's line, lifted by the ball's height (the
-     sprite's z, as the ball's own; on the ends' glass, which stands 80 px high in the
-     picture, no higher than its top less the ring), with the ball's bounce sample
-     (`PlaySfxSample16`, the PC sound too). Until 2026-11-04 the struck piece of glass lit up
+     frames) -- at an end WHERE THE BALL IS SEEN: on the line, lifted by the ball's height (the
+     sprite's z, as the ball's own; on the glass, which stands 80 px high in the picture, no
+     higher than its top less the ring); at a side on the floor, on the white side line where
+     the glass begins (the owner: the sides need no height) -- a hard hit with the ball's
+     bounce sample (`PlaySfxSample16`, the PC sound too). Until 2026-11-04 the struck piece of glass lit up
      as a fading white checkerboard instead (the owner: "looks odd"). The corner flag's z goes
      back to 0 at the final whistle (`Indoor_ClearMarker` from `Indoor_EndMatch`; outdoors
      nothing sets it);

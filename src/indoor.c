@@ -121,6 +121,7 @@ void Indoor_PinPitch(void)
 
 void Indoor_EndMatch(void)
 {
+    Indoor_ClearMarker();
     time_penalties_clear();
     release_court();
     release_tactics();
@@ -998,15 +999,18 @@ static void glass_table(void)
     s_glassRim = (uint8_t)nearest_colour(rgb, 187, 187, 187);
 }
 
+static int16_t marker_opaque(int16_t x, int16_t y);
+
 /* World rectangle x0..x1, y0..y1 through the glass, row `rimY` its light rim -- but for
- * the goal's hole, rows h0..h1 of x INDOOR_GLASS_HOLE_X0..X1, seen through clear. */
+ * the goal's hole, rows h0..h1 of x INDOOR_GLASS_HOLE_X0..X1, seen through clear, and the
+ * marker's own pixels (it is drawn before the bottom wall and stays bright). */
 static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h0, int16_t h1,
                        int16_t rimY)
 {
     int16_t camX = Render_CameraX(), camY = Render_CameraY();
     uint8_t *fb = (uint8_t *)_frontbufferBasePtr;
     int16_t mx0 = 1, my0 = 1, mx1 = 0, my1 = 0;
-    (void)Indoor_MarkerBox(&mx0, &my0, &mx1, &my1);      /* (the marker stays bright) */
+    (void)Indoor_MarkerBox(&mx0, &my0, &mx1, &my1);
     for (int16_t y = y0; y <= y1; y++) {
         int16_t sy = (int16_t)(y - camY);
         int16_t inHole = (int16_t)(y >= h0 && y <= h1);
@@ -1020,7 +1024,8 @@ static void glass_band(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t h
                 continue;
             if (inHole && x >= INDOOR_GLASS_HOLE_X0 && x <= INDOOR_GLASS_HOLE_X1)
                 continue;
-            if (x >= mx0 && x <= mx1 && y >= my0 && y <= my1)
+            if (x >= mx0 && x <= mx1 && y >= my0 && y <= my1 &&
+                marker_opaque((int16_t)(x - mx0), (int16_t)(y - my0)))
                 continue;
             row[sx] = y == rimY ? s_glassRim : s_glassLut[row[sx]];
         }
@@ -1287,11 +1292,13 @@ void Indoor_DrawGlassFront(void)
 
 
 /* ---- The marker on the glass and the woodwork (phase 5.5) ----------------------------- *
- * The owner's SWIS marks where the ball hits the glass (a growing ring and a cross) and
- * blinks a post or the bar red; here, in the game's pixels: a hard hit (INDOOR_MARK_SPEED)
- * lights the struck piece of glass -- a white checkerboard that fades to grey in three
- * steps, half a second -- with the ball's bounce sample, and a post or the bar blinks red
- * three times. One marker, the latest hit: a world sprite of its own pictures (sprite table
+ * The owner's SWIS marks where the ball hits the glass and blinks a post or the bar red;
+ * here as there (its WallImpact, at a third of its size: its ball is 16 px, ours 5): a hard
+ * hit (INDOOR_MARK_SPEED) draws a red ring that grows from 2 to 10 px and fades, over a
+ * white cross with a red centre that stays for two thirds of the second and then fades --
+ * where the ball is SEEN, its height above the floor too (the ends' glass stands 80 px
+ * high in the picture) -- with the ball's bounce sample; a post or the bar blinks red three
+ * times. (Until 2026-11-04 the struck piece of glass lit up as a checkerboard: "looks odd".) One marker, the latest hit: a world sprite of its own pictures (sprite table
  * slots INDOOR_MARK_SPRITE_FIRST..), shown by the corner flag's sprite, which a hall has
  * no use for (indoors it is the marker or hidden). So it is drawn, undrawn on the Amiga
  * and recorded in a replay like any sprite; it is not match state but the corner flag's
@@ -1304,17 +1311,21 @@ extern Sprite _cornerFlagSprite2;
 #endif
 extern void PlaySfxSample16(void);
 
-enum { MARK_SIDE = 0, MARK_END = 3, MARK_POST = 6, MARK_BAR = 7, MARK_SPRITES = 8 };
-#define MARK_GLASS_FRAMES   24          /* three steps of 8 */
+enum { MARK_GLASS = 0, MARK_POST = 6, MARK_BAR = 7, MARK_SPRITES = 8 };
+#define MARK_GLASS_STEPS    6           /* the ring's six sizes, a picture each */
+#define MARK_GLASS_FRAMES   48          /* six steps of 8: about a second, as SWIS's */
 #define MARK_WOOD_FRAMES    48          /* three blinks: 8 on, 8 off */
+#define MARK_RING_MAX       10          /* the ring's last radius */
+#define MARK_MAX_Z          (INDOOR_GLASS_HEIGHT - MARK_RING_MAX)   /* on the ends' glass */
 
 static const struct { uint8_t w, h, cx, cy; } kMarkSize[MARK_SPRITES] = {
-    { 10, 24, 5, 12 }, { 10, 24, 5, 12 }, { 10, 24, 5, 12 },    /* a side's glass */
-    { 24, 12, 12, 11 }, { 24, 12, 12, 11 }, { 24, 12, 12, 11 }, /* an end's, up from its foot */
+    { 21, 21, 10, 10 }, { 21, 21, 10, 10 }, { 21, 21, 10, 10 },  /* the ring and the cross */
+    { 21, 21, 10, 10 }, { 21, 21, 10, 10 }, { 21, 21, 10, 10 },
     { 3, 20, 1, 19 },                                           /* a post, up from the line */
     { 24, 3, 12, 1 },                                           /* a piece of the bar */
 };
-#define MARK_MAX_LINES  24             /* (the tallest: a side's glass) */
+static const uint8_t kRingRadius[MARK_GLASS_STEPS] = { 2, 3, 5, 6, 8, 10 };
+#define MARK_MAX_LINES  21
 #define MARK_MAX_WQ     2
 
 static SpriteGraphics s_markHdr[MARK_SPRITES];
@@ -1325,18 +1336,36 @@ static uint8_t s_markPix[MARK_SPRITES][MARK_MAX_LINES * MARK_MAX_WQ * 16];
 SWOS_CHIP_BSS static uint16_t s_markPix[MARK_SPRITES][MARK_MAX_LINES * MARK_MAX_WQ * 4 * 2];
 #endif
 static int16_t s_markBuilt;
-static int16_t s_markKind = -1, s_markTimer, s_markX, s_markY;
+static int16_t s_markKind = -1, s_markTimer, s_markX, s_markY, s_markZ;
 
-/* A marker picture's colour at (x, y): 0 clear, 2 white, 1 grey, 10 red. */
+/* A marker picture's colour at (x, y): 0 clear, 2 white, 1 grey, 10 red. SWIS fades with
+ * alpha; here a fading line keeps every other pixel, then every third. */
 static uint8_t mark_colour(int16_t k, int16_t x, int16_t y)
 {
+    int16_t dx, dy, d2, r, n;
     if (k >= MARK_POST)
         return 10;
-    switch ((k - (k >= MARK_END ? MARK_END : MARK_SIDE))) {
-    case 0:  return ((x + y) & 1) ? 0 : 2;              /* bright: white on every other */
-    case 1:  return ((x + y) & 1) ? 0 : 1;              /* grey */
-    default: return ((x & 1) || (y & 1)) ? 0 : 1;       /* a quarter, grey */
+    dx = (int16_t)(x - kMarkSize[k].cx);
+    dy = (int16_t)(y - kMarkSize[k].cy);
+    n = (int16_t)(dx < 0 ? -dx : dx) + (int16_t)(dy < 0 ? -dy : dy);   /* (for the fading) */
+    if (dx == 0 && dy == 0)
+        return 10;                                      /* the red centre */
+    if ((dx == 0 || dy == 0) && n <= 3) {               /* the cross, 3 px each way */
+        if (k <= MARK_GLASS + 3)
+            return 2;                                   /* white, two thirds of the time */
+        if (k == MARK_GLASS + 4)
+            return 1;                                   /* then grey */
+        return (n & 1) ? 1 : 0;                         /* and half of it */
     }
+    r = kRingRadius[k - MARK_GLASS];
+    d2 = (int16_t)(dx * dx + dy * dy);
+    if (d2 < r * r - r || d2 > r * r + r)               /* the ring, one pixel wide */
+        return 0;
+    if (k <= MARK_GLASS + 1)
+        return 10;                                      /* red */
+    if (k <= MARK_GLASS + 3)
+        return ((x + y) & 1) ? 0 : 10;                  /* fading */
+    return ((x + y) % 3) ? 0 : 10;                      /* nearly gone */
 }
 
 /* The marker's pictures into their slots: once, and again if the table lost them. */
@@ -1400,31 +1429,38 @@ void Indoor_BuildMarkSprites(void)
     s_markBuilt = 1;
 }
 
-static void mark(int16_t kind, int16_t x, int16_t y, int16_t frames)
+static void mark(int16_t kind, int16_t x, int16_t y, int16_t z, int16_t frames)
 {
     Indoor_BuildMarkSprites();
     s_markKind = kind;
     s_markX = x;
     s_markY = y;
+    s_markZ = z;
     s_markTimer = frames;
 }
 
-/* The ball off the glass (Indoor_BallAtWall): at a side (x past the court) or an end. */
+/* The ball off the glass (Indoor_BallAtWall): at a side (x past the court) or an end. The
+ * mark is where the ball is seen: on the glass's line, as high as the ball (a sprite's z
+ * lifts it, as the ball's lifts the ball) -- at the ends up the glass that stands there,
+ * no higher than its top; at the sides, whose glass lies in the floor, over it likewise. */
 static void mark_glass(Sprite *ball, int16_t side)
 {
+    int16_t z = ball->z.s.i;
     if (ball->speed < INDOOR_MARK_SPEED)
         return;
+    if (z < 0) z = 0;
+    if (z > MARK_MAX_Z) z = MARK_MAX_Z;
     if (side) {
         int16_t y = ball->y.s.i;
-        if (y < INDOOR_TOP + 12) y = INDOOR_TOP + 12;
-        if (y > INDOOR_BOTTOM - 12) y = INDOOR_BOTTOM - 12;
-        mark(MARK_SIDE, ball->x.s.i < 336 ? (int16_t)(INDOOR_LEFT - 5) : (int16_t)(INDOOR_RIGHT + 6), y,
+        if (y < INDOOR_TOP) y = INDOOR_TOP;
+        if (y > INDOOR_BOTTOM) y = INDOOR_BOTTOM;
+        mark(MARK_GLASS, ball->x.s.i < 336 ? (int16_t)(INDOOR_LEFT - 5) : (int16_t)(INDOOR_RIGHT + 6), y, z,
              MARK_GLASS_FRAMES);
     } else {
         int16_t x = ball->x.s.i;
-        if (x < INDOOR_LEFT + 12) x = INDOOR_LEFT + 12;
-        if (x > INDOOR_RIGHT - 12) x = INDOOR_RIGHT - 12;
-        mark(MARK_END, x, ball->y.s.i <= 449 ? INDOOR_TOP : INDOOR_BOTTOM, MARK_GLASS_FRAMES);
+        if (x < INDOOR_GLASS_X0 + MARK_RING_MAX) x = INDOOR_GLASS_X0 + MARK_RING_MAX;
+        if (x > INDOOR_GLASS_X1 - MARK_RING_MAX) x = INDOOR_GLASS_X1 - MARK_RING_MAX;
+        mark(MARK_GLASS, x, ball->y.s.i <= 449 ? INDOOR_TOP : INDOOR_BOTTOM, z, MARK_GLASS_FRAMES);
     }
     PlaySfxSample16();                  /* the thud: the ball's bounce */
 }
@@ -1435,16 +1471,19 @@ void Indoor_Woodwork(Sprite *ball, int16_t post)
     if (!_gIndoor)
         return;
     if (post)
-        mark(MARK_POST, (int16_t)(ball->x.s.i - 1 < 302 ? 300 : 370), line, MARK_WOOD_FRAMES);
+        mark(MARK_POST, (int16_t)(ball->x.s.i - 1 < 302 ? 300 : 370), line, 0, MARK_WOOD_FRAMES);
     else
-        mark(MARK_BAR, ball->x.s.i, (int16_t)(line - (line == INDOOR_TOP ? 21 : 17)),  /* (the top goal, */
-             MARK_WOOD_FRAMES);                                    /*  drawn in the map, is taller) */
+        mark(MARK_BAR, ball->x.s.i, (int16_t)(line - (line == INDOOR_TOP ? 21 : 17)), 0,  /* (the top */
+             MARK_WOOD_FRAMES);                             /* goal, drawn in the map, is taller) */
 }
 
+/* At kick-off and the final whistle: no marker, and the corner flag back on the floor (its
+ * z is 0 outdoors, which never sets it). */
 void Indoor_ClearMarker(void)
 {
     s_markTimer = 0;
     s_markKind = -1;
+    _cornerFlagSprite.z.raw = 0;
 }
 
 /* Each frame, for the corner flag (UpdateCornerFlagSprite): the marker, or nothing. */
@@ -1465,11 +1504,23 @@ void Indoor_UpdateMarker(void)
         }
         spr->x.s.i = s_markX;
         spr->y.s.i = s_markY;
+        spr->z.raw = (int32_t)s_markZ << 16;
     }
     spr->imageIndex = image;
 }
 
-/* The marker's box in the world while it shows (the PC's bottom wall leaves it bright). */
+#ifdef SWOS_SDL_BUILD
+/* Whether the marker's picture shown has a colour at (x, y) of its box (Indoor_MarkerBox). */
+static int16_t marker_opaque(int16_t x, int16_t y)
+{
+    const int16_t k = (int16_t)(_cornerFlagSprite.imageIndex - INDOOR_MARK_SPRITE_FIRST);
+    if (k < 0 || k >= MARK_SPRITES)
+        return 0;
+    return s_markPix[k][y * ((kMarkSize[k].w + 15) / 16) * 16 + x] != 0;    /* (chunky, as built) */
+}
+#endif
+
+/* The marker's box in the world while it shows (the PC's bottom wall leaves its pixels bright). */
 int16_t Indoor_MarkerBox(int16_t *x0, int16_t *y0, int16_t *x1, int16_t *y1)
 {
     const Sprite *spr = &_cornerFlagSprite;
@@ -1478,7 +1529,7 @@ int16_t Indoor_MarkerBox(int16_t *x0, int16_t *y0, int16_t *x1, int16_t *y1)
         return 0;
     k = (int16_t)(spr->imageIndex - INDOOR_MARK_SPRITE_FIRST);
     *x0 = (int16_t)(spr->x.s.i - kMarkSize[k].cx);
-    *y0 = (int16_t)(spr->y.s.i - kMarkSize[k].cy);
+    *y0 = (int16_t)(spr->y.s.i - spr->z.s.i - kMarkSize[k].cy);
     *x1 = (int16_t)(*x0 + kMarkSize[k].w - 1);
     *y1 = (int16_t)(*y0 + kMarkSize[k].h - 1);
     return 1;

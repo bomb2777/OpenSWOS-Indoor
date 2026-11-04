@@ -716,6 +716,11 @@ void TryPlayMusic(void)
         extern int AudioSDL_PcMusicStart(void);
         /* [audio] music = pc: the PC game's menu.xmi (src/dos_music.c). */
         extern int AudioSDL_StreamStart(const char *name, int loop);
+        extern int32_t Indoor_MenuMusic(void);
+        if (Indoor_MenuMusic() && AudioSDL_StreamStart("sound_indoor/menu.mp3", 1) == 0) {
+            /* INDOOR chosen on the FRIENDLY screen: the hall's own music, whatever [audio] music */
+            fprintf(stderr, "[indoor] menu music: sound_indoor/menu.mp3\n");
+        } else
         if (DosMusic_Style() && DosMusic_MenuRecording() && AudioSDL_StreamStart("menu", 1) == 0) {
             /* [audio] menu_music = mp3: a recording of it, sound_dos/menu.mp3 */
         } else
@@ -915,6 +920,21 @@ void StopMusicInBackground(void)
     AudioSDL_FadeOutSong(72);
     _audioActive = 0;
     _audioBankLoaded = 0;   /* next TryPlayMusic will re-load the song */
+}
+#endif
+
+#ifdef SWOS_SDL_BUILD
+/* The FRIENDLY screen's INDOOR row switched between a hall and outdoors: the menu music
+ * playing is the other one's, so cut it and start the right one (TryPlayMusic picks it).
+ * Nothing when no menu music plays (OPTIONS -> MENU MUSIC off). */
+void SwitchMenuMusic(void)
+{
+    if (_audioActive == 0)
+        return;
+    AudioSDL_StopSong();
+    _audioActive = 0;
+    _audioBankLoaded = 0;
+    TryPlayMusic();
 }
 #endif
 

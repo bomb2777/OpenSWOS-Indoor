@@ -592,7 +592,7 @@ SWOS_ASSETS := $(HOME)/.swos/assets
 endif
 # (grafs_dos: the PC game's graphics -- the menus' PC shading (dosmenus, on by default) and the
 #  DOS graphics; 1.4 MB. Not sound_dos (15 MB) nor grafs_2020 (not ours to hand out).)
-WASM_DATA_DIRS := data grafs grafs_aga grafs_dos grafs_jag grafs_indoor sound data_json mods
+WASM_DATA_DIRS := data grafs grafs_aga grafs_dos grafs_jag grafs_indoor sound sound_indoor data_json mods
 
 # Emscripten link flags. ASYNCIFY lets the blocking game loop yield to the
 # browser at the one Platform_VBlank choke-point (emscripten_sleep — docs/WASM.md
@@ -636,7 +636,7 @@ WASM_LINK_DEPS := wasm/pre.js $(WASM_SHELL)
 # deleted by hand, then jumped to 21MB.) List the preloaded files so a data change
 # forces the relink.
 WASM_PRELOAD_FILES := $(wildcard $(foreach r,bin $(SWOS_ASSETS),\
-                                 $(r)/data/* $(r)/grafs/* $(r)/grafs_aga/* $(r)/grafs_jag/* $(r)/grafs_indoor/* $(r)/sound/* \
+                                 $(r)/data/* $(r)/grafs/* $(r)/grafs_aga/* $(r)/grafs_jag/* $(r)/grafs_indoor/* $(r)/sound/* $(r)/sound_indoor/* \
                                  $(r)/data_json/*.json $(r)/data_json/*/*.json \
                                  $(r)/data_json/*/*/*.json))
 WASM_LINK_DEPS += $(WASM_PRELOAD_FILES)
@@ -1114,7 +1114,7 @@ macos-app: macos-universal
 	    echo "    WARNING: SDL2.framework not found — user will need to install it system-wide" >&2; \
 	  fi; \
 	  echo "    copying $$(scripts/stage_runtime.sh $$APP/Contents/MacOS \
-	        data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag grafs_indoor sound sound_dos data_json setup mods)"; \
+	        data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag grafs_indoor sound sound_indoor sound_dos data_json setup mods)"; \
 	  if   [ -f SWOS.icns ];           then cp SWOS.icns           $$APP/Contents/Resources/; \
 	  elif [ -f $(BINDIR)/SWOS.icns ]; then cp $(BINDIR)/SWOS.icns $$APP/Contents/Resources/; \
 	  else echo "    (no SWOS.icns — Finder will use the default app icon)"; fi; \

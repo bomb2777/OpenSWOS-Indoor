@@ -1,6 +1,6 @@
 # INDOOR.md — six a side in a hall
 
-> **Status (2026-11-04): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2-5.5 (the owner's lists after playing), 5.6 (the hall's menu music, PC); phase 6 (online) open.** This fork's own
+> **Status (2026-11-04): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2-5.5 (the owner's lists after playing), 5.6 (the hall's menu music, PC), 5.7; phase 6 (online) open.** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -187,7 +187,7 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    The sizes in 5.1 above are superseded by these.
 5.3. **The owner's third list** (2026-11-02) — done (`dc78d73`):
    - **Glass** ((98,98,98) at ~60 %, his SWIS `wall_transparent` / `sidewall_*`), `0b5c1bf`:
-     along the sides in the floor, 10 px. At the ends in perspective, both 80 px high
+     along the sides in the floor, 10 px (5 since 5.7). At the ends in perspective, both 80 px high
      (`INDOOR_GLASS_HEIGHT`): the top wall greys the floor behind it and the three nearest rows
      of fans, the bottom one the court's last 80 rows and the players in them; each with a clear
      hole where its goal stands (x 300..372; 24 px at the top line, the bottom goal frame's 18 px
@@ -308,6 +308,19 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    .app, WASM), not the Amiga drawer: the Amiga keeps its menu song (the owner: "not so
    important" -- its chip RAM has no room for the track, it would have to be streamed from
    fast RAM).
+5.7. **The owner's sixth list** (2026-11-04):
+   - **The side glass half as wide**, 5 px (`INDOOR_GLASS_LEFT/RIGHT`; "too fat"): LINO.MAP and
+     LINO_A.MAP made again (`scripts/make_indoor_hall.py`, which reproduced the old maps byte
+     for byte before the change). The bench stays where it stood (`INDOOR_BENCH_X` 163, no
+     longer worked out from the glass), so the hall's floor between bench and glass is 5 px
+     wider; the side stands' columns came out the same.
+   - **The PC's glass colour table is no longer built during a fade** (`glass_table`): it was
+     rebuilt from whatever palette was on screen, a fade's dark one too (18 times in a CPU
+     match), and from that sent the colours to the wrong ones -- after a goal's replay the
+     bottom wall showed solid white in a screenshot. A fade scales every colour alike, so the
+     bright palette's table stays right through it.
+   - README: the fork's own block at its top, a screenshot of an indoor match
+     (`docs/images/screenshots/indoor_01.png`).
 6. **Online and replays** — the host's INDOOR in the lobby, the setup blob and the `.SRP`;
    `NETPLAY_COMPAT` raised and the fork's own online identity.
 

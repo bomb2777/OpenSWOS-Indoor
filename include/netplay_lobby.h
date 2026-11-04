@@ -59,7 +59,8 @@ typedef struct {
 
 typedef struct {
     uint16_t gameLength;            /* _gameLength: 0..3 = 3, 5, 7, 10 minutes */
-    uint16_t pitchType;             /* _friendlyPitchType: 0..6, or 0xFFFF for random */
+    uint16_t pitchType;             /* _friendlyPitchType: 0..6, or 0xFFFF for random, or
+                                     * (OpenSWOS-Indoor) LOBBY_PITCH_INDOOR + an INDOOR floor */
     uint16_t minSubs, maxSubs;      /* 0..5, min <= max, min >= 1 when max > 0 */
     /* A cup tie, SWOS 2020's CUP row: */
     uint16_t legs;                  /* 0 a friendly (a draw stands), 1 or 2 legs */
@@ -77,6 +78,10 @@ typedef struct {
 } LobbyRules;
 
 enum { LOBBY_TIE_ET_PEN = 1, LOBBY_TIE_PEN_ONLY = 2 };
+/* OpenSWOS-Indoor: PITCH TYPE's indoor values, one per floor (include/indoor.h): the match
+ * is played in the hall on that floor (docs/INDOOR.md phase 6). In the pitch-type word so
+ * the rules' wire format stays as it was. */
+enum { LOBBY_PITCH_INDOOR = 0x0100 };
 enum { LOBBY_MODE_FRIENDLY = 0, LOBBY_MODE_LEAGUE = 1, LOBBY_MODE_RANKED = 2 };
 
 typedef enum {

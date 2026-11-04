@@ -28,6 +28,9 @@
 #ifndef NETPLAY_COMPAT_H
 #define NETPLAY_COMPAT_H
 
-#define NETPLAY_COMPAT 10     /* 10: the handshake carries the mods that change the match (9: the XBOX gameplay style, the handshake's style byte; 8: the host's crowd in the setup; 7: the lobby's match mode and service ids; 6: the lobby chat) */
+/* OpenSWOS-Indoor counts from 1000 (docs/INDOOR.md phase 6), where upstream's numbers never
+ * reach: a fork build must never meet one without INDOOR. When a rebase brings a raise of
+ * upstream's, raise this by one too. 1001: INDOOR online (upstream's 9); 1002: upstream's 10. */
+#define NETPLAY_COMPAT 1002   /* upstream's history -- 10: the handshake carries the mods that change the match (9: the XBOX gameplay style, the handshake's style byte; 8: the host's crowd in the setup; 7: the lobby's match mode and service ids; 6: the lobby chat) */
 
 #endif

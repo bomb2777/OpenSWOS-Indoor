@@ -53,6 +53,7 @@
 #include "sim_state_ids.h"
 #include "match_step.h"
 #include "endian_helpers.h"
+#include "indoor.h"         /* g_indoorSim: OpenSWOS-Indoor's match state (docs/INDOOR.md phase 6) */
 
 #include <stdlib.h>
 #include <string.h>
@@ -253,6 +254,14 @@ extern uint16_t   _overlayFlagBackup[1], _currentPlayerIndicatorPosition[1];
 #define FAN_ROWS_TOP_SLOT     42
 #define FAN_ROWS_BOTTOM_SLOT  2142
 #define FAN_ROWS_SLOTS        126
+/* OpenSWOS-Indoor: the hall's stands are other rows -- the end stands' rows 6-10 and
+ * 45-49 and the side stands between them (include/indoor.h) -- so an indoor match's crowd
+ * animation writes rows 6..49 (slots 252..2099), which must roll back as the outdoor
+ * rows do: without them a rollback left the fans as they were, and the next pick of the
+ * animation parted the two games (2026-11-04, the first rollback of an online indoor
+ * match). Outdoors these rows never change. */
+#define INDOOR_FAN_FIRST_SLOT (INDOOR_CROWD_TOP_ROW * 42)
+#define INDOOR_FAN_SLOTS      ((INDOOR_CROWD_BOTTOM_ROW + INDOOR_CROWD_ROWS - INDOOR_CROWD_TOP_ROW) * 42)
 
 /* ---- portable layouts (sim_state.h) ----
  * Byte runs are copied, 16- and 32-bit values written big-endian, pointers written as
@@ -367,6 +376,18 @@ static const SimField k_scorerFields[] = {
     GOAL(0), GOAL(1), GOAL(2), GOAL(3), GOAL(4), GOAL(5), GOAL(6), GOAL(7), GOAL(8), GOAL(9),
 };
 #undef GOAL
+
+/* OpenSWOS-Indoor: the indoor match's own state (include/indoor.h); all zero outdoors. */
+#define PEN(i) PTR(IndoorSimState, penalties[i].player, SIM_PTR_SPRITE), \
+               PTR(IndoorSimState, penalties[i].team, SIM_PTR_TEAM_INFO), \
+               W16(IndoorSimState, penalties[i].backAt, 1)
+static const SimField k_indoorSimFields[] = {
+    PEN(0), PEN(1), PEN(2), PEN(3),
+    PTR(IndoorSimState, keeperReleaser, SIM_PTR_SPRITE),
+    PTR(IndoorSimState, keeperTeam, SIM_PTR_TEAM_INFO),
+    W16(IndoorSimState, keeperBallY, 6),            /* keeperBallY, markKind .. markZ */
+};
+#undef PEN
 #undef W16
 #undef W32
 #undef BYT
@@ -379,6 +400,7 @@ STRUCT_LAYOUT(k_hudSprite, Sprite)
 STRUCT_LAYOUT(k_teamInfo, TeamGeneralInfo)
 STRUCT_LAYOUT(k_teamGame, TeamGame)
 STRUCT_LAYOUT(k_scorer, ScorerInfo)
+STRUCT_LAYOUT(k_indoorSim, IndoorSimState)
 #undef STRUCT_LAYOUT
 
 #define S  0
@@ -546,6 +568,8 @@ const SimStateRegion g_simStateRegions[] = {
                 FAN_ROWS_TOP_SLOT * 4, FAN_ROWS_SLOTS * 4, S, k_tileSlot),
     REGION_PART(_pitchDatBuffer, "_pitchDatBuffer:bottom_fans",
                 FAN_ROWS_BOTTOM_SLOT * 4, FAN_ROWS_SLOTS * 4, S, k_tileSlot),
+    REGION_PART(_pitchDatBuffer, "_pitchDatBuffer:indoor_fans",
+                INDOOR_FAN_FIRST_SLOT * 4, INDOOR_FAN_SLOTS * 4, S, k_tileSlot),
 
     /* The draw list. BuildSpriteBandAndGeneralRenderStacks sets each listed sprite's
      * onScreen, which the match reads (player auto-select, referee, camera, animation
@@ -590,6 +614,9 @@ const SimStateRegion g_simStateRegions[] = {
     REGION(_currentTimeSprite, S, k_hudSprite), REGION(_cornerFlagSprite2, S, k_sprite),
     REGION(_copyTimeSprite, S, k_word16),
     REGION(_overlayFlagBackup, S, k_word16), REGION(_currentPlayerIndicatorPosition, S, k_word16),
+
+    /* OpenSWOS-Indoor: a time penalty, the keeper's throw, the glass marker */
+    REGION(g_indoorSim, S, k_indoorSim),
 };
 
 #undef S
@@ -638,6 +665,8 @@ void SimState_Load(const uint8_t *src, uint32_t tiers)
     if (tiers & SIM_TIER_SIM) {
         AnimatedPatterns_SyncTileMirror(FAN_ROWS_TOP_SLOT, FAN_ROWS_SLOTS);
         AnimatedPatterns_SyncTileMirror(FAN_ROWS_BOTTOM_SLOT, FAN_ROWS_SLOTS);
+        if (_gIndoor)
+            AnimatedPatterns_SyncTileMirror(INDOOR_FAN_FIRST_SLOT, INDOOR_FAN_SLOTS);
     }
 }
 

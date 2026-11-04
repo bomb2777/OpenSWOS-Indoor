@@ -27,8 +27,8 @@
 /* Online. The matchmaking server lists a game only to players with the same tag
  * (VERSION:<tag>/<NETPLAY_COMPAT>, mm_client.c; the server's Connections.cpp), the web
  * build's with -WEB after it; GGPO-X's session name; a custom team file's format. */
-#define PROJECT_NETPLAY_TAG     "OPENSWOS"
-#define PROJECT_GGPO_GAME       "openswos"
+#define PROJECT_NETPLAY_TAG     "OPENSWOS-INDOOR"    /* OpenSWOS-Indoor: its own (docs/INDOOR.md phase 6) */
+#define PROJECT_GGPO_GAME       "openswos-indoor"
 #define PROJECT_TEAM_FORMAT     "openswos-team"
 /* The public matchmaking server (and recorder, reports, team check): its host. */
 #define PROJECT_MM_HOST         "online.openswos.net"

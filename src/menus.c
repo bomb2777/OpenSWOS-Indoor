@@ -2867,9 +2867,11 @@ void MultiplayerMenuSelected(void)
     }
 #endif
     OnlineMenus_Init();
-    /* (online is SWOS 96/97 whatever world this game plays offline, the world back after it:
-     *  OnlineMenus_Show, src/world_online.c) */
-    OnlineMenus_Show("swos2020/logInMenu");
+    /* OpenSWOS-Indoor: no server of its own, so MULTIPLAYER is the direct-IP menu
+     * (docs/INDOOR.md phase 6); upstream's opens swos2020/logInMenu here (online is SWOS
+     * 96/97 whatever world this game plays offline, the world back after it:
+     * OnlineMenus_Show, src/world_online.c). */
+    OnlineMenus_Show("p2p/p2pMenu");
     /* Coming back re-unpacks the main menu from its packed bytes, where the CONTINUE and
      * SAVE rows (entries 11/12) are visible and LOAD OLD COMPETITION sits below them --
      * what SWOSMainMenuInit did to them is gone. Every main-menu handler that opens a

@@ -17,7 +17,9 @@
 >   the ball, without a limit
 > - a ring and a cross where the ball hits the glass
 > - its own menu music (PC)
-> - PC (4:3) and Amiga 1200; no widescreen, offline only so far
+> - online on the PC: MULTIPLAYER connects two players by IP, the host picks LINOLEUM in the
+>   lobby; fork builds play only each other (no server of its own)
+> - PC (4:3) and Amiga 1200; no widescreen
 >
 > What changed: [INDOOR_CHANGELOG.md](INDOOR_CHANGELOG.md). How it works and what's next:
 > [docs/INDOOR.md](docs/INDOOR.md). Bugs in INDOOR: this fork's

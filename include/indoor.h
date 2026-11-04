@@ -29,6 +29,32 @@ enum {
 extern int16_t _gIndoor;                /* 1 while an indoor match is played */
 extern int16_t _gIndoorFloor;           /* its floor, INDOOR_* */
 extern int16_t _gIndoorFriendlyFloor;   /* the FRIENDLY screen's choice, INDOOR_OFF or a floor */
+/* An online match's floor, INDOOR_OFF or a floor: the host's choice in the lobby, set at its
+ * kick-off (netplay_lobby.c) and by the match setup (netplay_setup.c, which a re-simulation
+ * applies); Indoor_BeginMatch takes it in place of the FRIENDLY screen's while
+ * NetplayMatch_Enabled(). Cleared when the match ends. */
+extern int16_t _gIndoorOnlineFloor;
+
+/* What an indoor match changes while it is played, beyond the sprites and teams: ONE
+ * struct so the rollback registry (src/sim_state.c, SIM tier) saves and restores it --
+ * online, a rollback that left it behind would desync the two games (docs/INDOOR.md
+ * phase 6). Pointers are into the match's sprites and teams (SIM_PTR_SPRITE/TEAM_INFO).
+ * Adding a field: add it to sim_state.c's k_indoorSimFields too. */
+#define INDOOR_PENALTY_SLOTS 4
+typedef struct {
+    Sprite          *player;            /* sitting out a time penalty; 0 = slot free */
+    TeamGeneralInfo *team;
+    int16_t          backAt;            /* the clock minute he comes back on */
+} IndoorPenalty;
+typedef struct {
+    IndoorPenalty    penalties[INDOOR_PENALTY_SLOTS];
+    Sprite          *keeperReleaser;    /* the keeper whose throw is in the air; 0 = none */
+    TeamGeneralInfo *keeperTeam;
+    int16_t          keeperBallY;       /* the ball's y when last looked at */
+    int16_t          markKind;          /* the glass marker: -1 none */
+    int16_t          markTimer, markX, markY, markZ;
+} IndoorSimState;
+extern IndoorSimState g_indoorSim;
 
 /* The SWOS pitch type (0 frozen .. 6 hard) a floor plays as. */
 int16_t Indoor_PitchTypeForFloor(int16_t floor);

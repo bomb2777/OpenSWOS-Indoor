@@ -28,6 +28,10 @@
 #ifndef NETPLAY_COMPAT_H
 #define NETPLAY_COMPAT_H
 
-#define NETPLAY_COMPAT 13     /* 13: SWOS 2020's AMIGA60 and MOON gameplay styles (the handshake's style byte 3 and 4: dos_mode.h); 12: a two-legged tie's first leg leaves its injuries and sendings-off on the second (netplay_lobby.c leg_carry); 11: the replay ring is 38000 bytes on SDL, the resync state with it (10: the handshake carries the mods that change the match; 9: the XBOX gameplay style, the handshake's style byte; 8: the host's crowd in the setup; 7: the lobby's match mode and service ids; 6: the lobby chat) */
+/* OpenSWOS-Indoor counts from 1000 (docs/INDOOR.md phase 6), where upstream's numbers never
+ * reach: a fork build must never meet one without INDOOR. When a rebase brings a raise of
+ * upstream's, raise this by one too. 1001: INDOOR online (upstream's 9); 1002: upstream's 10;
+ * 1003: upstream's 11; 1004: upstream's 12. */
+#define NETPLAY_COMPAT 1004   /* upstream's history -- 12: a two-legged tie's first leg leaves its injuries and sendings-off on the second (netplay_lobby.c leg_carry); 11: the replay ring is 38000 bytes on SDL, the resync state with it (10: the handshake carries the mods that change the match; 9: the XBOX gameplay style, the handshake's style byte; 8: the host's crowd in the setup; 7: the lobby's match mode and service ids; 6: the lobby chat) */
 
 #endif

@@ -44,6 +44,7 @@
  */
 #include "mod_hooks.h"    /* lobbyKeepsReady */
 #include "netplay_lobby.h"
+#include "indoor.h"         /* INDOOR online: the host's floor (docs/INDOOR.md phase 6) */
 
 #ifdef SWOS_SDL_BUILD
 
@@ -360,7 +361,8 @@ static void clamp_rules(LobbyRules *r)
     r->switches &= NETPLAY_SW_ALL;      /* (an older host's CATCH UP / BALANCE: gone) */
     if (r->gameLength > 3)
         r->gameLength = 0;
-    if (r->pitchType != RANDOM_PITCH && r->pitchType > 6)
+    if (r->pitchType != RANDOM_PITCH && r->pitchType > 6 &&
+        r->pitchType != LOBBY_PITCH_INDOOR + INDOOR_LINOLEUM)     /* (the one floor drawn) */
         r->pitchType = RANDOM_PITCH;
     if (r->maxSubs > 5)
         r->maxSubs = 5;
@@ -707,6 +709,13 @@ static void assemble_match(void)
     _gameLength        = s_lobby.rules.gameLength;
     _pitchTypeOrSeason = 0;
     _friendlyPitchType = s_lobby.rules.pitchType;
+    /* INDOOR: the host's floor, its pitch type in the friendly's place (Indoor_BeginMatch
+     * pins it again at kick-off). The match setup carries the floor to the joiner. */
+    _gIndoorOnlineFloor = INDOOR_OFF;
+    if (s_lobby.rules.pitchType >= LOBBY_PITCH_INDOOR && s_lobby.rules.pitchType != RANDOM_PITCH) {
+        _gIndoorOnlineFloor = (int16_t)(s_lobby.rules.pitchType - LOBBY_PITCH_INDOOR);
+        _friendlyPitchType  = (uint16_t)Indoor_PitchTypeForFloor(_gIndoorOnlineFloor);
+    }
     _minSubstitutes    = s_lobby.rules.minSubs;
     _maxSubstitutes    = s_lobby.rules.maxSubs;
     _gameType          = 0;                     /* a friendly */

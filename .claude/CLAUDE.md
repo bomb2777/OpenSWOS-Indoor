@@ -197,10 +197,13 @@ for the match, `Indoor_CourtPalette`). The hall is laid out for 4:3 and the
 Amiga only (no widescreen). The FRIENDLY screen's INDOOR row
 (entries 11-12, `FriendlyIndoorProc` in `src/menus.c`, both targets) sets `_gIndoorFriendlyFloor`;
 `Indoor_BeginMatch` (`src/indoor.c`, from `InitAndPlayGame`) makes `_gIndoor` 1 for that match
-only, never for a competition, career, training, arcade or online match. **Match code tests
+only, never for a competition, career, training or arcade match (online: the host's choice, below). **Match code tests
 `_gIndoor` and nothing else, and with it 0 a match plays exactly as upstream's** -- the career
 golden test (and the replay/rollback/netplay rigs, where `tests/dos` exists) prove it.
-`SWOS_INDOOR=1` forces it for a test. Built in phases (INDOOR.md "Plan"); keep the doc's status
+`SWOS_INDOOR=1` forces it for a test. Online (phase 6) the HOST picks it in the lobby (PITCH TYPE
+→ LINOLEUM), the match setup carries the floor (version 5) and `g_indoorSim` is its rollback
+state; the fork has its own online identity (`OPENSWOS-INDOOR`, `NETPLAY_COMPAT` from 1000) and
+MULTIPLAYER opens the direct-IP menu. Built in phases (INDOOR.md "Plan"); keep the doc's status
 line current.
 
 **`SWOS_WORLDS`** (default 1; `make SWOS_WORLDS=0`, the same on `Makefile.amiga`): the football worlds

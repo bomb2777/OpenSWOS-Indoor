@@ -971,7 +971,6 @@ skip_goal_collision:
         DOS_SOUND(DOS_EV_WOODWORK, dosPostSide);
         DOS_SOUND(DOS_EV_MISS_CROWD, 0);
         PlaySample3IfNotTraining();
-        Indoor_Woodwork(ball, dosPostSide);     /* INDOOR: the post or the bar blinks */
         {
             uint16_t spd = (uint16_t)ball->speed;
             ball->speed = (int16_t)(spd - (spd >> 2));

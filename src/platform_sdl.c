@@ -1390,6 +1390,7 @@ static void refresh_palette_from_copper(void)
         extern uint16_t _pitchNumberAndType;
         uint8_t rgb[768];
         DosGfx_BuildPalette((int)(_pitchNumberAndType & 0xFF), rgb);
+        { extern void Indoor_CourtPaletteRGB(uint8_t *rgb); Indoor_CourtPaletteRGB(rgb); }  /* INDOOR */
         /* Apply the current fade level so fades work on the DOS palette like the
          * copper path does (g_fadeLevel: 0x80 bright .. 0 black; rgb*level/0x80).
          * DosGfx_BuildPalette rebuilds full-bright RGB each frame, so without

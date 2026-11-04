@@ -843,6 +843,7 @@ void ApplyPitchPaletteAndFactors(void)
                 uint16_t idx = _paletteIndices[pi];
                 ((uint16_t *)_gamePalette)[idx] = palPtr[pi];
             }
+            Indoor_CourtPalette((uint16_t *)_gamePalette);     /* INDOOR: the court teal */
         }
 #else
         {

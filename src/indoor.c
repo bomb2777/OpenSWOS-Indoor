@@ -978,13 +978,19 @@ static int32_t nearest_colour(const uint8_t *rgb, int32_t r, int32_t g, int32_t 
     return best;
 }
 
-/* The table from the palette on screen, rebuilt when it changes (a fade, the pitch
- * condition's colours): 60 % of the glass's grey over each colour, as LINO.MAP's glass.
+/* The table from the palette on screen, rebuilt when it changes (the pitch condition's
+ * colours): 60 % of the glass's grey over each colour, as LINO.MAP's glass. Never during a
+ * fade (fade.c g_fadeLevel below FADE_MAX): a fade scales every colour alike, so the table
+ * of the bright palette stays right, while one built from a dark palette sends every colour
+ * to the wrong one -- after a goal's replay the bottom wall came out white for a frame.
  * (The PC keeps this clear glass; the Amiga has a checkerboard -- the owner, 5.4.) */
 static void glass_table(void)
 {
+    extern int g_fadeLevel;
     uint8_t rgb[768];
     uint32_t h = 2166136261u;
+    if (g_fadeLevel < 0x80 && s_glassPalHash != 0)
+        return;
     Platform_PaletteRGB(rgb);
     for (int32_t i = 0; i < 768; i++)
         h = (h ^ rgb[i]) * 16777619u;

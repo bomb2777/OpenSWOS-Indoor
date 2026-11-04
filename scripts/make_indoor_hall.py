@@ -53,8 +53,8 @@ CROWD_TOP_ROW = (449 - HALF_L) // 16 - 2 - CROWD_ROWS  # INDOOR_CROWD_TOP_ROW: 6
 CROWD_BOTTOM_ROW = (449 + HALF_L + 16) // 16 + 1  # INDOOR_CROWD_BOTTOM_ROW: 45
 BOX_HALF_W, BOX_DEPTH = 74, 75
 # The sides of the hall (indoor.h, phase 5.1): the bench's right edge, the side stands.
-GLASS_LEFT, GLASS_RIGHT = 10, 10                  # INDOOR_GLASS_LEFT / _RIGHT
-BENCH_X = 336 - HALF_W - GLASS_LEFT - 4           # INDOOR_BENCH_X: 163
+GLASS_LEFT, GLASS_RIGHT = 5, 5                    # INDOOR_GLASS_LEFT / _RIGHT (10 until 2026-11-04)
+BENCH_X = 336 - HALF_W - 14                       # INDOOR_BENCH_X: 163, where it stood by the 10 px glass
 SIDE_COLS = 8
 SIDE_LEFT_COL = (BENCH_X - 16 - 5) // 16 - SIDE_COLS    # 0
 SIDE_RIGHT_COL = (336 + HALF_W + GLASS_RIGHT + 15) // 16  # 32

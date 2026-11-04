@@ -219,9 +219,10 @@ int16_t Indoor_GoalY(int16_t y);
  * The camera follows the ball across as outdoors, clamped to INDOOR_HALL_LEFT..RIGHT:
  * laid out for the 4:3 view (336) and the Amiga's (320) -- no widescreen (the owner) --
  * so the view pans, and the bench is seen while play is on the left. */
-#define INDOOR_GLASS_LEFT        10     /* the side glass's width, left and right */
-#define INDOOR_GLASS_RIGHT       10
-#define INDOOR_BENCH_X           (INDOOR_LEFT - INDOOR_GLASS_LEFT - 4)  /* the bench (its sprites), 163 */
+#define INDOOR_GLASS_LEFT        5      /* the side glass's width, left and right (10 until */
+#define INDOOR_GLASS_RIGHT       5      /* 2026-11-04: "too fat", the owner) */
+#define INDOOR_BENCH_X           (INDOOR_LEFT - 14)  /* the bench (its sprites), 163: where it stood
+                                                      * beside the 10 px glass, kept */
 #define INDOOR_SIDE_COLS         8      /* 9 for a moment in 5.3, 6 in 5.2, 2 in 5.1 */
 #define INDOOR_SIDE_LEFT_COL     ((INDOOR_BENCH_X - 16 - 5) / 16 - INDOOR_SIDE_COLS)   /* 0: x 0..127 */
 #define INDOOR_SIDE_RIGHT_COL    ((INDOOR_RIGHT + INDOOR_GLASS_RIGHT + 15) / 16)         /* 32: x 512..639 */
@@ -247,8 +248,8 @@ int16_t Indoor_GoalY(int16_t y);
  * frame: its map (LINO_A.MAP) has the glass baked in as a checkerboard, the fans behind the
  * top wall are greyed tiles that no longer move, and only the boxes of the players and the
  * ball behind the bottom wall are greyed a frame (indoor.c). */
-#define INDOOR_GLASS_X0          (INDOOR_LEFT - INDOOR_GLASS_LEFT)          /* 167 */
-#define INDOOR_GLASS_X1          (INDOOR_RIGHT + INDOOR_GLASS_RIGHT)        /* 505 */
+#define INDOOR_GLASS_X0          (INDOOR_LEFT - INDOOR_GLASS_LEFT)          /* 172 */
+#define INDOOR_GLASS_X1          (INDOOR_RIGHT + INDOOR_GLASS_RIGHT)        /* 500 */
 #define INDOOR_GLASS_TOP_Y0      ((INDOOR_CROWD_TOP_ROW + INDOOR_CROWD_ROWS - 3) * 16)  /* 128 */
 #define INDOOR_GLASS_HEIGHT      (INDOOR_TOP - INDOOR_GLASS_TOP_Y0)          /* 80, both ends */
 #define INDOOR_GLASS_HOLE_X0     300    /* the goal frame, outside to outside */

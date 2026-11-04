@@ -25,10 +25,15 @@ static int16_t  s_prev[2], s_next[2];       /* the two source frames an output f
 static uint32_t s_phase;                    /* 16.16 between them */
 static int32_t  s_primed;
 
+/* A bare name is sound_dos/<name>.mp3; one with an extension a path under the data folder
+ * (the INDOOR menu music, sound_indoor/menu.mp3). */
 static const char *path_of(const char *name, char *buf, uint32_t size)
 {
-    char rel[96];
-    snprintf(rel, sizeof rel, "sound_dos/%s.mp3", name);
+    static char rel[96];    /* static: swos_data_path returns it when the file is not in the assets folder */
+    if (strchr(name, '.'))
+        snprintf(rel, sizeof rel, "%s", name);
+    else
+        snprintf(rel, sizeof rel, "sound_dos/%s.mp3", name);
     return swos_data_path(rel, buf, size);
 }
 
@@ -75,7 +80,7 @@ int32_t MusicStream_Start(const char *name, int32_t loop)
     if (!s_file)
         return 0;
     if (!drmp3_init_memory(&s_mp3, s_file, (size_t)size, NULL) || s_mp3.channels < 1 || s_mp3.channels > 2) {
-        fprintf(stderr, "[music] sound_dos/%s.mp3 is not an MP3 this can play\n", name);
+        fprintf(stderr, "[music] %s is not an MP3 this can play\n", path_of(name, anchored, (uint32_t)sizeof anchored));
         free(s_file);
         s_file = NULL;
         return 0;

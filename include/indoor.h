@@ -286,13 +286,14 @@ void Indoor_KeepPlayersInside(void);
  * Returns 1 if it was a goal-mouth crossing CheckIfBallOutOfPlay must decide. */
 int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY);
 
-/* The marker (phase 5.5): a hard hit on the glass draws SWIS's ring and cross where the ball
- * is seen (its height too), a post or the bar blinks red.
+/* The marker (phase 5.5): every touch of the glass draws SWIS's ring and cross (at an end
+ * where the ball is seen, its height too; at a side on the side line), a hard one thuds; a
+ * post or the bar blinks red.
  * Its pictures are sprite table slots INDOOR_MARK_SPRITE_FIRST.. (8, after face 3's), shown
  * by the corner flag's sprite, which indoors is the marker or hidden (Indoor_UpdateMarker,
  * from UpdateCornerFlagSprite). */
 #define INDOOR_MARK_SPRITE_FIRST 1684
-#define INDOOR_MARK_SPEED        1300   /* ball->speed: a shot or a clearance, not a pass */
+#define INDOOR_MARK_SPEED        1300   /* ball->speed: the thud's -- a shot or a clearance, not a pass */
 void Indoor_BuildMarkSprites(void);
 void Indoor_Woodwork(Sprite *ball, int16_t post);
 void Indoor_UpdateMarker(void);

@@ -10,7 +10,8 @@
 #include <stdint.h>
 
 /* Called by the audio layer (src/audio_sdl.c) under its lock.
- * Start sound_dos/<name>.mp3 from the beginning; nonzero when it is playing. */
+ * Start sound_dos/<name>.mp3 from the beginning; nonzero when it is playing. A name with
+ * an extension is a path under the data folder instead (sound_indoor/menu.mp3). */
 int32_t MusicStream_Start(const char *name, int32_t loop);
 void    MusicStream_Stop(void);
 int32_t MusicStream_Playing(void);

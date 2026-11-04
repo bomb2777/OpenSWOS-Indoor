@@ -1317,18 +1317,15 @@ extern Sprite _cornerFlagSprite2;
 #endif
 extern void PlaySfxSample16(void);
 
-enum { MARK_GLASS = 0, MARK_POST = 6, MARK_BAR = 7, MARK_SPRITES = 8 };
+enum { MARK_GLASS = 0, MARK_SPRITES = 6 };
 #define MARK_GLASS_STEPS    6           /* the ring's six sizes, a picture each */
 #define MARK_GLASS_FRAMES   48          /* six steps of 8: about a second, as SWIS's */
-#define MARK_WOOD_FRAMES    48          /* three blinks: 8 on, 8 off */
 #define MARK_RING_MAX       10          /* the ring's last radius */
 #define MARK_MAX_Z          (INDOOR_GLASS_HEIGHT - MARK_RING_MAX)   /* on the ends' glass */
 
 static const struct { uint8_t w, h, cx, cy; } kMarkSize[MARK_SPRITES] = {
     { 21, 21, 10, 10 }, { 21, 21, 10, 10 }, { 21, 21, 10, 10 },  /* the ring and the cross */
     { 21, 21, 10, 10 }, { 21, 21, 10, 10 }, { 21, 21, 10, 10 },
-    { 3, 20, 1, 19 },                                           /* a post, up from the line */
-    { 24, 3, 12, 1 },                                           /* a piece of the bar */
 };
 static const uint8_t kRingRadius[MARK_GLASS_STEPS] = { 2, 3, 5, 6, 8, 10 };
 #define MARK_MAX_LINES  21
@@ -1349,8 +1346,6 @@ static int16_t s_markKind = -1, s_markTimer, s_markX, s_markY, s_markZ;
 static uint8_t mark_colour(int16_t k, int16_t x, int16_t y)
 {
     int16_t dx, dy, d2, r, n;
-    if (k >= MARK_POST)
-        return 10;
     dx = (int16_t)(x - kMarkSize[k].cx);
     dy = (int16_t)(y - kMarkSize[k].cy);
     n = (int16_t)(dx < 0 ? -dx : dx) + (int16_t)(dy < 0 ? -dy : dy);   /* (for the fading) */
@@ -1472,18 +1467,6 @@ static void mark_glass(Sprite *ball, int16_t side)
         PlaySfxSample16();              /* the thud: the ball's bounce */
 }
 
-void Indoor_Woodwork(Sprite *ball, int16_t post)
-{
-    const int16_t line = ball->y.s.i <= 449 ? INDOOR_TOP : INDOOR_BOTTOM;
-    if (!_gIndoor)
-        return;
-    if (post)
-        mark(MARK_POST, (int16_t)(ball->x.s.i - 1 < 302 ? 300 : 370), line, 0, MARK_WOOD_FRAMES);
-    else
-        mark(MARK_BAR, ball->x.s.i, (int16_t)(line - (line == INDOOR_TOP ? 21 : 17)), 0,  /* (the top */
-             MARK_WOOD_FRAMES);                             /* goal, drawn in the map, is taller) */
-}
-
 /* At kick-off and the final whistle: no marker, and the corner flag back on the floor (its
  * z is 0 outdoors, which never sets it). */
 void Indoor_ClearMarker(void)
@@ -1503,12 +1486,7 @@ void Indoor_UpdateMarker(void)
 #endif
     if (s_markTimer > 0) {
         const int16_t t = --s_markTimer;
-        if (s_markKind >= MARK_POST) {
-            if (((MARK_WOOD_FRAMES - 1 - t) / 8 & 1) == 0)
-                image = (int16_t)(INDOOR_MARK_SPRITE_FIRST + s_markKind);
-        } else {
-            image = (int16_t)(INDOOR_MARK_SPRITE_FIRST + s_markKind + (MARK_GLASS_FRAMES - 1 - t) / 8);
-        }
+        image = (int16_t)(INDOOR_MARK_SPRITE_FIRST + s_markKind + (MARK_GLASS_FRAMES - 1 - t) / 8);
         spr->x.s.i = s_markX;
         spr->y.s.i = s_markY;
         spr->z.raw = (int32_t)s_markZ << 16;

@@ -363,7 +363,7 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
 6. **Online** (2026-11-04) — done:
    - **The fork's own identity** (`include/project_identity.h`): `PROJECT_NETPLAY_TAG`
      `OPENSWOS-INDOOR`, `PROJECT_GGPO_GAME` `openswos-indoor`, and `NETPLAY_COMPAT` from
-     1000 (1006; `include/netplay_compat.h`), where upstream's numbers never reach -- a
+     1000 (1007; `include/netplay_compat.h`), where upstream's numbers never reach -- a
      fork build never meets one that has no INDOOR. A rebase that brings a raise of
      upstream's raises ours by one. The handshake also compares the rollback state's layout,
      which the indoor state below changed.
@@ -391,6 +391,18 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      `--netplay-state-stream-diff`: `_animatedPatterns`). The rest
      (tactics, line-up, court tables, glass, palette) is set at kick-off from data both
      games have, and does not change in play.
+   - **The team screen and the line-up in the lobby** (2026-11-09, the owner: "in the lobby I
+     can set LINOLEUM, but the team tactic menu shows the outdoor version"). Under the
+     host's indoor floor each game puts its own player's side in its indoor line-up ONCE
+     (`indoor_line_up` in `src/netplay_lobby.c`, `Indoor_SortLineUp`: when the floor is
+     chosen, or a team picked under it) and sends it; leaving the floor gives the outdoor
+     line-up and tactic back. TACTICS opens the screen indoors (`Indoor_LobbyScreenBegin`/
+     `End`: the five tactics, the six who start, the little court), what is arranged there
+     stays whatever tactic is picked, and the lobby's rows name the indoor tactics
+     (`Indoor_TacticName`). The match keeps the sides as the lobby sent them: online,
+     `Indoor_BeginMatch` does not sort (offline it still does, before its team screen).
+     NETPLAY_COMPAT 1007. `SWOS_LOBBY_LINEUP_SWAP=a:b` swaps on the indoor line-up, and
+     `SWOS_LOBBY_READY` readies again after the other side's indoor line-up dropped it.
    - `SWOS_LOBBY_INDOOR=1` has a test host choose LINOLEUM. Two players through the lobby
      with random input on an emulated wifi link (both predict wrong and roll back), no server
      needed: `HOST_WIDTH=362 JOIN_WIDTH=362 PROFILE=wifi HOST_ENV="SWOS_LOBBY_INDOOR=1

@@ -111,6 +111,12 @@ const char        *NetplayLobby_Notice(void);
  * have not seen. Ignored unless the lobby is OPEN. */
 void               NetplayLobby_SetTeam(const TeamFileEx *team);
 void               NetplayLobby_SetTactic(int32_t tactic);
+/* INDOOR (OpenSWOS-Indoor): the side as the team screen arranged it (kept in its indoor
+ * line-up); make this player's indoor line-up now if the host's floor wants one; the
+ * host's floor (INDOOR_OFF outdoors). */
+void               NetplayLobby_SetArrangedTeam(const TeamFileEx *team);
+void               NetplayLobby_IndoorLineUp(void);
+int16_t            NetplayLobby_IndoorFloor(void);
 void               NetplayLobby_SetReady(int32_t ready);
 /* The second leg of a two-legged tie is next (or being played): each player's team stands, and
  * what the first did to it comes along -- a player sent off, an injury (netplay_lobby.c). */

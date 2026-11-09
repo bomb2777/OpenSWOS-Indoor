@@ -14,7 +14,9 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
   - With the ball at the opponents' goal the defenders push up to the halfway line.
   - Attacking wide: from the ball on the halfway line forward, the players spread across the
     court and keep more room between them; in defence the shape stays compact.
-  - Older builds can't play online against this one (compat 1006).
+  - Online: with LINOLEUM picked in the lobby, the TACTICS screen there shows the indoor
+    tactics and the six who start, and the line-up arranged there is the one played.
+  - Older builds can't play online against this one (compat 1007).
 
 ## 2026-11-04
 

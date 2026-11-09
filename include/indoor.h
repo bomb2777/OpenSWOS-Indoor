@@ -157,6 +157,12 @@ void Indoor_MenuSpritesReloaded(void);
 
 /* How many tactics a team can choose from: 18 outdoors, INDOOR_TACTICS indoors. */
 int16_t Indoor_TacticsCount(void);
+/* An indoor tactic's name (0-4), the indoor line-up of a team (its tactic made one of the
+ * five first), and the lobby's team screen shown indoors (online, the host's floor). */
+const char *Indoor_TacticName(int16_t tactic);
+void Indoor_SortLineUp(TeamFileEx *team);
+void Indoor_LobbyScreenBegin(int16_t floor);
+void Indoor_LobbyScreenEnd(void);
 
 /* TacticsData_SelectRelease (the Amiga or DOS 4-4-2, at every InitTeamsData) puts a
  * release's preset in a slot of the table. While the indoor tactics are installed it

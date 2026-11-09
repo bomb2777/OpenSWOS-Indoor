@@ -1140,6 +1140,13 @@ static void lobby_test_draw(LobbyState st)
         NetplayLobby_SetReady(1);
         s_testReady = 0;
     }
+    /* INDOOR: each game makes its side's indoor line-up when it first sees the floor, and
+     * the other player's ready drops at that change (as at any): ready again, as they would. */
+    if (getenv("SWOS_LOBBY_READY") && st == LOBBY_OPEN && NetplayLobby_IndoorFloor() != INDOOR_OFF) {
+        const LobbyPlayer *me = NetplayLobby_Player(NetplayLobby_LocalPlayer());
+        if (me && me->hasTeam && !me->ready)
+            NetplayLobby_SetReady(1);
+    }
     static uint32_t openSince;
     static int32_t openAfter = -1;      /* the matches played when openSince was taken */
     if (st != LOBBY_OPEN || openAfter != s_lobbyMatches) {
@@ -1238,7 +1245,9 @@ static const char *tactic_name(const LobbyPlayer *p, char *buf, uint32_t cap)
 
     if (!p->hasTeam)
         return "-";
-    if (p->tactic < TACTIC_USER_A)
+    if (NetplayLobby_IndoorFloor() != INDOOR_OFF)     /* INDOOR: the five (indoor_line_up) */
+        name = Indoor_TacticName((int16_t)p->tactic);
+    else if (p->tactic < TACTIC_USER_A)
         name = (const char *)_tacticsStringTable[p->tactic];
     else if (p == NetplayLobby_Player(NetplayLobby_LocalPlayer()))
         name = (const char *)slots[p->tactic - TACTIC_USER_A];     /* our own slot, as it is */
@@ -2137,7 +2146,7 @@ static void lineup_end(void)
     _selTeamNumber = s_lineup.selNo; _gameType = s_lineup.gameType;
     _isCareer = s_lineup.isCareer; _trainingGame = s_lineup.training;
     _twoPlayers = s_lineup.twoPlayers;
-    NetplayLobby_SetTeam(&arranged);
+    NetplayLobby_SetArrangedTeam(&arranged);
 }
 
 /* The team screen, from the lobby: straight after TEAMS picks a team, and from TACTICS
@@ -2159,8 +2168,10 @@ static void lineup_screen(void)
 
     NetplayLobby_SetReady(0);
     NetplayLobby_SetActivity(LOBBY_ACTIVITY_ARRANGING_TEAM);
+    NetplayLobby_IndoorLineUp();        /* INDOOR: a team just picked, in its indoor line-up */
     NetplayLobby_Poll();
     lineup_begin();
+    Indoor_LobbyScreenBegin(NetplayLobby_IndoorFloor());   /* the host's floor: the indoor screen */
     _exitGameFlag = 0;
     g_playMatchStartLabel = confirm;
     g_playMatchStartRefused = NetplayLobby_LegBlocked;     /* (a second leg: no CONFIRM while the
@@ -2172,6 +2183,7 @@ static void lineup_screen(void)
     confirmed = _exitGameFlag == 0;     /* EXIT sets it; CONFIRM (the PLAY button) does not */
     _exitGameFlag = 0;
     lineup_end();
+    Indoor_LobbyScreenEnd();
     NetplayLobby_SetActivity(LOBBY_ACTIVITY_NONE);
     if (confirmed)
         NetplayLobby_SetReady(1);
@@ -2229,6 +2241,7 @@ static void lineup_test_swap(void)
     int a, b;
     if (!v || sscanf(v, "%d:%d", &a, &b) != 2 || !NetplayLobby_Player(NetplayLobby_LocalPlayer())->hasTeam)
         return;
+    NetplayLobby_IndoorLineUp();        /* (as the team screen: from the indoor line-up) */
     lineup_begin();
     PlayMatchMenuSwapPlayers(&_selectedTeams[0], (int16_t)a, (int16_t)b);
     lineup_end();

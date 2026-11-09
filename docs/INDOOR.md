@@ -352,11 +352,18 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    grid. `scripts/indoor_tactics_sheet.py <dir> [file.c | --swis <SWIS .txt>]` draws each
    tactic as its 35 ball sectors (and a SWIS tactic the same way) -- look before playing.
    CPU v CPU (cpu_friendly.sh, 3 matches): 0:3, 3:2, 0:1, where the old tactics made 5:4,
-   4:4. Tuning by play is open. NETPLAY_COMPAT 1005.
+   4:4. NETPLAY_COMPAT 1005.
+   **Round 2, attacking wide** (the owner, after the sheets: "still too close to each other --
+   wider as soon as the ball is on and over the middleline; in defence it can stay"): from
+   ball row `WIDE_FROM` 3 (the halfway line's) on, the sides take `SIDE_X_WIDE`'s places
+   (2.0/12.0 for a pair, 1.5/7.0/12.5 for three, against 4/10 and 3/7/11), the wide players
+   follow the ball across only `WIDE_FOLLOW` 0.5 of `FOLLOW_X`, and `MIN_GAP_WIDE` is 4.0.
+   The attacking shape now spans 10-11 of the 15 cells across (6-8 before); rows 0-2 are
+   unchanged. CPU v CPU: 0:2, 1:2, 0:2. Tuning by play is open. NETPLAY_COMPAT 1006.
 6. **Online** (2026-11-04) — done:
    - **The fork's own identity** (`include/project_identity.h`): `PROJECT_NETPLAY_TAG`
      `OPENSWOS-INDOOR`, `PROJECT_GGPO_GAME` `openswos-indoor`, and `NETPLAY_COMPAT` from
-     1000 (1005; `include/netplay_compat.h`), where upstream's numbers never reach -- a
+     1000 (1006; `include/netplay_compat.h`), where upstream's numbers never reach -- a
      fork build never meets one that has no INDOOR. A rebase that brings a raise of
      upstream's raises ours by one. The handshake also compares the rollback state's layout,
      which the indoor state below changed.

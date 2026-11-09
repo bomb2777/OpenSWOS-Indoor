@@ -1,6 +1,6 @@
 # INDOOR.md — six a side in a hall
 
-> **Status (2026-11-04): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2-5.5 (the owner's lists after playing), 5.6 (the hall's menu music, PC), 5.7, 6 (online, by direct IP, fork builds only).** This fork's own
+> **Status (2026-11-09): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2-5.5 (the owner's lists after playing), 5.6 (the hall's menu music, PC), 5.7, 5.8 (the tactics made for the court), 6 (online, by direct IP, fork builds only).** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -337,10 +337,26 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      dots the centre circle's line where it was drawn in the grass colour.
    - README: the fork's own block at its top, a screenshot of an indoor match
      (`docs/images/screenshots/indoor_01.png`).
+5.8. **The tactics made for the court** (2026-11-09; the owner: "a balanced start, the shape
+   moving with the ball, denser around it in the corners", after his SWIS's
+   `tactics/2-2_5x7.txt`). `scripts/make_indoor_tactics.py` no longer copies outdoor players:
+   each of the five has a line (D/M/A) and a side (R/C/L) (`SHAPES`, the same as `kPlaces`/
+   `kSides` in `indoor.c`), and for every one of the 35 ball sectors its place is computed --
+   its line's height following the ball (`LINE_Y`: defenders 2.0 .. 7.0, up to the halfway
+   line when the ball is at the opponents' goal -- the owner; midfield 3.5 .. 10.5, attack
+   6.5 .. 13.5; a defender goal-side of a ball in the own half by `GOAL_SIDE`), its side's
+   place shifted towards the ball (`FOLLOW_X` per line), pulled in towards a wide ball
+   (`PULL` 0.30 within `REACH` 11 cells, in the own half only: a SWOS tactic does not know
+   who has the ball, and closing up while attacking took the team's width -- CPU v CPU 9
+   goals a match became 0-1; `PULL_UNTIL` 4), then kept `MIN_GAP` 2.6 cells apart and on the
+   grid. `scripts/indoor_tactics_sheet.py <dir> [file.c | --swis <SWIS .txt>]` draws each
+   tactic as its 35 ball sectors (and a SWIS tactic the same way) -- look before playing.
+   CPU v CPU (cpu_friendly.sh, 3 matches): 0:3, 3:2, 0:1, where the old tactics made 5:4,
+   4:4. Tuning by play is open. NETPLAY_COMPAT 1005.
 6. **Online** (2026-11-04) — done:
    - **The fork's own identity** (`include/project_identity.h`): `PROJECT_NETPLAY_TAG`
      `OPENSWOS-INDOOR`, `PROJECT_GGPO_GAME` `openswos-indoor`, and `NETPLAY_COMPAT` from
-     1000 (1002; `include/netplay_compat.h`), where upstream's numbers never reach -- a
+     1000 (1005; `include/netplay_compat.h`), where upstream's numbers never reach -- a
      fork build never meets one that has no INDOOR. A rebase that brings a raise of
      upstream's raises ours by one. The handshake also compares the rollback state's layout,
      which the indoor state below changed.

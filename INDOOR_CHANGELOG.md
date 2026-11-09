@@ -12,7 +12,9 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
   - In the own half the players near a ball on the wing close up around it; going forward
     the team stays wide.
   - With the ball at the opponents' goal the defenders push up to the halfway line.
-  - Older builds can't play online against this one (compat 1005).
+  - Attacking wide: from the ball on the halfway line forward, the players spread across the
+    court and keep more room between them; in defence the shape stays compact.
+  - Older builds can't play online against this one (compat 1006).
 
 ## 2026-11-04
 

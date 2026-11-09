@@ -4,6 +4,16 @@ What this fork (`bomb2777/OpenSWOS-Indoor`, branch `indoor`) has added to OpenSW
 first. All of it applies only to a friendly played with INDOOR switched on; with it off, the
 game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
+## 2026-11-09
+
+- **New indoor tactics, made for the court:**
+  - Each tactic starts from a balanced shape (defence, midfield, attack; left, centre, right).
+  - The team moves with the ball as a block.
+  - In the own half the players near a ball on the wing close up around it; going forward
+    the team stays wide.
+  - With the ball at the opponents' goal the defenders push up to the halfway line.
+  - Older builds can't play online against this one (compat 1005).
+
 ## 2026-11-04
 
 - **Online play (PC):**

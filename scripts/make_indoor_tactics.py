@@ -24,6 +24,7 @@ sector
      player is (within REACH) -- with the ball in a corner the near players crowd in and
      the far ones tuck inside;
   4. spacing: never nearer a team-mate than MIN_GAP cells (pushed apart, a few rounds);
+     with the ball on or over halfway the team attacks WIDE: SIDE_X_WIDE, MIN_GAP_WIDE;
   5. clamped to the grid, inside the walls.
 
 Tune by editing the numbers below, rerunning, looking at the sheets and playing. The lines
@@ -66,6 +67,14 @@ FOLLOW_X = {"D": 0.35, "M": 0.5, "A": 0.45}
 PULL, REACH, PULL_UNTIL = 0.30, 11.0, 4
 # The nearest two team-mates may stand (cells).
 MIN_GAP = 2.6
+# Attacking width (the owner, 2026-11-09: "too close to each other ... place them wider as soon
+# the ball is on and over the middleline; in defence it can stay"). From ball row WIDE_FROM on
+# (row 3 holds the halfway line) the sides take SIDE_X_WIDE's places, follow the ball across
+# only WIDE_FOLLOW of FOLLOW_X (the far side stays wide), and keep MIN_GAP_WIDE apart.
+WIDE_FROM = 3
+SIDE_X_WIDE = {1: {"C": 7.0}, 2: {"R": 2.0, "L": 12.0}, 3: {"R": 1.5, "C": 7.0, "L": 12.5}}
+WIDE_FOLLOW = 0.5
+MIN_GAP_WIDE = 4.0
 # The grid, kept off the glass and out of the own goalmouth.
 X_MIN, X_MAX, Y_MIN, Y_MAX = 0, 14, 1, 14
 
@@ -88,6 +97,9 @@ def sector_positions(shape, bx, by):
     """Where the five go with the ball in sector (bx, by): [(x, y)] floats."""
     ballx, bally = ball_cell(bx, by)
     progress = by / 6.0
+    attacking = by >= WIDE_FROM
+    side_x = SIDE_X_WIDE if attacking else SIDE_X
+    gap = MIN_GAP_WIDE if attacking else MIN_GAP
     wide = min(1.0, abs(ballx - 7.0) / 6.0)
     counts = {}
     for line, _ in shape:
@@ -98,7 +110,8 @@ def sector_positions(shape, bx, by):
         y = lo + (hi - lo) * progress
         if line == "D" and bally < 7.5:
             y = min(y, max(Y_MIN, bally - GOAL_SIDE))
-        x = SIDE_X[counts[line]][side] + FOLLOW_X[line] * (ballx - 7.0)
+        follow = FOLLOW_X[line] * (WIDE_FOLLOW if attacking and side != "C" else 1.0)
+        x = side_x[counts[line]][side] + follow * (ballx - 7.0)
         # closing up on the ball, the more the wider it is and the nearer the player
         d = math.hypot(ballx - x, bally - y)
         k = PULL * wide * max(0.0, 1.0 - d / REACH) * max(0.0, 1.0 - by / float(PULL_UNTIL))
@@ -107,18 +120,18 @@ def sector_positions(shape, bx, by):
         if line == "D" and bally < 7.5:
             y = min(y, max(Y_MIN, bally - GOAL_SIDE))
         pos.append([x, y])
-    # spacing: push apart any two nearer than MIN_GAP
+    # spacing: push apart any two nearer than the gap
     for _ in range(30):
         moved = False
         for i in range(len(pos)):
             for j in range(i + 1, len(pos)):
                 dx, dy = pos[j][0] - pos[i][0], pos[j][1] - pos[i][1]
                 d = math.hypot(dx, dy)
-                if d >= MIN_GAP:
+                if d >= gap:
                     continue
                 if d < 1e-6:            # on top of each other: apart across
                     dx, dy, d = 1.0, 0.0, 1.0
-                push = (MIN_GAP - d) / 2.0
+                push = (gap - d) / 2.0
                 ux, uy = dx / d, dy / d
                 pos[i][0] -= ux * push
                 pos[i][1] -= uy * push

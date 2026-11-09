@@ -167,6 +167,13 @@ static uint8_t *tactic_slot(int32_t i)
 }
 
 enum { kLegPlayers = 16 };
+/* INDOOR: this player's side in its indoor line-up (indoor_line_up, below). */
+static struct {
+    int32_t arranged;               /* mine() is in its indoor line-up */
+    uint8_t order[16];              /* its outdoor one */
+    int32_t tactic;
+} s_indoorSide;
+
 static LobbyPlayer *mine(void)   { return &s_lobby.players[s_lobby.me - 1]; }
 static LobbyPlayer *theirs(void) { return &s_lobby.players[2 - s_lobby.me]; }
 
@@ -886,6 +893,7 @@ void NetplayLobby_Begin(int32_t localPlayer, const char *localName)
     free(s_lobby.setup);
     free(s_lobby.kickoff);
     memset(&s_lobby, 0, sizeof s_lobby);
+    memset(&s_indoorSide, 0, sizeof s_indoorSide);
     s_lobby.me    = localPlayer == 2 ? 2 : 1;
     s_lobby.state = LOBBY_OPEN;
     s_lobby.saidNext = 1;
@@ -979,6 +987,62 @@ int32_t NetplayLobby_Rematch(const char *notice)
     return 0;
 }
 
+/* ---- INDOOR: each side in its indoor line-up ----
+ *
+ * Under the host's indoor floor (PITCH TYPE LINOLEUM) a side is played in its indoor
+ * line-up: the six who start and their places (Indoor_SortLineUp, the one a friendly makes
+ * before its indoor team screen) and one of the five indoor tactics. Each game makes its
+ * own player's ONCE -- when the floor is chosen, or a team picked under it -- and sends
+ * it; what the player then arranges on the team screen (shown indoors, online_menus.c)
+ * stays, whatever tactic they pick, and the match keeps it (Indoor_BeginMatch online).
+ * Back outdoors, the side's outdoor line-up and tactic come back. */
+/* (s_indoorSide: at the top, beside s_lobby) */
+
+static int32_t lobby_indoor(void)
+{
+    return s_lobby.rules.pitchType != RANDOM_PITCH &&
+           s_lobby.rules.pitchType == LOBBY_PITCH_INDOOR + INDOOR_LINOLEUM;
+}
+
+static void indoor_line_up(void)
+{
+    LobbyPlayer *p = mine();
+    int32_t i;
+
+    if (s_lobby.state != LOBBY_OPEN || !p->hasTeam)
+        return;
+    if (lobby_indoor() && !s_indoorSide.arranged) {
+        for (i = 0; i < 16; i++)
+            s_indoorSide.order[i] = p->team.team.playerNumbers[i];
+        s_indoorSide.tactic = p->tactic;
+        p->team.team.tactics = (uint8_t)(p->tactic < INDOOR_TACTICS ? p->tactic : 0);
+        Indoor_SortLineUp(&p->team);
+        p->tactic = p->team.team.tactics;
+        s_indoorSide.arranged = 1;
+    } else if (!lobby_indoor() && s_indoorSide.arranged) {
+        for (i = 0; i < 16; i++)
+            p->team.team.playerNumbers[i] = s_indoorSide.order[i];
+        p->tactic = s_indoorSide.tactic;
+        p->team.team.tactics = (uint8_t)s_indoorSide.tactic;
+        p->team.team.playerValuesDirty = TEAM_VALUES_DIRTY;
+        s_indoorSide.arranged = 0;
+        fprintf(stderr, "[lobby] outdoors again: %.17s's own line-up back\n", (const char *)p->team.team.teamName);
+    } else {
+        return;
+    }
+    s_lobby.dirty = 1;      /* (the other player's ready drops: our side changed -- side_differs) */
+}
+
+void NetplayLobby_IndoorLineUp(void)
+{
+    indoor_line_up();
+}
+
+int16_t NetplayLobby_IndoorFloor(void)
+{
+    return lobby_indoor() ? (int16_t)(s_lobby.rules.pitchType - LOBBY_PITCH_INDOOR) : INDOOR_OFF;
+}
+
 void NetplayLobby_Poll(void)
 {
     LobbyState st = s_lobby.state;
@@ -1039,6 +1103,7 @@ void NetplayLobby_Poll(void)
 
     if (s_lobby.state == LOBBY_OPEN)
         team_check();
+    indoor_line_up();
     if (s_lobby.state == LOBBY_OPEN && s_lobby.dirty)
         send_state();
     if (s_lobby.chatDirty && (s_lobby.state == LOBBY_OPEN || s_lobby.state == LOBBY_STARTING))
@@ -1058,11 +1123,20 @@ const LobbyPlayer *NetplayLobby_Player(int32_t player)
     return &s_lobby.players[player - 1];
 }
 
+/* The side as the team screen left it: under the indoor floor, still its indoor line-up. */
+void NetplayLobby_SetArrangedTeam(const TeamFileEx *team)
+{
+    int32_t arranged = s_indoorSide.arranged;
+    NetplayLobby_SetTeam(team);
+    s_indoorSide.arranged = arranged;
+}
+
 void NetplayLobby_SetTeam(const TeamFileEx *team)
 {
     LobbyPlayer *p = mine();
     if (s_lobby.state != LOBBY_OPEN || !team)
         return;
+    s_indoorSide.arranged = 0;          /* a new team: its indoor line-up is still to make */
     p->team    = *team;
     p->hasTeam = 1;
     /* The team's own formation, as the friendly menu would start it. A team record
@@ -1526,6 +1600,9 @@ const LobbyPlayer *NetplayLobby_Player(int32_t player) { (void)player; return NU
 const LobbyRules  *NetplayLobby_Rules(void) { return &s_noRules; }
 const char        *NetplayLobby_Notice(void) { return ""; }
 void               NetplayLobby_SetTeam(const TeamFileEx *team) { (void)team; }
+void               NetplayLobby_SetArrangedTeam(const TeamFileEx *team) { (void)team; }
+void               NetplayLobby_IndoorLineUp(void) {}
+int16_t            NetplayLobby_IndoorFloor(void) { return INDOOR_OFF; }
 void               NetplayLobby_SetTactic(int32_t tactic) { (void)tactic; }
 void               NetplayLobby_SetReady(int32_t ready) { (void)ready; }
 void               NetplayLobby_SetActivity(int32_t activity) { (void)activity; }

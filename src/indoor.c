@@ -71,6 +71,12 @@ int32_t Indoor_MenuMusic(void)
 }
 
 static void install_tactics(TeamFileEx *team1, TeamFileEx *team2);
+
+/* An online match's two sides come from the lobby already in their indoor line-up -- each
+ * player's own, arranged on the lobby's team screen (Indoor_LobbyScreenBegin) or sorted
+ * there for them (netplay_lobby.c indoor_line_up) -- and the setup carries it to both
+ * machines: the match keeps it. Offline the friendly sorts here, before its team screen. */
+static int16_t s_keepLineUps;
 static void release_tactics(void);
 static void install_court(void);
 static void release_court(void);
@@ -97,6 +103,7 @@ void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
      * match setup: netplay_setup.c version 5), never this machine's own choice. */
     if (NetplayMatch_Enabled())
         floor = _gIndoorOnlineFloor;
+    s_keepLineUps = NetplayMatch_Enabled() ? 1 : 0;
     if (_gArcadeMode)
         floor = INDOOR_OFF;
 #endif
@@ -298,9 +305,25 @@ static void sort_line_up(TeamFileEx *t)
 #endif
 }
 
+static char *const kTacticNames[INDOOR_TACTICS] = {
+    _aIndoor221, _aIndoor212, _aIndoor122, _aIndoor311, _aIndoor131
+};
+
+const char *Indoor_TacticName(int16_t tactic)
+{
+    return kTacticNames[tactic >= 0 && tactic < INDOOR_TACTICS ? tactic : 0];
+}
+
+void Indoor_SortLineUp(TeamFileEx *team)
+{
+    if (team->team.tactics >= INDOOR_TACTICS)
+        team->team.tactics = 0;
+    sort_line_up(team);
+}
+
 static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
 {
-    char *names[INDOOR_TACTICS] = { _aIndoor221, _aIndoor212, _aIndoor122, _aIndoor311, _aIndoor131 };
+    char *const *names = kTacticNames;
 
     if (s_tacticsInstalled)
         return;
@@ -323,9 +346,31 @@ static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
             s_teams[t]->team.tactics = 0;
         for (int16_t i = 0; i < 16; i++)
             s_outdoorOrder[t][i] = s_teams[t]->team.playerNumbers[i];
-        sort_line_up(s_teams[t]);
+        if (!s_keepLineUps)
+            sort_line_up(s_teams[t]);
     }
     s_tacticsInstalled = 1;
+}
+
+/* The lobby's team screen (online_menus.c lineup_screen) under the host's indoor floor:
+ * the screen a friendly shows before an indoor kick-off -- the five tactics, the six who
+ * start, the little court -- over the lobby's sides as they are (already in their indoor
+ * line-up: nothing is sorted or given back here). */
+void Indoor_LobbyScreenBegin(int16_t floor)
+{
+    if (floor != INDOOR_LINOLEUM || s_tacticsInstalled)
+        return;
+    _gIndoor = 1;
+    _gIndoorFloor = floor;
+    install_tactics(NULL, NULL);
+}
+
+void Indoor_LobbyScreenEnd(void)
+{
+    if (!_gIndoor)
+        return;
+    release_tactics();
+    _gIndoor = 0;
 }
 
 static void release_tactics(void)

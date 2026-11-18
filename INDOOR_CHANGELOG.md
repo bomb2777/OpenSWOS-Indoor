@@ -4,6 +4,16 @@ What this fork (`bomb2777/OpenSWOS-Indoor`, branch `indoor`) has added to OpenSW
 first. All of it applies only to a friendly played with INDOOR switched on; with it off, the
 game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
+## 2026-11-18
+
+- Brought up to date with OpenSWOS again (its long benches for World 2026-27, stoppage time,
+  the arcade mod and the rest of its changes).
+  - Indoors there is no long bench and no stoppage time: the hall keeps its own bench and its
+    2 x 20 clock.
+  - The marker on the glass is no longer in the in-match replay on the PC (whole-match replays
+    still show it).
+  - Older builds can't play online against this one (compat 1011).
+
 ## 2026-11-10
 
 - Brought up to date with OpenSWOS (its AMIGA 60FPS and MOON SOCCER gameplay styles and the

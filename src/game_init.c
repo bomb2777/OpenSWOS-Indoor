@@ -1352,6 +1352,16 @@ void InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
 
     /* Stop music if playing */
     if (_menuMusic != 0) {
+#ifdef SWOS_SDL_BUILD
+        /* INDOOR (this fork's): the hall's music fades in the mixer while the stadium shows.
+         * StopMusic's fade waits 130 frames on the PLAY MATCH screen, swapping its two
+         * buffers -- they differ there, and it flickered. */
+        extern int32_t Indoor_MenuMusic(void);
+        extern void StopMusicInBackground(void);
+        if (Indoor_MenuMusic())
+            StopMusicInBackground();
+        else
+#endif
         StopMusic();
     }
 

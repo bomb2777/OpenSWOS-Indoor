@@ -6401,7 +6401,7 @@ static void FriendlyIndoorRefresh(void)
 {
     MenuEntry *value = &_menuEntries[kFriendlyIndoorValue];
 
-    value->fg = (uintptr_t)Indoor_FloorName(_gIndoorFriendlyFloor);
+    value->fg = (uintptr_t)Indoor_FloorLabel(_gIndoorFriendlyFloor, _gIndoorFriendlyNoHalf);
     if (_gIndoorFriendlyFloor != INDOOR_OFF) {
         _pitchTypeOrSeason = 0;
         _friendlyPitchType = (uint16_t)Indoor_PitchTypeForFloor(_gIndoorFriendlyFloor);
@@ -6415,11 +6415,18 @@ static void FriendlyIndoorRefresh(void)
     }
 }
 
-/* The INDOOR button: OFF -> a floor -> OFF. */
+/* The INDOOR button: OFF -> a floor -> the floor without the halfway rule -> OFF. */
 __attribute__((used, externally_visible))
 void FriendlyIndoorProc(MenuEntry *entry)
 {
     int16_t was = _gIndoorFriendlyFloor;
+    if (was != INDOOR_OFF && !_gIndoorFriendlyNoHalf) {
+        _gIndoorFriendlyNoHalf = 1;             /* same floor, no halfway rule */
+        FriendlyIndoorRefresh();
+        CallDrawMenuItem(entry);
+        return;
+    }
+    _gIndoorFriendlyNoHalf = 0;
     _gIndoorFriendlyFloor = Indoor_NextFriendlyFloor(was);
     if (was == INDOOR_OFF) {
         s_outdoorPitchType = _friendlyPitchType;

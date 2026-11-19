@@ -63,11 +63,54 @@ int16_t Indoor_NextFriendlyFloor(int16_t floor)
     return floor == INDOOR_OFF ? INDOOR_LINOLEUM : INDOOR_OFF;
 }
 
-/* The menus play the hall's music while the FRIENDLY screen's INDOOR row shows a floor
- * (SDL: TryPlayMusic, sound_indoor/menu.mp3; the Amiga keeps its menu song). */
+/* The menus play the hall's music (SDL: TryPlayMusic, sound_indoor/menu.mp3; the Amiga keeps
+ * its menu song) while the FRIENDLY screen's INDOOR row shows a floor -- from that screen on,
+ * through its team screens and its matches, until the main menu is shown again -- and while an
+ * online lobby is under the host's indoor floor, on both sides. The main menu always plays the
+ * game's own music (the owner, 2026-11-19). */
+static int16_t s_friendlyMusic;     /* the FRIENDLY screen has been shown since the main menu */
+
 int32_t Indoor_MenuMusic(void)
 {
-    return _gIndoorFriendlyFloor != INDOOR_OFF;
+    if (s_friendlyMusic && _gIndoorFriendlyFloor != INDOOR_OFF)
+        return 1;
+#ifdef SWOS_NETPLAY
+    {
+        extern int32_t NetplayLobby_IsOpen(void);
+        extern int16_t NetplayLobby_IndoorFloor(void);
+        if (NetplayLobby_IsOpen() && NetplayLobby_IndoorFloor() != INDOOR_OFF)
+            return 1;
+    }
+#endif
+    return 0;
+}
+
+void Indoor_FriendlyScreenShown(void)
+{
+    s_friendlyMusic = 1;
+}
+
+/* Each menu frame (ModHooks_MenuDrawn): the main menu ends the FRIENDLY screen's music, and the
+ * music is switched when what is wanted changed -- the INDOOR row, the lobby's floor, the main
+ * menu. SwitchMenuMusic does nothing while no music plays; TryPlayMusic asks again when it next
+ * starts. */
+void Indoor_MenuMusicFrame(void)
+{
+#ifdef SWOS_SDL_BUILD
+    static int32_t s_wanted = -1;
+    extern int32_t Menu_IsMainMenu(void);
+    extern void SwitchMenuMusic(void);
+    int32_t wanted;
+
+    if (Menu_IsMainMenu())
+        s_friendlyMusic = 0;
+    wanted = Indoor_MenuMusic();
+    if (s_wanted >= 0 && wanted != s_wanted) {
+        fprintf(stderr, "[indoor] menu music: %s\n", wanted ? "the hall's" : "the game's own");
+        SwitchMenuMusic();
+    }
+    s_wanted = wanted;
+#endif
 }
 
 static void install_tactics(TeamFileEx *team1, TeamFileEx *team2);

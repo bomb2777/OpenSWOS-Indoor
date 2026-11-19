@@ -213,6 +213,7 @@ void ModHooks_MenuDrawn(void)
 {
 #ifdef SWOS_SDL_BUILD
     { extern void SelectFiles_TestFrame(void); SelectFiles_TestFrame(); }   /* (SWOS_FILES_TEST: file_io.c) */
+    { extern void Indoor_MenuMusicFrame(void); Indoor_MenuMusicFrame(); }  /* (INDOOR, this fork's: the hall's music) */
 #endif
     EACH(menuDrawn) (*m_)->menuDrawn();
 }

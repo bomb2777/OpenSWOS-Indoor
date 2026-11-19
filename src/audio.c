@@ -688,6 +688,10 @@ retry:
 /* ================================================================
  * TryPlayMusic  (SWOS2.s line 11189)
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+static int16_t s_noRamp;    /* SwitchMenuMusic: start at full volume, no 32-frame wait */
+#endif
+
 __attribute__((used, externally_visible))
 void TryPlayMusic(void)
 {
@@ -743,7 +747,7 @@ void TryPlayMusic(void)
     AudioSetChannelVolume(0xFFFF, 0);
     _audioActive = 1;
 
-    for (vol = 0; vol <= 0x3E; vol += 2) {   /* SDL: ramp to full (0x40) — see loader_intro.c */
+    for (vol = s_noRamp ? 0x40 : 0; vol <= 0x3E; vol += 2) {   /* SDL: ramp to full (0x40) — see loader_intro.c */
         AudioSetChannelVolume(0xFFFF, vol);
         WaitForVSync();
     }
@@ -930,9 +934,11 @@ void StopMusicInBackground(void)
 #endif
 
 #ifdef SWOS_SDL_BUILD
-/* The FRIENDLY screen's INDOOR row switched between a hall and outdoors: the menu music
- * playing is the other one's, so cut it and start the right one (TryPlayMusic picks it).
- * Nothing when no menu music plays (OPTIONS -> MENU MUSIC off). */
+/* INDOOR (this fork's): the menus moved between the hall's music and the game's own
+ * (Indoor_MenuMusicFrame), so cut the song playing and start the right one (TryPlayMusic
+ * picks it). At full volume at once: TryPlayMusic's fade-in waits 32 frames, and each wait
+ * swaps the screen's two buffers -- during a menu change they hold different menus, which
+ * flickered. Nothing when no menu music plays (OPTIONS -> MENU MUSIC off). */
 void SwitchMenuMusic(void)
 {
     if (_audioActive == 0)
@@ -940,7 +946,9 @@ void SwitchMenuMusic(void)
     AudioSDL_StopSong();
     _audioActive = 0;
     _audioBankLoaded = 0;
+    s_noRamp = 1;
     TryPlayMusic();
+    s_noRamp = 0;
 }
 #endif
 

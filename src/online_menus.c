@@ -1061,7 +1061,7 @@ static void lobby_frame_hook(void)
  * SWOS_LOBBY_MATCHES=N has both leave the game after N matches, the host once the lobby
  * is back up and the joiner when the host has gone. SWOS_LOBBY_SWITCHES=<hex> sets the
  * host's switches (NETPLAY_SW_*, netplay_match.h). SWOS_LOBBY_INDOOR=1 (OpenSWOS-Indoor)
- * has the host choose LINOLEUM on PITCH TYPE, as the row's button does. */
+ * has the host choose LINOLEUM on PITCH TYPE, as the row's button does (=2 LINOLEUM NO HALF). */
 static int32_t s_lobbyAgain;        /* run_live_match: show the lobby again, for a rematch */
 static int32_t s_lobbyMatches;      /* matches played from this lobby */
 static int32_t s_testReady;         /* SWOS_LOBBY_READY: say ready once the lobby is open */
@@ -1101,10 +1101,12 @@ static void lobby_test_knobs(void)
         NetplayLobby_SetRules(&r);
     }
 
-    if (getenv("SWOS_LOBBY_INDOOR") && atoi(getenv("SWOS_LOBBY_INDOOR")) == 1 && NetplayLobby_IsHost()) {
+    if (getenv("SWOS_LOBBY_INDOOR") && atoi(getenv("SWOS_LOBBY_INDOOR")) >= 1 && NetplayLobby_IsHost()) {
         LobbyRules r = *NetplayLobby_Rules();
         r.pitchType = 0xFFFF;
         next_pitch(&r);                             /* RANDOM -> LINOLEUM, 5 FROM 5 */
+        if (atoi(getenv("SWOS_LOBBY_INDOOR")) == 2)
+            next_pitch(&r);                         /* -> LINOLEUM NO HALF */
         NetplayLobby_SetRules(&r);
     }
 
@@ -1267,7 +1269,8 @@ static const char *pitch_name(uint16_t pitch)
     extern const char _aNormal[], _aDry[], _aHard[];
     static const char *const names[7] = { _aFrozen, _aMuddy, _aWet, _aSoft, _aNormal, _aDry, _aHard };
     if (pitch >= LOBBY_PITCH_INDOOR && pitch != 0xFFFF)  /* INDOOR: the hall's floor */
-        return Indoor_FloorName((int16_t)(pitch - LOBBY_PITCH_INDOOR));
+        return Indoor_FloorLabel((int16_t)((pitch & ~LOBBY_PITCH_NO_HALF) - LOBBY_PITCH_INDOOR),
+                                 (pitch & LOBBY_PITCH_NO_HALF) ? 1 : 0);
     return pitch < 7 ? names[pitch] : _aRandom;
 }
 
@@ -2282,13 +2285,16 @@ static void next_length(LobbyRules *r) { r->gameLength = (uint16_t)((r->gameLeng
 
 /* RANDOM, FROZEN .. HARD, RANDOM: the friendly menu's order (FriendlyPitchTypeProc); then
  * (OpenSWOS-Indoor) LINOLEUM, the hall, which sets SUBSTITUTES to 5 FROM 5 as the FRIENDLY
- * screen's INDOOR row does, and leaving it the lobby's 2 FROM 5. */
+ * screen's INDOOR row does, then LINOLEUM NO HALF (no keeper's halfway rule), and leaving
+ * them the lobby's 2 FROM 5. */
 static void next_pitch(LobbyRules *r)
 {
     if (r->pitchType == 0xFFFF) {
         r->pitchType = LOBBY_PITCH_INDOOR + INDOOR_LINOLEUM;
         r->minSubs = 5;
         r->maxSubs = 5;
+    } else if (r->pitchType >= LOBBY_PITCH_INDOOR && !(r->pitchType & LOBBY_PITCH_NO_HALF)) {
+        r->pitchType |= LOBBY_PITCH_NO_HALF;    /* the same hall, no halfway rule */
     } else if (r->pitchType >= LOBBY_PITCH_INDOOR) {
         r->pitchType = 0;
         r->minSubs = 2;

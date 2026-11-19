@@ -375,7 +375,7 @@ static void clamp_rules(LobbyRules *r)
     if (r->gameLength > 3)
         r->gameLength = 0;
     if (r->pitchType != RANDOM_PITCH && r->pitchType > 6 &&
-        r->pitchType != LOBBY_PITCH_INDOOR + INDOOR_LINOLEUM)     /* (the one floor drawn) */
+        (r->pitchType & ~LOBBY_PITCH_NO_HALF) != LOBBY_PITCH_INDOOR + INDOOR_LINOLEUM)     /* (the one floor drawn) */
         r->pitchType = RANDOM_PITCH;
     if (r->maxSubs > 5)
         r->maxSubs = 5;
@@ -771,8 +771,10 @@ static void assemble_match(void)
     /* INDOOR: the host's floor, its pitch type in the friendly's place (Indoor_BeginMatch
      * pins it again at kick-off). The match setup carries the floor to the joiner. */
     _gIndoorOnlineFloor = INDOOR_OFF;
+    _gIndoorOnlineNoHalf = 0;
     if (s_lobby.rules.pitchType >= LOBBY_PITCH_INDOOR && s_lobby.rules.pitchType != RANDOM_PITCH) {
-        _gIndoorOnlineFloor = (int16_t)(s_lobby.rules.pitchType - LOBBY_PITCH_INDOOR);
+        _gIndoorOnlineFloor = (int16_t)((s_lobby.rules.pitchType & ~LOBBY_PITCH_NO_HALF) - LOBBY_PITCH_INDOOR);
+        _gIndoorOnlineNoHalf = (s_lobby.rules.pitchType & LOBBY_PITCH_NO_HALF) ? 1 : 0;
         _friendlyPitchType  = (uint16_t)Indoor_PitchTypeForFloor(_gIndoorOnlineFloor);
     }
     _minSubstitutes    = s_lobby.rules.minSubs;
@@ -1055,7 +1057,7 @@ int32_t NetplayLobby_Rematch(const char *notice)
 static int32_t lobby_indoor(void)
 {
     return s_lobby.rules.pitchType != RANDOM_PITCH &&
-           s_lobby.rules.pitchType == LOBBY_PITCH_INDOOR + INDOOR_LINOLEUM;
+           (s_lobby.rules.pitchType & ~LOBBY_PITCH_NO_HALF) == LOBBY_PITCH_INDOOR + INDOOR_LINOLEUM;
 }
 
 static void indoor_line_up(void)
@@ -1094,7 +1096,7 @@ void NetplayLobby_IndoorLineUp(void)
 
 int16_t NetplayLobby_IndoorFloor(void)
 {
-    return lobby_indoor() ? (int16_t)(s_lobby.rules.pitchType - LOBBY_PITCH_INDOOR) : INDOOR_OFF;
+    return lobby_indoor() ? (int16_t)((s_lobby.rules.pitchType & ~LOBBY_PITCH_NO_HALF) - LOBBY_PITCH_INDOOR) : INDOOR_OFF;
 }
 
 void NetplayLobby_Poll(void)

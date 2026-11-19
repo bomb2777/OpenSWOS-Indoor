@@ -299,8 +299,9 @@ int32_t NetplaySetup_Encode(uint8_t *out, uint32_t cap)
             BE_WRITE_U16(p, ok ? cells[c] : (uint16_t)PITCH_CROWD_KEEP);
     }
 
-    /* (version 7) INDOOR: the host's floor, which the joiner and a re-simulation play on. */
-    BE_WRITE_U16(p, (uint16_t)(_gIndoorOnlineFloor + 1)); p += 2;
+    /* (version 7) INDOOR: the host's floor, which the joiner and a re-simulation play on;
+     * 0x100 the halfway rule off (LINOLEUM NO HALF). */
+    BE_WRITE_U16(p, (uint16_t)(((_gIndoorOnlineFloor + 1) & 0xFF) | (_gIndoorOnlineNoHalf ? 0x100 : 0))); p += 2;
 
     return (int32_t)(p - out);
 }
@@ -450,11 +451,15 @@ int32_t NetplaySetup_Apply(const uint8_t *in, uint32_t len)
     /* (version 7) INDOOR: the floor, the setup's last word; before it, every online match
      * was outdoors. */
     _gIndoorOnlineFloor = INDOOR_OFF;
+    _gIndoorOnlineNoHalf = 0;
     if (version >= 7) {
         if (!s_haveCrowd)               /* (a crowd of another count: its bytes are there) */
             p += CROWD_BYTES;
-        if (p + INDOOR_BYTES <= in + len)
-            _gIndoorOnlineFloor = (int16_t)(BE_READ_U16(p) - 1);
+        if (p + INDOOR_BYTES <= in + len) {
+            uint16_t w = BE_READ_U16(p);
+            _gIndoorOnlineFloor = (int16_t)((w & 0xFF) - 1);
+            _gIndoorOnlineNoHalf = (w & 0x100) ? 1 : 0;
+        }
         p += INDOOR_BYTES;
     }
 

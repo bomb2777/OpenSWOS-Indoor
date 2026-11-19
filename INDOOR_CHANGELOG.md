@@ -4,6 +4,18 @@ What this fork (`bomb2777/OpenSWOS-Indoor`, branch `indoor`) has added to OpenSW
 first. All of it applies only to a friendly played with INDOOR switched on; with it off, the
 game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
+## 2026-11-19
+
+- **LINOLEUM NO HALF:** the keeper may throw or kick over the halfway line. The FRIENDLY
+  screen's INDOOR row cycles OFF, LINOLEUM, LINOLEUM NO HALF; online the host picks it on
+  PITCH TYPE.
+- **Menu music:** the main menu always plays the game's own music; the hall's music plays on
+  the FRIENDLY screen with a floor set, and in the lobby on both sides when the host picks
+  the hall. No more flicker when the music changes.
+- **Online fix:** a rematch after an indoor match could go out of step at once ("THE TWO
+  GAMES WENT OUT OF STEP").
+- Older builds can't play online against this one (compat 1012).
+
 ## 2026-11-18
 
 - Brought up to date with OpenSWOS again (its long benches for World 2026-27, stoppage time,

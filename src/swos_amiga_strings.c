@@ -35,6 +35,7 @@ char _aUniform[]      = "UNIFORM";
 char _aIndoor[]       = "INDOOR";
 char _aWood[]         = "WOOD";
 char _aLinoleum[]     = "LINOLEUM";
+char _aLinoleumNoHalf[] = "LINOLEUM NO HALF";   /* the keeper's throw over halfway allowed */
 char _aStone[]        = "STONE";
 char _aBeachSand[]    = "BEACH SAND";
 /* OpenSWOS INDOOR: the five indoor tactics (indoor_tactics_data.c). */

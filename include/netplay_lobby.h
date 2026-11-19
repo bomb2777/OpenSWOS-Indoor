@@ -85,6 +85,8 @@ enum { LOBBY_TIE_ET_PEN = 1, LOBBY_TIE_PEN_ONLY = 2 };
  * is played in the hall on that floor (docs/INDOOR.md phase 6). In the pitch-type word so
  * the rules' wire format stays as it was. */
 enum { LOBBY_PITCH_INDOOR = 0x0100 };
+/* ... plus this bit: the hall without the keeper's halfway rule (LINOLEUM NO HALF). */
+enum { LOBBY_PITCH_NO_HALF = 0x0080 };
 enum { LOBBY_MODE_FRIENDLY = 0, LOBBY_MODE_LEAGUE = 1, LOBBY_MODE_RANKED = 2 };
 
 typedef enum {

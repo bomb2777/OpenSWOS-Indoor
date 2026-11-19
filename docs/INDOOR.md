@@ -29,7 +29,8 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
 
 - **FRIENDLY screen:** an INDOOR row under SUBSTITUTES (entries 11–12 of
   `bin/data_json/menus/friendlyGameMenu.json`; `FriendlyIndoorProc`, `FriendlyIndoorRefresh`
-  in `src/menus.c`). It toggles OFF ⇄ LINOLEUM. While it shows a floor, PITCH TYPE shows that
+  in `src/menus.c`). It cycles OFF → LINOLEUM → LINOLEUM NO HALF → OFF (NO HALF: the same
+  hall without the keeper's halfway rule, `_gIndoorFriendlyNoHalf`). While it shows a floor, PITCH TYPE shows that
   floor's type and cannot be changed; OFF gives back what it said before. Like the pitch, it
   is fixed once the teams are chosen. **Both targets** have it: INDOOR is shared match code,
   and only online play (phase 6) is the PC's alone, as netplay is.
@@ -145,7 +146,10 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
       the halfway line before another player of either side touched it (`_lastPlayerPlayed`;
       checked in `UpdateBall`, `Indoor_KeeperRuleCheck`) gives the other side a free kick on the
       halfway line where it crossed: the foul's stoppage without a foul, `ST_FOUL`, no wall. Any
-      touch or stoppage disarms it. A ball off a body that is not a kick, header or control
+      touch or stoppage disarms it. LINOLEUM NO HALF switches the rule off (`_gIndoorNoHalf`,
+      set by `Indoor_BeginMatch`; online the lobby's PITCH TYPE bit `LOBBY_PITCH_NO_HALF` 0x80
+      and the setup's floor word bit 0x100; `SWOS_INDOOR_NO_HALF=1` with `SWOS_INDOOR` for a
+      test; NETPLAY_COMPAT 1012, 2026-11-19). A ball off a body that is not a kick, header or control
       counts as untouched (the game does not record it). The computer's keeper passes out of
       his hands indoors (`INDOOR_KEEPER_PASSES`, `ai.c`): one rule free kick a CPU match, not 20.
    4. **Red card = time penalty.** `SendPlayerAway` → `Indoor_TimePenalty`: the player walks to the
@@ -363,7 +367,7 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
 6. **Online** (2026-11-04) — done:
    - **The fork's own identity** (`include/project_identity.h`): `PROJECT_NETPLAY_TAG`
      `OPENSWOS-INDOOR`, `PROJECT_GGPO_GAME` `openswos-indoor`, and `NETPLAY_COMPAT` from
-     1000 (1011; `include/netplay_compat.h`), where upstream's numbers never reach -- a
+     1000 (1012; `include/netplay_compat.h`), where upstream's numbers never reach -- a
      fork build never meets one that has no INDOOR. A rebase that brings a raise of
      upstream's raises ours by one. The handshake also compares the rollback state's layout,
      which the indoor state below changed.
@@ -403,7 +407,15 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      `Indoor_BeginMatch` does not sort (offline it still does, before its team screen).
      NETPLAY_COMPAT 1007. `SWOS_LOBBY_LINEUP_SWAP=a:b` swaps on the indoor line-up, and
      `SWOS_LOBBY_READY` readies again after the other side's indoor line-up dropped it.
-   - `SWOS_LOBBY_INDOOR=1` has a test host choose LINOLEUM. Two players through the lobby
+   - The kick-off state (the host's match state, sent at START) needs every pointer in it to
+     have an identity. `_plPositions` (`match_sim.c`) is left pointing into the tactic a
+     match read last; swapping the five tactic slots (`install_tactics`/`release_tactics`)
+     left it in a record the table no longer held, so after an indoor match (or an outdoor
+     one before the lobby's indoor team screen) the host had no kick-off state to offer and a
+     rematch was out of step from frame 1. `move_pl_positions` moves it with the slot
+     (2026-11-19; `MATCHES=3 FRAMES=221 HOST_ENV="SWOS_LOBBY_INDOOR=1"
+     scripts/netplay_lobby_test.sh` showed it).
+   - `SWOS_LOBBY_INDOOR=1` has a test host choose LINOLEUM (=2 LINOLEUM NO HALF). Two players through the lobby
      with random input on an emulated wifi link (both predict wrong and roll back), no server
      needed: `HOST_WIDTH=362 JOIN_WIDTH=362 PROFILE=wifi HOST_ENV="SWOS_LOBBY_INDOOR=1
      SWOS_INDOOR_TEST_RED=1" JOIN_ENV="SWOS_INDOOR_TEST_RED=1" scripts/netplay_lobby_test.sh`

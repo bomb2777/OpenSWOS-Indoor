@@ -20,13 +20,16 @@ int16_t _gIndoor;
 int16_t _gIndoorFloor = INDOOR_LINOLEUM;
 int16_t _gIndoorFriendlyFloor = INDOOR_OFF;
 int16_t _gIndoorOnlineFloor = INDOOR_OFF;
+int16_t _gIndoorNoHalf;
+int16_t _gIndoorFriendlyNoHalf;
+int16_t _gIndoorOnlineNoHalf;
 
 /* What an indoor match changes as it is played, in the rollback registry (sim_state.c):
  * a time penalty, the keeper's throw, the glass marker. */
 IndoorSimState g_indoorSim = { .markKind = -1 };
 
 extern const char _aOff[];
-extern char _aWood[], _aLinoleum[], _aStone[], _aBeachSand[];
+extern char _aWood[], _aLinoleum[], _aStone[], _aBeachSand[], _aLinoleumNoHalf[];
 
 extern uint16_t _gameType;
 extern uint16_t _trainingGame;
@@ -54,6 +57,13 @@ const char *Indoor_FloorName(int16_t floor)
     case INDOOR_SAND:     return _aBeachSand;
     default:              return _aOff;
     }
+}
+
+const char *Indoor_FloorLabel(int16_t floor, int16_t noHalf)
+{
+    if (noHalf && floor == INDOOR_LINOLEUM)
+        return _aLinoleumNoHalf;
+    return Indoor_FloorName(floor);
 }
 
 /* Only linoleum is drawn so far, so the button toggles OFF <-> LINOLEUM. Adding a
@@ -128,6 +138,7 @@ static void time_penalties_clear(void);
 void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
 {
     int16_t floor = _gIndoorFriendlyFloor;
+    int16_t noHalf = _gIndoorFriendlyNoHalf;
 
     _gIndoor = 0;
 #ifdef SWOS_SDL_BUILD
@@ -140,12 +151,16 @@ void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
             floor = INDOOR_LINOLEUM;
         else if (force && force[0] == '0' && force[1] == '\0')
             floor = INDOOR_OFF;
+        if (force)                      /* SWOS_INDOOR_NO_HALF=1: without the halfway rule */
+            noHalf = getenv("SWOS_INDOOR_NO_HALF") != NULL;
     }
     extern int _gArcadeMode;
     /* An online match plays the host's floor (the lobby's PITCH TYPE row, carried in the
      * match setup: netplay_setup.c version 5), never this machine's own choice. */
-    if (NetplayMatch_Enabled())
+    if (NetplayMatch_Enabled()) {
         floor = _gIndoorOnlineFloor;
+        noHalf = _gIndoorOnlineNoHalf;
+    }
     s_keepLineUps = NetplayMatch_Enabled() ? 1 : 0;
     if (_gArcadeMode)
         floor = INDOOR_OFF;
@@ -157,14 +172,15 @@ void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
 
     _gIndoor = 1;
     _gIndoorFloor = floor;
+    _gIndoorNoHalf = noHalf ? 1 : 0;
     Indoor_BuildMarkSprites();
     Indoor_ClearMarker();
     time_penalties_clear();
     install_tactics(team1, team2);
     install_court();
 #ifdef SWOS_SDL_BUILD
-    fprintf(stderr, "[indoor] this friendly is played indoors: %s, pitch type %d\n",
-            Indoor_FloorName(floor), Indoor_PitchTypeForFloor(floor));
+    fprintf(stderr, "[indoor] this friendly is played indoors: %s, pitch type %d, halfway rule %s\n",
+            Indoor_FloorName(floor), Indoor_PitchTypeForFloor(floor), _gIndoorNoHalf ? "off" : "on");
 #endif
 }
 
@@ -184,7 +200,9 @@ void Indoor_EndMatch(void)
     release_court();
     release_tactics();
     _gIndoor = 0;
+    _gIndoorNoHalf = 0;
     _gIndoorOnlineFloor = INDOOR_OFF;   /* (set again by the next online match's start) */
+    _gIndoorOnlineNoHalf = 0;
 }
 
 /* ---- Tactics -------------------------------------------------------------------- */
@@ -364,6 +382,25 @@ void Indoor_SortLineUp(TeamFileEx *team)
     sort_line_up(team);
 }
 
+/* _plPositions (match_sim.c) is left by a match's init pointing into the tactic it read
+ * last, and it is match state (sim_state.c, SIM_PTR_TACTICS: a byte of a _teamTacticsTable
+ * record). Swapping a slot's record leaves it pointing into one the table no longer holds --
+ * a pointer with no identity, so the lobby could not send its kick-off state and a rematch
+ * after an indoor match (or an indoor one after an outdoor match) kicked off from each
+ * side's own state, out of step from frame 1 (the owner, 2026-11-19). Move it with the slot:
+ * same slot, same byte, in the record that slot holds now. */
+static void move_pl_positions(TeamTactics *const *from, TeamTactics *const *to)
+{
+    extern uintptr_t _plPositions;
+    for (int16_t i = 0; i < INDOOR_TACTICS; i++) {
+        uintptr_t lo = (uintptr_t)from[i];
+        if (from[i] && _plPositions >= lo && _plPositions < lo + sizeof(TeamTactics)) {
+            _plPositions = (uintptr_t)to[i] + (_plPositions - lo);
+            return;
+        }
+    }
+}
+
 static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
 {
     char *const *names = kTacticNames;
@@ -378,6 +415,7 @@ static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
         _tacticsStringTable[i] = names[i];
         _sidePitchSurnamePositionsTable[i] = _indoorSidePitch[i];
     }
+    move_pl_positions(s_outdoorTactics, _teamTacticsTable);
     /* A team on a tactic past the five plays 2-2-1 for this match. */
     s_teams[0] = team1;
     s_teams[1] = team2;
@@ -420,6 +458,7 @@ static void release_tactics(void)
 {
     if (!s_tacticsInstalled)
         return;
+    move_pl_positions(_teamTacticsTable, s_outdoorTactics);
     for (int16_t i = 0; i < INDOOR_TACTICS; i++) {
         _teamTacticsTable[i] = s_outdoorTactics[i];
         _tacticsStringTable[i] = s_outdoorNames[i];
@@ -964,7 +1003,7 @@ static void keeper_rule_disarm(void)
 
 void Indoor_KeeperReleased(Sprite *player, TeamGeneralInfo *team)
 {
-    if (!_gIndoor || _gameState != ST_KEEPER_HOLDS_BALL || player->playerOrdinal != 1)
+    if (!_gIndoor || _gIndoorNoHalf || _gameState != ST_KEEPER_HOLDS_BALL || player->playerOrdinal != 1)
         return;
     g_indoorSim.keeperReleaser = player;
     g_indoorSim.keeperTeam = team;

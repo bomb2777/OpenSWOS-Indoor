@@ -34,7 +34,8 @@
  * 1003: upstream's 11; 1004: upstream's 12;
  * 1005: the indoor tactics made by a model (5.8); 1006: they attack wide;
  * 1007: online, the indoor line-up is the lobby's (arranged on its team screen);
- * 1008: upstream's 13; 1009-1011: upstream's 14-16. */
-#define NETPLAY_COMPAT 1011   /* upstream's history -- 16: a long bench is the front row (places 6.. standing before the game's dugouts); 15: a World 2026-27 friendly's long bench (long_bench.c); 14: main's 13 and mod41-match's 13 merged (a world's stoppage time); 13: SWOS 2020's AMIGA60 and MOON gameplay styles (the handshake's style byte 3 and 4: dos_mode.h); 12: a two-legged tie's first leg leaves its injuries and sendings-off on the second (netplay_lobby.c leg_carry); 11: the replay ring is 38000 bytes on SDL, the resync state with it (10: the handshake carries the mods that change the match; 9: the XBOX gameplay style, the handshake's style byte; 8: the host's crowd in the setup; 7: the lobby's match mode and service ids; 6: the lobby chat) */
+ * 1008: upstream's 13; 1009-1011: upstream's 14-16;
+ * 1012: LINOLEUM NO HALF (the setup's floor word 0x100, the lobby's PITCH TYPE 0x80). */
+#define NETPLAY_COMPAT 1012   /* upstream's history -- 16: a long bench is the front row (places 6.. standing before the game's dugouts); 15: a World 2026-27 friendly's long bench (long_bench.c); 14: main's 13 and mod41-match's 13 merged (a world's stoppage time); 13: SWOS 2020's AMIGA60 and MOON gameplay styles (the handshake's style byte 3 and 4: dos_mode.h); 12: a two-legged tie's first leg leaves its injuries and sendings-off on the second (netplay_lobby.c leg_carry); 11: the replay ring is 38000 bytes on SDL, the resync state with it (10: the handshake carries the mods that change the match; 9: the XBOX gameplay style, the handshake's style byte; 8: the host's crowd in the setup; 7: the lobby's match mode and service ids; 6: the lobby chat) */
 
 #endif

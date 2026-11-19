@@ -34,6 +34,13 @@ extern int16_t _gIndoorFriendlyFloor;   /* the FRIENDLY screen's choice, INDOOR_
  * applies); Indoor_BeginMatch takes it in place of the FRIENDLY screen's while
  * NetplayMatch_Enabled(). Cleared when the match ends. */
 extern int16_t _gIndoorOnlineFloor;
+/* The keeper's throw over the halfway line (a free kick to the other side) is a rule of the
+ * hall unless switched off: the FRIENDLY screen's LINOLEUM NO HALF, the lobby's PITCH TYPE of
+ * that name (the owner, 2026-11-19). _gIndoorNoHalf is the match's (Indoor_BeginMatch); the
+ * other two are the menu's and the host's choices, as the floors above. */
+extern int16_t _gIndoorNoHalf;
+extern int16_t _gIndoorFriendlyNoHalf;
+extern int16_t _gIndoorOnlineNoHalf;
 
 /* What an indoor match changes while it is played, beyond the sprites and teams: ONE
  * struct so the rollback registry (src/sim_state.c, SIM tier) saves and restores it --
@@ -61,6 +68,8 @@ int16_t Indoor_PitchTypeForFloor(int16_t floor);
 
 /* The menu text of a floor (or "OFF" for INDOOR_OFF). */
 const char *Indoor_FloorName(int16_t floor);
+/* The same with the halfway rule off: "LINOLEUM NO HALF". */
+const char *Indoor_FloorLabel(int16_t floor, int16_t noHalf);
 
 /* The FRIENDLY screen's choice, as the next press of its INDOOR button makes it. */
 int16_t Indoor_NextFriendlyFloor(int16_t floor);

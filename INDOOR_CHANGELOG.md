@@ -8,6 +8,8 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
 - **MULTIPLAYER menu:** a YOUR IP row shows the address your friend has to type (asked of a
   public STUN server); choosing it copies it. HOST and JOIN are two buttons now.
+- **Goals:** a ball that went in near a post no longer bounces back out of the net's corner.
+  Older builds can't play online against this one (compat 1013).
 
 ## 2026-11-19
 

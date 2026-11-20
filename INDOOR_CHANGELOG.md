@@ -14,6 +14,9 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
   1-2-2 is a reversed triangle (midfielders wide, forwards inside them); at a free kick in
   the opponents' half, 2-1-2's and 1-2-2's forwards go out to the sides.
   Older builds can't play online against this one (compat 1014).
+- **The hall:** the players leave at half time and full time through a door in the right side
+  stand and disappear (they used to stand in the crowd). The top goal shows the parquet
+  behind its net, and the bottom penalty area stands out behind the glass.
 
 ## 2026-11-19
 

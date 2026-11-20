@@ -4,6 +4,11 @@ What this fork (`bomb2777/OpenSWOS-Indoor`, branch `indoor`) has added to OpenSW
 first. All of it applies only to a friendly played with INDOOR switched on; with it off, the
 game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
+## 2026-11-20
+
+- **MULTIPLAYER menu:** a YOUR IP row shows the address your friend has to type (asked of a
+  public STUN server); choosing it copies it. HOST and JOIN are two buttons now.
+
 ## 2026-11-19
 
 - **LINOLEUM NO HALF:** the keeper may throw or kick over the halfway line. The FRIENDLY

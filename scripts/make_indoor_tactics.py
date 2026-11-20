@@ -53,6 +53,30 @@ SHAPES = [
 # Height of each line (grid y, 0 own goal line .. 15 the opponents'; halfway 7.5) with
 # the ball at the own end and at the opponents' end; linear in between.
 LINE_Y = {"D": (2.0, 7.0), "M": (3.5, 10.5), "A": (6.5, 13.5)}
+# Forwards in attack (the owner, 2026-11-20: "the attackers should be more near the opponents'
+# goal ... on free kicks in the opponents' half they are too close to the ball"): from ball row
+# WIDE_FROM on, a forward stands at least this high -- the penalty area starts near y 12.8.
+A_ATTACK_Y = {3: 12.0, 4: 12.6, 5: 13.0, 6: 13.5}   # (12.6: Python rounds 12.5 down)
+# One tactic's own numbers, in place of the ones above (the owner, 2026-11-20):
+#   2-1-2: "the both attackers could be more offensive in the last third";
+#   1-2-2: "spread the midfield a bit and the attackers much more to the wings, so it looks
+#          like a reversed triangle" -- forwards out wide in every row, following the ball
+#          across less so the far one stays on its wing.
+# Then (same day): 1-2-2 the other way round -- the midfielders out wide, the forwards a bit
+# inside them. (2-1-2's forwards out on the sides only at a free kick: src/indoor.c,
+# Indoor_FreeKickSpread -- in the table too it played "too offensive".)
+SHAPE_TWEAKS = {
+    "2-1-2": {"a_attack_y": {3: 12.0, 4: 13.0, 5: 14.0, 6: 14.0}},
+    "1-2-2": {"side_x": {"M": {"R": 1.0, "L": 13.0}, "A": {"R": 3.0, "L": 11.0}},
+              "side_x_wide": {"M": {"R": 1.0, "L": 13.0}, "A": {"R": 3.0, "L": 11.0}},
+              "follow_x": {"M": 0.2, "A": 0.3}},
+}
+
+# The wingers of a three-man midfield (1-3-1: MR, ML) are a line of their own (the owner: "make
+# the wingers offensive when attacking and defensive when defending. they have to run the most
+# of all players"): beside the defender with the ball in the own half, behind the forward with
+# it in the opponents'. Per ball row 0..6.
+WING_Y = [2.0, 2.5, 4.5, 9.5, 11.0, 12.0, 12.5]
 # How far a defender stays behind the ball (cells), when the ball is in the own half.
 GOAL_SIDE = 1.5
 # Across: a side's place (grid x; 0 the team's right) for a line of one, two or three.
@@ -93,8 +117,9 @@ def ball_cell(bx, by):
     return (bx + 0.5) * 3.0 - 0.5, (by + 0.5) * 16.0 / 7.0 - 0.5
 
 
-def sector_positions(shape, bx, by):
+def sector_positions(shape, bx, by, name=None):
     """Where the five go with the ball in sector (bx, by): [(x, y)] floats."""
+    tweak = SHAPE_TWEAKS.get(name, {})
     ballx, bally = ball_cell(bx, by)
     progress = by / 6.0
     attacking = by >= WIDE_FROM
@@ -108,10 +133,17 @@ def sector_positions(shape, bx, by):
     for line, side in shape:
         lo, hi = LINE_Y[line]
         y = lo + (hi - lo) * progress
+        a_attack = tweak.get("a_attack_y", A_ATTACK_Y)
+        if line == "A" and by in a_attack:
+            y = max(y, a_attack[by])
+        if line == "M" and counts["M"] == 3 and side != "C":
+            y = WING_Y[by]
         if line == "D" and bally < 7.5:
             y = min(y, max(Y_MIN, bally - GOAL_SIDE))
-        follow = FOLLOW_X[line] * (WIDE_FOLLOW if attacking and side != "C" else 1.0)
-        x = side_x[counts[line]][side] + follow * (ballx - 7.0)
+        follow = tweak.get("follow_x", {}).get(line, FOLLOW_X[line])
+        follow *= WIDE_FOLLOW if attacking and side != "C" else 1.0
+        own_x = tweak.get("side_x_wide" if attacking else "side_x", {}).get(line, {})
+        x = own_x.get(side, side_x[counts[line]][side]) + follow * (ballx - 7.0)
         # closing up on the ball, the more the wider it is and the nearer the player
         d = math.hypot(ballx - x, bally - y)
         k = PULL * wide * max(0.0, 1.0 - d / REACH) * max(0.0, 1.0 - by / float(PULL_UNTIL))
@@ -146,12 +178,12 @@ def sector_positions(shape, bx, by):
     return [(int(round(x)), int(round(y))) for x, y in pos]
 
 
-def tactic(shape):
+def tactic(shape, name=None):
     """[player][35] position bytes (x << 4 | y), sector order."""
     players = [[0] * 35 for _ in shape]
     for by in range(7):
         for bx in range(5):
-            for i, (x, y) in enumerate(sector_positions(shape, bx, by)):
+            for i, (x, y) in enumerate(sector_positions(shape, bx, by, name)):
                 players[i][bx + 5 * by] = (x << 4) | y
     return players
 
@@ -179,7 +211,7 @@ def main():
         lines.append("    {   /* %s */" % name)
         lines.append("        { " + ", ".join("0x%02X" % b for b in nb) + " },")
         lines.append("        {")
-        players = [c_positions(p) for p in tactic(shape)]
+        players = [c_positions(p) for p in tactic(shape, name)]
         players += [empty] * (10 - len(shape))
         lines.append(",\n".join("            " + p for p in players))
         lines.append("        },")

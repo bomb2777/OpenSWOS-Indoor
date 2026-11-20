@@ -1006,6 +1006,35 @@ extern void StopAllPlayers(void);
 extern void PlayFoulWhistleSample(void);
 
 
+/* At a free kick in the opponents' half, a tactic's two forwards stand out on the sides: in
+ * the table itself that played "too offensive" (the owner, 2026-11-20), so only here. Each
+ * keeps its side (kSides: ordinal 5 the team's right, 6 its left; a top team's right is the
+ * low x, a bottom team's the high). */
+void Indoor_FreeKickSpread(Sprite *player, const TeamGeneralInfo *team)
+{
+    int16_t right, x;
+
+    if (!_gIndoor || _gameStatePl == ST_GAME_IN_PROGRESS || team != _lastTeamPlayedBeforeBreak)
+        return;
+    if (_gameState != ST_FOUL && (_gameState < ST_FREE_KICK_LEFT1 || _gameState > ST_FREE_KICK_RIGHT3))
+        return;
+    if (team->tactics != 1 && team->tactics != 2)       /* 2-1-2, 1-2-2: forwards 5 and 6 */
+        return;
+    if (player->playerOrdinal != 5 && player->playerOrdinal != 6)
+        return;
+    if (team == &_topTeamData ? _foulYCoordinate <= 449 : _foulYCoordinate >= 449)
+        return;                                         /* (its own half) */
+    {
+        int32_t dx = player->destX - _foulXCoordinate, dy = player->destY - _foulYCoordinate;
+        if (dx * dx + dy * dy < 24 * 24)
+            return;                                     /* the one taking it */
+    }
+    right = (player->playerOrdinal == 5) == (team == &_topTeamData);
+    x = (int16_t)(right ? _playerXQuadrantsCoordinates[1] : _playerXQuadrantsCoordinates[13]);
+    if (right ? player->destX > x : player->destX < x)
+        player->destX = x;
+}
+
 static void keeper_rule_disarm(void)
 {
     g_indoorSim.keeperReleaser = 0;

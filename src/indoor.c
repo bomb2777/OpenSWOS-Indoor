@@ -874,6 +874,16 @@ int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY)
         if (bx - 1 >= 302 && bx - 1 <= 366 && ball->z.s.i <= 15 &&
             bx >= INDOOR_LEFT && bx <= INDOOR_RIGHT)
             return 1;
+        /* Already in the goal: the net holds it (UpdateBall's goal box, x - 1 296..372:
+         * side nets, back net, roof), never the glass. A ball that went in near a post
+         * and rolled on into the net's corner (x - 1 past 302..366), or bounced up in it,
+         * was taken for glass here and sent back out over the line (the owner,
+         * 2026-11-20: "it only happens in the goal corners"). */
+        {
+            int16_t sx = (int16_t)(savedX >> 16), sy = (int16_t)(savedY >> 16);
+            if ((sy < INDOOR_TOP || sy > INDOOR_BOTTOM) && sx - 1 >= 296 && sx - 1 <= 372)
+                return 1;
+        }
         mirror_dest(&ball->destY, savedY);
         hit = 1;
     }

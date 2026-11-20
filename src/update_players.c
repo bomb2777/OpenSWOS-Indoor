@@ -2793,6 +2793,7 @@ not_in_penalty:
         player->destY = player->y.s.i;
 
     finalize:
+        Indoor_FreeKickSpread(player, team);     /* INDOOR: forwards out wide at a free kick */
         /* UpdatePlayerSpeed */
         UpdatePlayerSpeed(player, team);
 

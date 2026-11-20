@@ -27,6 +27,9 @@
 #include "menu_symbols.h"
 #include "menu_system.h"
 #include "match_record.h"   /* a direct match is not the matchmaker's: "server" does not record it */
+#include "stun_ip.h"        /* (OpenSWOS-Indoor) YOUR IP: the public address */
+
+#include <SDL.h>            /* SDL_SetClipboardText, SDL_GetTicks */
 
 #include <stdio.h>
 #include <string.h>
@@ -48,11 +51,14 @@ enum {
     P2PMenu_status2,
     P2PMenu_start,
     P2PMenu_exit,
+    P2PMenu_ipLabel,        /* (OpenSWOS-Indoor) YOUR IP, after the rest so they keep their numbers */
+    P2PMenu_ip,
+    P2PMenu_modeJoin,       /* (OpenSWOS-Indoor) JOIN beside HOST (P2PMenu_mode) */
     P2PMenu_kNumEntries
 };
 
 /* SWOS 2020's colour constants (mnu2h/Constants.py), the ones this menu uses. */
-enum { kGray = 7, kLightBlue = 13 };
+enum { kGray = 7, kLightBlue = 13, kGreen = 14 };
 
 enum { kMaxInputDelay = 6 };    /* frames; GGPO rolls back at most 8 (docs/NETPLAY.md) */
 
@@ -69,6 +75,8 @@ static int32_t s_delay = 2;
 static char s_delayText[24];
 static char s_status1[64];
 static char s_status2[64];
+static char s_ipText[32];
+static uint32_t s_copiedAt;         /* SDL_GetTicks when YOUR IP was copied; 0 none */
 
 /* What the last thing the player did had to say, until they do the next. */
 static const char *s_notice1;
@@ -194,12 +202,43 @@ static int32_t link_is_open(P2PLinkState state)
     return state == P2P_HOSTING || state == P2P_JOINING || state == P2P_CONNECTED;
 }
 
+/* (OpenSWOS-Indoor) YOUR IP: the address a friend types, as the internet sees this
+ * machine (src/stun_ip.c asks a STUN server once the menu opens); choosing the row copies
+ * it to the clipboard, or asks again after a failure. */
+static const char *ip_text(void)
+{
+    switch (StunIp_State()) {
+    case STUN_IP_KNOWN:
+        if (s_copiedAt && SDL_GetTicks() - s_copiedAt < 2000)
+            snprintf(s_ipText, sizeof s_ipText, "COPIED");
+        else
+            snprintf(s_ipText, sizeof s_ipText, "%s  COPY", StunIp_Address());
+        break;
+    case STUN_IP_FAILED:      snprintf(s_ipText, sizeof s_ipText, "UNKNOWN - ASK AGAIN"); break;
+    case STUN_IP_UNAVAILABLE: snprintf(s_ipText, sizeof s_ipText, "NOT IN THIS BUILD"); break;
+    default:                  snprintf(s_ipText, sizeof s_ipText, "ASKING..."); break;
+    }
+    return s_ipText;
+}
+
+static void p2pMenu_ip_OnSelect(void)
+{
+    if (StunIp_State() == STUN_IP_KNOWN) {
+        if (SDL_SetClipboardText(StunIp_Address()) == 0)
+            s_copiedAt = SDL_GetTicks() | 1;
+    } else {
+        StunIp_Request();
+    }
+}
+
 static void p2pMenu_OnInit(void)
 {
     /* A link left open by the last visit -- the menu was left while hosting, say. */
     P2PLink_Close();
     notice(NULL, NULL);
     set_status("", "");
+    StunIp_Request();
+    s_copiedAt = 0;
 }
 
 /* Every frame (the menu is flagged dos_redraw), so the panel follows the link without
@@ -218,12 +257,18 @@ static void p2pMenu_OnDraw(void)
     P2PLinkState state = P2PLink_State();
     int32_t      open  = link_is_open(state);
 
-    set_row(P2PMenu_mode, s_hosting ? "HOST A GAME" : "JOIN A GAME", !open);
+    /* (OpenSWOS-Indoor) two buttons, HOST and JOIN, the chosen one green: one switch
+     * that said HOST A GAME / JOIN A GAME was not clear about what pressing it did. */
+    set_row(P2PMenu_mode, "HOST", !open);
+    set_row(P2PMenu_modeJoin, "JOIN", !open);
+    if (!open)
+        entry_at(s_hosting ? P2PMenu_mode : P2PMenu_modeJoin)->bgColor = kGreen;
     set_row(P2PMenu_address,
             s_hosting ? "NOT NEEDED WHEN HOSTING" : (s_address[0] ? s_address : "TYPE IT HERE"),
             !open && !s_hosting);
     set_row(P2PMenu_port, s_port, !open);
     set_row(P2PMenu_delay, delay_text(), !open);
+    set_row(P2PMenu_ip, ip_text(), StunIp_State() == STUN_IP_KNOWN || StunIp_State() == STUN_IP_FAILED);
 
     set_text(P2PMenu_start, !open ? (s_hosting ? "HOST" : "JOIN")
                                   : (state == P2P_CONNECTED ? "DISCONNECT" : "CANCEL"));
@@ -233,13 +278,16 @@ static void p2pMenu_OnDraw(void)
     set_text(P2PMenu_status2, s_status2);
 }
 
-static void p2pMenu_mode_OnSelect(void)
+static void choose_mode(int32_t hosting)
 {
-    if (link_is_open(P2PLink_State()))
+    if (link_is_open(P2PLink_State()) || s_hosting == hosting)
         return;
-    s_hosting = !s_hosting;
+    s_hosting = hosting;
     notice(NULL, NULL);
 }
+
+static void p2pMenu_mode_OnSelect(void) { choose_mode(1); }     /* HOST */
+static void p2pMenu_join_OnSelect(void) { choose_mode(0); }     /* JOIN */
 
 static void p2pMenu_address_OnSelect(void)
 {
@@ -324,6 +372,8 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(p2pMenu_delay_OnSelect),
     HANDLER(p2pMenu_start_OnSelect),
     HANDLER(p2pMenu_exit_OnSelect),
+    HANDLER(p2pMenu_ip_OnSelect),
+    HANDLER(p2pMenu_join_OnSelect),
 };
 
 #undef HANDLER

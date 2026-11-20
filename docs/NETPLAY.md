@@ -668,10 +668,11 @@ now opens the matchmaking flow (§7, "The menus"), and this one is reached with
 
 | Row | What it is |
 |---|---|
-| GAME | host a game, or join one |
+| GAME | host a game, or join one: two buttons, HOST and JOIN, the chosen one green (OpenSWOS-Indoor) |
 | HOST ADDRESS | the host's IPv4 address, typed in; the host itself needs none |
 | UDP PORT | 27885 by default (§3: SWOS 2020's 47885 is inside a block Windows reserves for WSL2). The host binds exactly it, so it is the port a player forwards; a joiner takes the next free one above it, so two peers can share a machine |
 | INPUT DELAY | frames of local input delay for the match to come, 0..6 |
+| YOUR IP | (OpenSWOS-Indoor) this machine's public IPv4 address, asked of a public STUN server when the menu opens (`src/stun_ip.c`: one Binding Request, RFC 5389, from a thread; Google's two, then Cloudflare's); choosing it copies it to the clipboard, or asks again after a failure. `[stun]` lines in SWOS.log |
 
 The status panel follows the link every frame — the menu is flagged `dos_redraw`, so its
 `onDraw` polls — and shows the round trip once measured, which is the number to choose an

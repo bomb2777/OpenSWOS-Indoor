@@ -12,6 +12,7 @@
 #ifdef SWOS_SDL_BUILD
 #include "swos_types.h"
 #endif
+#include "indoor.h"          /* INDOOR_X: the walk-off exit on the hall (Sprite_WalkedOff) */
 
 /* ---- Blitter register write macros ----
  * GCC m68k 15.1.0 decomposes `volatile uint16_t = N` struct-member
@@ -2469,7 +2470,10 @@ int Sprite_WalkedOff(const Sprite *s, const SpriteGraphics *g)
     if (_gameState != ST_GOING_TO_HALFTIME && _gameState != ST_PLAYERS_GOING_TO_SHOWER &&
         _gameState != ST_RESULT_ON_HALFTIME && _gameState != ST_RESULT_AFTER_THE_GAME)
         return 0;                   /* (and while the result shows: the last ones are still walking) */
-    if (s->z.s.i >= HUD_LAYER_Z_MIN || s->destX <= WALK_OFF_EXIT_X_MIN)
+    /* INDOOR: the exit points are moved onto the hall like everything (540/541), into its
+     * players' door in the right side stand (make_indoor_hall.py DOOR_*) -- beyond ITS
+     * touchline, INDOOR_X(590). */
+    if (s->z.s.i >= HUD_LAYER_Z_MIN || s->destX <= INDOOR_X(WALK_OFF_EXIT_X_MIN))
         return 0;
     const int32_t dx = s->x.s.i - s->destX, dy = s->y.s.i - s->destY;
     return dx >= -WALK_OFF_REACH && dx <= WALK_OFF_REACH && dy >= -WALK_OFF_REACH && dy <= WALK_OFF_REACH;

@@ -60,7 +60,12 @@ SIDE_LEFT_COL = (BENCH_X - 16 - 5) // 16 - SIDE_COLS    # 0
 SIDE_RIGHT_COL = (336 + HALF_W + GLASS_RIGHT + 15) // 16  # 32
 SIDE_FIRST_ROW = CROWD_TOP_ROW + CROWD_ROWS             # 11
 SIDE_ROWS = CROWD_BOTTOM_ROW - SIDE_FIRST_ROW           # 34
-DUGOUTS_Y = [(368, 430), (464, 526)]                    # the outdoor dugouts' (bench_subs.c 389/485)
+DUGOUTS_Y = [(368, 430), (464, 526)]
+# The players' door (2026-11-20): at half time and full time they walk to the outdoor exit
+# points, (540, 408) and (541, 418) in the hall -- in the right side stand -- and vanish there
+# (sprites.c Sprite_WalkedOff). Two cells of the stand, map rows 25-26 / cols 32-33, are a
+# doorway instead of fans.
+DOOR_ROWS, DOOR_COLS = (25, 26), (32, 33)                    # the outdoor dugouts' (bench_subs.c 389/485)
 PENALTY_SPOT = 71
 CX, CY = 336, 449
 LEFT, RIGHT, TOP, BOTTOM = CX - HALF_W, CX + HALF_W, CY - HALF_L, CY + HALF_L
@@ -145,7 +150,6 @@ def main():
     # its areas in exactly these two entries.
     light = (0x66, 0x66, 0xEE)
     line = (255, 255, 255)
-    court_shadow = (17, 17, 136)             # the net's inside at the line: a dark floor blue
     floor_shadow = (119, 85, 51)             # a shadow on the parquet
     # The parquet: a patch from the hall's margin, scaled like the court, repeated.
     patch_src = src.crop((10, 10, 10 + round(32 / SCALE), 10 + round(32 / SCALE)))
@@ -171,14 +175,18 @@ def main():
     # the pitch; the goal SPRITES only add what must be drawn over the players -- the
     # bottom goal's front, the top goal's strip of net 18-23 px behind the line. So this
     # draws the rest of the top one: the crossbar, the posts, the net falling to the line,
-    # its inside in shadow. Our own drawing, in the goal sprites' greys (palette 50-59).
+    # its inside the hall's parquet as behind the bottom goal (until 2026-11-20 the lower half
+    # was a dark floor blue, the owner: "old blue background"). Our own drawing, in the goal
+    # sprites' greys (palette 50-59).
     gx0, gx1 = CX - 36, CX + 36              # the frame, outside to outside (300..372)
     d.line([gx0, TOP - 18, gx1, TOP - 18], fill=grey(59))       # crossbar
     d.line([gx0 + 1, TOP - 17, gx1, TOP - 17], fill=grey(50))
     shades = [54, 53, 52, 52, 52, 51, 51, 50]
     for i in range(16):                      # the net, light at the top to dark at the line
         y = TOP - 16 + i
-        c = grey(shades[i]) if i < len(shades) else court_shadow
+        if i >= len(shades):
+            break                            # the parquet shows through, to the line
+        c = grey(shades[i])
         d.line([gx0 + 2, y, gx1 - 1, y], fill=c)
         if i % 2 == 0 and i < len(shades):   # its mesh
             for x in range(gx0 + 2 + (i // 2) % 2, gx1 - 1, 2):
@@ -193,6 +201,15 @@ def main():
         d.rectangle([x0, y1 - 10, x1, y1], fill=grey(51), outline=grey(50))
         for x in range(x0 + 3, x1, 4):
             d.line([x, y1 - 9, x, y1 - 1], fill=grey(50))
+
+    # The players' door: a frame and the dark corridor behind it.
+    dx0, dy0 = DOOR_COLS[0] * 16, DOOR_ROWS[0] * 16
+    dx1, dy1 = DOOR_COLS[1] * 16 + 15, DOOR_ROWS[1] * 16 + 15
+    d.rectangle([dx0, dy0, dx1, dy1], fill=grey(58))
+    d.rectangle([dx0 + 2, dy0 + 2, dx1, dy1 - 2], fill=grey(51))
+    d.rectangle([dx0 + 4, dy0 + 4, dx1, dy1 - 4], fill=grey(50))
+    for y in range(dy0 + 6, dy1 - 4, 4):     # the corridor's floor, fading in
+        d.line([dx0 + 6, y, dx1, y], fill=grey(51))
 
     for i in range(18):                      # the posts, white in the light
         y = TOP - 17 + i
@@ -289,6 +306,8 @@ def main():
         aisle = i % 10 == 5
         for k in range(SIDE_COLS):
             cells[r * COLS + SIDE_LEFT_COL + k] = 9 if aisle else (1, 3)[(i + k) % 2]
+            if r in DOOR_ROWS and SIDE_RIGHT_COL + k in DOOR_COLS:
+                continue                     # the players' door, drawn on the floor
             cells[r * COLS + SIDE_RIGHT_COL + k] = 25 if aisle else (17, 19)[(i + k) % 2]
 
     def planar(t):

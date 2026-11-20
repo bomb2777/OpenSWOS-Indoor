@@ -774,7 +774,11 @@ static const uint8_t  kCourtEntry[4] = { 75, 76, 77, 82 };
 static const uint16_t kCourtTeal[4]  = { 0x188,     /* the court, #118888 */
                                          0x3AA,     /* its areas, #33AAAA */
                                          0x477,     /* the court through the glass */
-                                         0x588 };   /* the areas through it */
+                                         0x699 };   /* the areas through it: brighter than the
+                                                     * glass's 60 % grey would make them
+                                                     * (0x588), so the bottom penalty area
+                                                     * stands out behind the wall (the owner,
+                                                     * 2026-11-20) -- set in glass_table */
 static uint16_t s_courtSaved[4];
 static int16_t  s_courtTeal;
 
@@ -1250,6 +1254,10 @@ static void glass_table(void)
                                                 (rgb[i * 3 + 1] * 4 + 98 * 6) / 10,
                                                 (rgb[i * 3 + 2] * 4 + 98 * 6) / 10);
     s_glassRim = (uint8_t)nearest_colour(rgb, 187, 187, 187);
+    if (_gIndoor) {             /* the court and its areas each to their own (Indoor_CourtPalette) */
+        s_glassLut[kCourtEntry[0]] = kCourtEntry[2];
+        s_glassLut[kCourtEntry[1]] = kCourtEntry[3];
+    }
 }
 
 static int16_t marker_opaque(int16_t x, int16_t y);

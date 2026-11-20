@@ -116,6 +116,11 @@ int16_t Indoor_RestartOrdinal(int16_t ordinal);
 void Indoor_WallSpot(int16_t ballX, int16_t ballY, int16_t goalY, int16_t slot, int16_t inWall,
                      int16_t *x, int16_t *y);
 
+/* A free kick of `team`'s in the opponents' half, with a two-forward tactic (2-1-2, 1-2-2):
+ * its forwards (ordinals 5, 6) go out to their sides, grid x 1 and 13, not the kicker
+ * (UpdatePlayers' finalize, every destination before the move; the owner, 2026-11-20). */
+void Indoor_FreeKickSpread(Sprite *player, const TeamGeneralInfo *team);
+
 /* Whether the player in this slot of a side (0 = the keeper .. 10) is parked: never
  * offered for substitution. Always 0 outdoors. */
 int16_t Indoor_IsParkedSlot(uint16_t slot);

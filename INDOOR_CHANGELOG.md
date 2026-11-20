@@ -9,7 +9,11 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 - **MULTIPLAYER menu:** a YOUR IP row shows the address your friend has to type (asked of a
   public STUN server); choosing it copies it. HOST and JOIN are two buttons now.
 - **Goals:** a ball that went in near a post no longer bounces back out of the net's corner.
-  Older builds can't play online against this one (compat 1013).
+- **Tactics:** forwards stand at the box from halfway on (2-1-2's right at the goal in the
+  last third); 1-3-1's wingers drop back beside the defender and push up behind the forward;
+  1-2-2 is a reversed triangle (midfielders wide, forwards inside them); at a free kick in
+  the opponents' half, 2-1-2's and 1-2-2's forwards go out to the sides.
+  Older builds can't play online against this one (compat 1014).
 
 ## 2026-11-19
 

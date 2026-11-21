@@ -14,6 +14,7 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 - **The glass** (PC) is lighter: you see more of the court through it, especially behind the
   bottom wall.
 - **The ball is yellow** indoors, as in futsal.
+- **The goals are red and white:** crossbar and posts in bands.
 - Older builds can't play online against this one (compat 1015).
 
 ## 2026-11-20

@@ -44,6 +44,7 @@ char _aIndoor212[]    = "2-1-2";
 char _aIndoor122[]    = "1-2-2";
 char _aIndoor311[]    = "3-1-1";
 char _aIndoor131[]    = "1-3-1";
+char _aIndoor113[]    = "1-1-3";
 char _aDataEurocupTmd[] = "data/eurocup.tmd";
 char _aDataEurocwcTmd[] = "data/eurocwc.tmd";
 char _aDataTeamNnn[] = "data/team.nnn";

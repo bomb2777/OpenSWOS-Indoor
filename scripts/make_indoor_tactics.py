@@ -48,6 +48,7 @@ SHAPES = [
     ("1-2-2", [("D", "C"), ("M", "R"), ("M", "L"), ("A", "R"), ("A", "L")]),
     ("3-1-1", [("D", "R"), ("D", "C"), ("D", "L"), ("M", "C"), ("A", "C")]),
     ("1-3-1", [("D", "C"), ("M", "R"), ("M", "C"), ("M", "L"), ("A", "C")]),
+    ("1-1-3", [("D", "C"), ("M", "C"), ("A", "R"), ("A", "C"), ("A", "L")]),
 ]
 
 # Height of each line (grid y, 0 own goal line .. 15 the opponents'; halfway 7.5) with
@@ -77,6 +78,11 @@ SHAPE_TWEAKS = {
 # of all players"): beside the defender with the ball in the own half, behind the forward with
 # it in the opponents'. Per ball row 0..6.
 WING_Y = [2.0, 2.5, 4.5, 9.5, 11.0, 12.0, 12.5]
+# The wing forwards of a three-man attack (1-1-3: AR, AL; the owner, 2026-11-21: "the wing
+# attackers also act as wing midfielders when it comes to defending, but offensive, like an
+# attack tactic"): at the midfield's height with the ball in the own half, high and wide with
+# it in the opponents'. Per ball row 0..6.
+WING_A_Y = [4.0, 5.0, 6.5, 11.5, 12.5, 13.0, 13.5]
 # How far a defender stays behind the ball (cells), when the ball is in the own half.
 GOAL_SIDE = 1.5
 # Across: a side's place (grid x; 0 the team's right) for a line of one, two or three.
@@ -109,6 +115,7 @@ SIDE_PITCH = {
     "1-2-2": [KEEPER, (0x42, 0x23, 0x0000), (0x03, 0x41, 0x8000), (0x81, 0x41, 0x4000), (0x3F, 0x5F, 0x4000), (0x45, 0x5F, 0x8000)],
     "3-1-1": [KEEPER, (0x03, 0x28, 0x8000), (0x42, 0x19, 0x0000), (0x81, 0x28, 0x4000), (0x42, 0x41, 0x0000), (0x42, 0x64, 0x0000)],
     "1-3-1": [KEEPER, (0x42, 0x23, 0x0000), (0x03, 0x46, 0x8000), (0x42, 0x37, 0x0000), (0x81, 0x46, 0x4000), (0x42, 0x64, 0x0000)],
+    "1-1-3": [KEEPER, (0x42, 0x23, 0x0000), (0x42, 0x41, 0x0000), (0x03, 0x5F, 0x8000), (0x42, 0x64, 0x0000), (0x81, 0x5F, 0x4000)],
 }
 
 
@@ -138,6 +145,8 @@ def sector_positions(shape, bx, by, name=None):
             y = max(y, a_attack[by])
         if line == "M" and counts["M"] == 3 and side != "C":
             y = WING_Y[by]
+        if line == "A" and counts["A"] == 3 and side != "C":
+            y = WING_A_Y[by]
         if line == "D" and bally < 7.5:
             y = min(y, max(Y_MIN, bally - GOAL_SIDE))
         follow = tweak.get("follow_x", {}).get(line, FOLLOW_X[line])

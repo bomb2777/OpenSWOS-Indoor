@@ -780,7 +780,7 @@ void SetVariableButtons(void) {
         _menuEntries[10].isInvisible = 0;
         if (_showingCpuTeams) _menuEntries[10].isInvisible = 1;
         if (_is_A_team) _menuEntries[10].isInvisible = 1;
-        if (_gIndoor) _menuEntries[10].isInvisible = 1;     /* INDOOR: no EDIT TACTICS yet */
+        /* (INDOOR: EDIT TACTICS edits the indoor USER A-F since 2026-11-21) */
 
         _menuEntries[7].isInvisible = 0;
         _menuEntries[11].isInvisible = 1;

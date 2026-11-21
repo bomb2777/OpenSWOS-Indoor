@@ -1046,6 +1046,7 @@ int16_t SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
                 ext == 0x2E534541u || /* .SEA */
                 ext == 0x2E434152u || /* .CAR */
                 ext == 0x2E544143u || /* .TAC */
+                ext == 0x2E495443u || /* .ITC: an INDOOR tactic (this fork's, indoor.h) */
 #ifdef SWOS_SDL_BUILD
                 ext == 0x2E535250u || /* .SRP: a whole-match replay kept by SAVE HIGHLIGHTS */
 #endif
@@ -1143,6 +1144,7 @@ int16_t GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
                 ext == 0x2E534541u || /* .SEA */
                 ext == 0x2E434152u || /* .CAR */
                 ext == 0x2E544143u || /* .TAC */
+                ext == 0x2E495443u || /* .ITC: an INDOOR tactic (this fork's, indoor.h) */
                 ext == 0x2E48494Cu || /* .HIL */
                 ext == 0x2E52504Cu    /* .RPL (PC whole-match replay) */
 #ifdef SWOS_SDL_BUILD
@@ -1305,7 +1307,7 @@ void SelFilesDrawItemDescription(MenuEntry *entry) {
         descStr = (const uint8_t *)"SEASON";
     else if (ext == 0x2E434152)  /* '.CAR' */
         descStr = (const uint8_t *)"CAREER";
-    else if (ext == 0x2E544143)  /* '.TAC' */
+    else if (ext == 0x2E544143 || ext == 0x2E495443)  /* '.TAC', '.ITC' (INDOOR) */
         descStr = (const uint8_t *)"TACT";
     else if (ext == 0x2E52504C || ext == 0x2E535250)  /* '.RPL', '.SRP' — whole-match replays */
         descStr = (const uint8_t *)"REPLAY";

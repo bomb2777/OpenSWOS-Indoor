@@ -48,6 +48,7 @@ uint8_t _keyexit = 0x46;
 /* ---- Path resolver ------------------------------------------------- */
 static const char *known_save_exts[] = {
     ".DIY", ".PRE", ".SEA", ".CAR", ".TAC", ".HIL", ".EDT",
+    ".ITC", /* an INDOOR tactic (this fork's, indoor.h) */
     ".RPL", /* PC whole-match replay (not native to the Amiga) */
     ".SRP", /* OpenSWOS whole-match replay (src/replay_v2.c) */
     ".TEAM", /* a custom team for online play (src/custom_team.c) */
@@ -484,6 +485,7 @@ static const uint32_t ext_table[] = {
     0x2E534541u, /* ".SEA" */
     0x2E434152u, /* ".CAR" */
     0x2E544143u, /* ".TAC" */
+    0x2E495443u, /* ".ITC" (INDOOR) */
     0x2E48494Cu, /* ".HIL" */
     0x2E454454u, /* ".EDT" */
     0x2E52504Cu, /* ".RPL" (PC whole-match replay) */

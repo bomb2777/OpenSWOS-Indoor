@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include "netplay_match.h"
 #endif
+#include <string.h>             /* memcpy, memset: the USER tactics (both targets, as menus.c) */
 
 int16_t _gIndoor;
 int16_t _gIndoorFloor = INDOOR_LINOLEUM;
@@ -106,6 +107,8 @@ void Indoor_FriendlyScreenShown(void)
  * starts. */
 void Indoor_MenuMusicFrame(void)
 {
+
+
 #ifdef SWOS_SDL_BUILD
     static int32_t s_wanted = -1;
     extern int32_t Menu_IsMainMenu(void);
@@ -135,6 +138,8 @@ static void install_court(void);
 static void release_court(void);
 static void time_penalties_clear(void);
 static void ball_colours(int16_t yellow);
+static void online_user_tactics(TeamFileEx *team1, TeamFileEx *team2);
+static void online_user_tactics_back(void);
 
 void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
 {
@@ -178,6 +183,10 @@ void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
     ball_colours(0);                    /* (the match loads its sprites afresh: Indoor_KeepPlayersInside) */
     Indoor_ClearMarker();
     time_penalties_clear();
+#ifdef SWOS_SDL_BUILD
+    if (NetplayMatch_Enabled())
+        online_user_tactics(team1, team2);
+#endif
     install_tactics(team1, team2);
     install_court();
 #ifdef SWOS_SDL_BUILD
@@ -201,6 +210,7 @@ void Indoor_EndMatch(void)
     time_penalties_clear();
     release_court();
     release_tactics();
+    online_user_tactics_back();
     _gIndoor = 0;
     _gIndoorNoHalf = 0;
     _gIndoorOnlineFloor = INDOOR_OFF;   /* (set again by the next online match's start) */
@@ -212,12 +222,81 @@ void Indoor_EndMatch(void)
 extern TeamTactics *_teamTacticsTable[];
 extern void        *_tacticsStringTable[];
 extern void        *_sidePitchSurnamePositionsTable[];
-extern char _aIndoor221[], _aIndoor212[], _aIndoor122[], _aIndoor311[], _aIndoor131[];
+extern char _aIndoor221[], _aIndoor212[], _aIndoor122[], _aIndoor311[], _aIndoor131[], _aIndoor113[];
 
 static int16_t      s_tacticsInstalled;
-static TeamTactics *s_outdoorTactics[INDOOR_TACTICS];
-static void        *s_outdoorNames[INDOOR_TACTICS];
-static void        *s_outdoorSidePitch[INDOOR_TACTICS];
+static TeamTactics *s_outdoorTactics[INDOOR_ALL_TACTICS];
+static void        *s_outdoorNames[INDOOR_ALL_TACTICS];
+static void        *s_outdoorSidePitch[INDOOR_ALL_TACTICS];
+static TeamTactics  s_indoorUser[INDOOR_USER_TACTICS];     /* USER A-F indoors (indoor.h) */
+static int16_t      s_indoorUserMade;
+
+/* USER A-F start as copies of 2-2-1, each its own ball-out-of-play tactic. */
+static void indoor_user_make(void)
+{
+    if (s_indoorUserMade)
+        return;
+    for (int16_t i = 0; i < INDOOR_USER_TACTICS; i++) {
+        TeamTactics *t = &s_indoorUser[i];
+        memcpy(t, &_indoorTactics[0], sizeof *t);
+        memset(t->name, 0, sizeof t->name);
+        memcpy(t->name, "USER A", 6);
+        t->name[5] = (int8_t)('A' + i);
+        t->ballOutOfPlayTactics = (uint8_t)(INDOOR_TACTICS + i);
+    }
+    s_indoorUserMade = 1;
+}
+
+int16_t Indoor_IsUserTactic(int32_t tactic)
+{
+    return tactic >= INDOOR_TACTICS && tactic < INDOOR_ALL_TACTICS;
+}
+
+TeamTactics *Indoor_UserTactic(int32_t tactic)
+{
+    indoor_user_make();
+    return &s_indoorUser[Indoor_IsUserTactic(tactic) ? tactic - INDOOR_TACTICS : 0];
+}
+
+/* An online match: the two sides' USER tactics came in USER A and B (outdoor slots, in the
+ * match setup); indoor USER A/B take them for the match, this player's own kept. */
+static TeamTactics s_ownUser[2];
+static int16_t     s_ownUserKept;
+
+static void online_user_tactics(TeamFileEx *team1, TeamFileEx *team2)
+{
+    extern uint8_t _teamTacticsUSERA[], _teamTacticsUSERB[];
+    TeamFileEx *teams[2] = { team1, team2 };
+    uint8_t *carried[2] = { _teamTacticsUSERA, _teamTacticsUSERB };
+    indoor_user_make();
+    for (int16_t p = 0; p < 2; p++) {
+        if (!teams[p] || teams[p]->team.tactics != INDOOR_TACTICS + p)
+            continue;
+        if (!s_ownUserKept) {
+            memcpy(s_ownUser, s_indoorUser, sizeof s_ownUser);
+            s_ownUserKept = 1;
+        }
+        memcpy(&s_indoorUser[p], carried[p], sizeof s_indoorUser[p]);
+        s_indoorUser[p].ballOutOfPlayTactics = (uint8_t)(INDOOR_TACTICS + p);
+#ifdef SWOS_SDL_BUILD
+        fprintf(stderr, "[indoor] online: side %d plays its own tactic %.9s (indoor USER %c)\n",
+                p + 1, (const char *)s_indoorUser[p].name, 'A' + p);
+#endif
+    }
+}
+
+static void online_user_tactics_back(void)
+{
+    if (!s_ownUserKept)
+        return;
+    memcpy(s_indoorUser, s_ownUser, sizeof s_ownUser);
+    s_ownUserKept = 0;
+}
+
+static TeamTactics *indoor_tactic(int16_t i)
+{
+    return i < INDOOR_TACTICS ? &_indoorTactics[i] : &s_indoorUser[i - INDOOR_TACTICS];
+}
 static TeamFileEx  *s_teams[2];
 static uint8_t      s_teamTactics[2];
 static uint8_t      s_outdoorOrder[2][16];  /* each team's line-up before the indoor one */
@@ -289,6 +368,7 @@ static void sort_line_up(TeamFileEx *t)
         { 1, 2, 2, 3, 3 },      /* 1-2-2 */
         { 1, 1, 1, 2, 3 },      /* 3-1-1 */
         { 1, 2, 2, 2, 3 },      /* 1-3-1 */
+        { 1, 2, 3, 3, 3 },      /* 1-1-3 */
     };
     static const uint8_t kSides[INDOOR_TACTICS][INDOOR_PLAYERS - 1] = {
         { 0, 2, 0, 2, 1 },
@@ -296,6 +376,7 @@ static void sort_line_up(TeamFileEx *t)
         { 1, 0, 2, 0, 2 },
         { 0, 1, 2, 1, 1 },
         { 1, 0, 1, 2, 1 },
+        { 1, 1, 0, 1, 2 },
     };
     uint8_t order[16], used[16];
     int16_t place[INDOOR_PLAYERS];      /* the slot (in the team's order) on each place */
@@ -369,17 +450,60 @@ static void sort_line_up(TeamFileEx *t)
 }
 
 static char *const kTacticNames[INDOOR_TACTICS] = {
-    _aIndoor221, _aIndoor212, _aIndoor122, _aIndoor311, _aIndoor131
+    _aIndoor221, _aIndoor212, _aIndoor122, _aIndoor311, _aIndoor131, _aIndoor113
 };
 
 const char *Indoor_TacticName(int16_t tactic)
 {
+    if (tactic >= INDOOR_TACTICS && tactic < INDOOR_ALL_TACTICS) {
+        indoor_user_make();
+        return (const char *)s_indoorUser[tactic - INDOOR_TACTICS].name;
+    }
     return kTacticNames[tactic >= 0 && tactic < INDOOR_TACTICS ? tactic : 0];
+}
+
+uint16_t Indoor_UserTacticSlot(uint16_t outdoorSlot)
+{
+    return _gIndoor && outdoorSlot >= 12 && outdoorSlot < 12 + INDOOR_USER_TACTICS
+           ? (uint16_t)(INDOOR_TACTICS + outdoorSlot - 12) : outdoorSlot;
+}
+
+uintptr_t Indoor_UserTacticName(int16_t user, uintptr_t outdoorName)
+{
+    if (!_gIndoor || user < 0 || user >= INDOOR_USER_TACTICS)
+        return outdoorName;
+    indoor_user_make();
+    return (uintptr_t)s_indoorUser[user].name;
+}
+
+uint16_t Indoor_EditPlayers(void)
+{
+    return _gIndoor ? (uint16_t)(INDOOR_PLAYERS - 1) : 10;
+}
+
+uint32_t Indoor_TacticsExt(void)
+{
+    return _gIndoor ? INDOOR_TAC_EXT : 0x2E544143u;
+}
+
+/* The import list (IMPORT on the tactic editor), entries 1..18: the eleven indoor tactics,
+ * the rest hidden -- ImportTacticsSelectTactics copies _teamTacticsTable[entry - 1]. */
+void Indoor_ImportTacticsMenu(struct MenuEntry *first)
+{
+    MenuEntry *e = first;
+    if (!_gIndoor)
+        return;
+    for (int16_t i = 0; i < 18; i++, e++) {
+        if (i < INDOOR_ALL_TACTICS)
+            e->fg = (uintptr_t)Indoor_TacticName(i);
+        else
+            e->isInvisible = 1;
+    }
 }
 
 void Indoor_SortLineUp(TeamFileEx *team)
 {
-    if (team->team.tactics >= INDOOR_TACTICS)
+    if (team->team.tactics >= INDOOR_ALL_TACTICS)
         team->team.tactics = 0;
     sort_line_up(team);
 }
@@ -394,7 +518,7 @@ void Indoor_SortLineUp(TeamFileEx *team)
 static void move_pl_positions(TeamTactics *const *from, TeamTactics *const *to)
 {
     extern uintptr_t _plPositions;
-    for (int16_t i = 0; i < INDOOR_TACTICS; i++) {
+    for (int16_t i = 0; i < INDOOR_ALL_TACTICS; i++) {
         uintptr_t lo = (uintptr_t)from[i];
         if (from[i] && _plPositions >= lo && _plPositions < lo + sizeof(TeamTactics)) {
             _plPositions = (uintptr_t)to[i] + (_plPositions - lo);
@@ -409,23 +533,27 @@ static void install_tactics(TeamFileEx *team1, TeamFileEx *team2)
 
     if (s_tacticsInstalled)
         return;
-    for (int16_t i = 0; i < INDOOR_TACTICS; i++) {
+    indoor_user_make();
+    for (int16_t i = 0; i < INDOOR_ALL_TACTICS; i++) {
         s_outdoorTactics[i] = _teamTacticsTable[i];
         s_outdoorNames[i] = _tacticsStringTable[i];
         s_outdoorSidePitch[i] = _sidePitchSurnamePositionsTable[i];
-        _teamTacticsTable[i] = &_indoorTactics[i];
-        _tacticsStringTable[i] = names[i];
-        _sidePitchSurnamePositionsTable[i] = _indoorSidePitch[i];
+        _teamTacticsTable[i] = indoor_tactic(i);
+        _tacticsStringTable[i] = i < INDOOR_TACTICS ? names[i] : (char *)s_indoorUser[i - INDOOR_TACTICS].name;
+        _sidePitchSurnamePositionsTable[i] = _indoorSidePitch[i < INDOOR_TACTICS ? i : 0];   /* (a USER: 2-2-1's picture) */
     }
     move_pl_positions(s_outdoorTactics, _teamTacticsTable);
-    /* A team on a tactic past the five plays 2-2-1 for this match. */
+    /* A team on a tactic past the built-in ones plays 2-2-1 for this match: its record's
+     * tactic is an outdoor one (5-17 are other formations there). Only an online start
+     * brings an indoor USER tactic -- the lobby marks it (Indoor_IsUserTactic). */
     s_teams[0] = team1;
     s_teams[1] = team2;
     for (int16_t t = 0; t < 2; t++) {
         if (!s_teams[t])
             continue;
         s_teamTactics[t] = s_teams[t]->team.tactics;
-        if (s_teams[t]->team.tactics >= INDOOR_TACTICS)
+        if (s_teams[t]->team.tactics >= INDOOR_TACTICS &&
+            !(s_keepLineUps && Indoor_IsUserTactic(s_teams[t]->team.tactics)))
             s_teams[t]->team.tactics = 0;
         for (int16_t i = 0; i < 16; i++)
             s_outdoorOrder[t][i] = s_teams[t]->team.playerNumbers[i];
@@ -461,7 +589,7 @@ static void release_tactics(void)
     if (!s_tacticsInstalled)
         return;
     move_pl_positions(_teamTacticsTable, s_outdoorTactics);
-    for (int16_t i = 0; i < INDOOR_TACTICS; i++) {
+    for (int16_t i = 0; i < INDOOR_ALL_TACTICS; i++) {
         _teamTacticsTable[i] = s_outdoorTactics[i];
         _tacticsStringTable[i] = s_outdoorNames[i];
         _sidePitchSurnamePositionsTable[i] = s_outdoorSidePitch[i];
@@ -477,12 +605,12 @@ static void release_tactics(void)
 
 int16_t Indoor_TacticsCount(void)
 {
-    return _gIndoor ? INDOOR_TACTICS : 18;
+    return _gIndoor ? INDOOR_ALL_TACTICS : 18;
 }
 
 int16_t Indoor_TakeOutdoorTactic(int16_t slot, TeamTactics *t)
 {
-    if (!s_tacticsInstalled || slot < 0 || slot >= INDOOR_TACTICS)
+    if (!s_tacticsInstalled || slot < 0 || slot >= INDOOR_ALL_TACTICS)
         return 0;
     s_outdoorTactics[slot] = t;
     return 1;
@@ -604,7 +732,7 @@ void Indoor_TacticsButtons(struct MenuEntry *first)
 {
     MenuEntry *e = first;
     for (int16_t i = 0; i < 18; i++, e++) {
-        if (i < INDOOR_TACTICS)
+        if (i < INDOOR_ALL_TACTICS)
             e->fg = (uintptr_t)_tacticsStringTable[i];
         else
             e->isInvisible = 1;
@@ -634,17 +762,6 @@ extern uint8_t *_spriteGraphicsPtr;
 
 static int16_t s_sidePitchBlue;         /* sprite 225 is the hall's (its court mixed, no arcs) */
 
-/* The markings a hall does not have (phase 5.4): the four corner arcs and the two arcs on
- * the penalty areas. Spans (y, x0, x1) of the top-left quarter of the sprite; the others
- * are its mirrors (x -> 131 - x, y -> 114 - y). A pixel is cleared only when it has the
- * lines' colour, so other art (the DOS sprites) loses nothing else. */
-static const uint8_t kArcSpans[][3] = {
-    { 2, 5, 5 }, { 3, 5, 5 }, { 4, 4, 4 }, { 5, 2, 3 },
-    { 20, 53, 53 }, { 21, 54, 54 }, { 22, 55, 55 }, { 23, 56, 56 },
-    { 24, 57, 58 }, { 25, 59, 61 }, { 26, 62, 65 },
-};
-#define ARC_PIXELS (18 * 4)
-static uint8_t s_arcSaved[ARC_PIXELS];
 
 /* A pixel of sprite `idx`: one byte on the PC (chunky), bit planes on the Amiga. */
 static uint8_t *sprite_pixel_at(SpriteGraphics *spr, uint16_t idx, int16_t x, int16_t y, uint16_t *bit,
@@ -771,67 +888,87 @@ static void ball_colours(int16_t yellow)
 }
 
 /* hide: clear the arcs (saving what was there); else put it back. */
-static void side_pitch_arcs(int16_t hide)
+/* The menus' pitches (the line-up screen's little one, sprite 225; the tactic editor's,
+ * 226) as the hall's court indoors (phase 5.4, the owner; 2026-11-21 the editor's too):
+ *  - the end zones' markings cleared -- the corner arcs, the arcs on the penalty areas, the
+ *    goal areas (no 5 m box in a hall) and the penalty spots -- and the penalty area drawn
+ *    in the court's own proportions (indoor.h: 148 x 75 of 318 x 482, the spot at 71);
+ *  - the grass (14, green) checkered with blue (11): the menus have 16 colours and no teal,
+ *    and the two read as teal at that size (the owner's idea).
+ * The outer lines, the halfway line and the centre circle stay. Every pixel is kept before
+ * (`saved`), so outdoors gets the sprite back exactly. */
+typedef struct {
+    uint16_t idx;
+    int16_t  w, h;                  /* the part of the sprite kept and changed */
+    int16_t  fx0, fx1, fy0, fy1;    /* the field's outer lines */
+    int16_t  zone;                  /* rows inside each goal line cleared */
+    int16_t  bx0, bx1, depth;       /* the new penalty area: its sides, its line's distance */
+    int16_t  spotX, spotY;          /* the new spot's top-left (2 x 2), the top end's */
+} MenuPitch;
+
+static void menu_pitch(const MenuPitch *m, uint8_t *saved, int16_t indoor)
 {
-    SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[SPR_SIDE_PITCH];
-    if (!spr || !spr->sprData || spr->wquads * 16 < 132 || spr->nlines < 115)
+    SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[m->idx];
+    if (!spr || !spr->sprData || spr->wquads * 16 < m->w || spr->nlines < m->h)
         return;
-    const uint8_t line = side_pixel(spr, 1, 57), court = side_pixel(spr, 20, 40);
-    int16_t n = 0;
-    for (uint16_t s = 0; s < sizeof(kArcSpans) / sizeof(kArcSpans[0]); s++)
-        for (int16_t x0 = kArcSpans[s][1]; x0 <= kArcSpans[s][2]; x0++)
-            for (int16_t m = 0; m < 4; m++) {
-                const int16_t x = (m & 1) ? (int16_t)(131 - x0) : x0;
-                const int16_t y = (m & 2) ? (int16_t)(114 - kArcSpans[s][0]) : kArcSpans[s][0];
-                if (hide) {
-                    s_arcSaved[n] = side_pixel(spr, x, y);
-                    if (s_arcSaved[n] == line)
-                        set_side_pixel(spr, x, y, court);
-                } else {
-                    set_side_pixel(spr, x, y, s_arcSaved[n]);
-                }
-                n++;
+    if (!indoor) {
+        for (int16_t y = 0; y < m->h; y++)
+            for (int16_t x = 0; x < m->w; x++)
+                set_sprite_pixel(spr, m->idx, x, y, saved[(int32_t)y * m->w + x]);
+        return;
+    }
+    for (int16_t y = 0; y < m->h; y++)
+        for (int16_t x = 0; x < m->w; x++)
+            saved[(int32_t)y * m->w + x] = sprite_pixel(spr, m->idx, x, y);
+    {
+        const uint8_t line = sprite_pixel(spr, m->idx, m->fx0, (int16_t)((m->fy0 + m->fy1) / 2));
+        const uint8_t court = 14;
+        for (int16_t end = 0; end < 2; end++) {
+            /* a row `d` inside the goal line, at this end */
+#define ROW(d) (end ? (int16_t)(m->fy1 - (d)) : (int16_t)(m->fy0 + (d)))
+            for (int16_t d = 1; d <= m->zone; d++)
+                for (int16_t x = (int16_t)(m->fx0 + 1); x < m->fx1; x++)
+                    if (sprite_pixel(spr, m->idx, x, ROW(d)) == line)
+                        set_sprite_pixel(spr, m->idx, x, ROW(d), court);
+            for (int16_t x = m->bx0; x <= m->bx1; x++)
+                set_sprite_pixel(spr, m->idx, x, ROW(m->depth), line);
+            for (int16_t d = 1; d < m->depth; d++) {
+                set_sprite_pixel(spr, m->idx, m->bx0, ROW(d), line);
+                set_sprite_pixel(spr, m->idx, m->bx1, ROW(d), line);
             }
+            for (int16_t d = 0; d < 2; d++)
+                for (int16_t x = m->spotX; x < m->spotX + 2; x++)
+                    set_sprite_pixel(spr, m->idx, x, ROW(m->spotY - m->fy0 + d), line);
+#undef ROW
+        }
+    }
+    for (int16_t y = 0; y < m->h; y++)
+        for (int16_t x = 0; x < m->w; x++)
+            if (((x + y) & 1) && sprite_pixel(spr, m->idx, x, y) == 14)
+                set_sprite_pixel(spr, m->idx, x, y, 11);
 }
 
-/* The court's teal on the little pitch: the menus have 16 colours and no teal, so every
- * other pixel of its grass (14, green) becomes the blue (11) -- a checkerboard of the two,
- * which reads as teal at that size (the owner's idea). Which pixels changed is kept, so
- * outdoors gets exactly its grass back. */
-#define SIDE_W 132
-#define SIDE_H 115
-static uint8_t s_sideMixed[(SIDE_W * SIDE_H + 7) / 8];
+/* Measured from the sprites (the original art; DOS's has the same layout). */
+static const MenuPitch kSidePitch = { SPR_SIDE_PITCH, 132, 115, 1, 130, 1, 113, 26, 36, 95, 17, 65, 15 };
+#define SPR_TACTICS_PITCH 226
+static const MenuPitch kTacPitch  = { SPR_TACTICS_PITCH, 130, 200, 1, 128, 1, 198, 29, 35, 94, 31, 64, 29 };
+static uint8_t s_sideSaved[132 * 115];
+static uint8_t s_tacSaved[130 * 200];
+static int16_t s_tacPitchBlue;
 
-static void side_pitch_mix(int16_t on)
+void Indoor_TacticsPitchColours(void)
 {
-    SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[SPR_SIDE_PITCH];
-    if (!spr || !spr->sprData || spr->wquads * 16 < SIDE_W || spr->nlines < SIDE_H)
+    if (s_tacPitchBlue == (_gIndoor != 0))
         return;
-    for (int16_t y = 0; y < SIDE_H; y++)
-        for (int16_t x = 0; x < SIDE_W; x++) {
-            const int32_t i = (int32_t)y * SIDE_W + x;
-            if (on) {
-                const uint8_t mixed = (uint8_t)(((x + y) & 1) && side_pixel(spr, x, y) == 14);
-                s_sideMixed[i >> 3] = (uint8_t)((s_sideMixed[i >> 3] & ~(1u << (i & 7))) | (mixed << (i & 7)));
-                if (mixed)
-                    set_side_pixel(spr, x, y, 11);
-            } else if (s_sideMixed[i >> 3] & (1u << (i & 7))) {
-                set_side_pixel(spr, x, y, 14);
-            }
-        }
+    menu_pitch(&kTacPitch, s_tacSaved, _gIndoor != 0);
+    s_tacPitchBlue = (_gIndoor != 0);
 }
 
 void Indoor_SidePitchColours(void)
 {
     if (s_sidePitchBlue == (_gIndoor != 0))
         return;
-    if (_gIndoor) {
-        side_pitch_arcs(1);             /* (the arcs off while the grass is still one colour) */
-        side_pitch_mix(1);
-    } else {
-        side_pitch_mix(0);
-        side_pitch_arcs(0);
-    }
+    menu_pitch(&kSidePitch, s_sideSaved, _gIndoor != 0);
     s_sidePitchBlue = (_gIndoor != 0);
 }
 
@@ -940,6 +1077,7 @@ void Indoor_CourtPaletteRGB(uint8_t *rgb)
 void Indoor_MenuSpritesReloaded(void)
 {
     s_sidePitchBlue = 0;
+    s_tacPitchBlue = 0;
 }
 
 

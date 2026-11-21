@@ -160,6 +160,13 @@ static struct {
     int32_t     peerAnnounced;          /* the bot has said they are here */
 } s_lobby;
 
+static int32_t lobby_indoor(void);
+/* INDOOR: a tactic 5-10 under the host's indoor floor is the player's own (indoor.h). */
+static int32_t lobby_user_indoor(int32_t tactic)
+{
+    return lobby_indoor() && Indoor_IsUserTactic(tactic);
+}
+
 static uint8_t *tactic_slot(int32_t i)
 {
     switch (i) {
@@ -436,6 +443,8 @@ static int32_t encode_state(uint8_t *out)
      * is the player's own and may have been edited since. */
     if (p->tactic >= TACTIC_USER_A)
         memcpy(&p->userTactic, tactic_slot(p->tactic - TACTIC_USER_A), TACTIC_BYTES);
+    else if (lobby_user_indoor(p->tactic))      /* INDOOR: its own USER A-F (5-10) */
+        memcpy(&p->userTactic, Indoor_UserTactic(p->tactic), TACTIC_BYTES);
 
     BE_WRITE_U32(q, STATE_MAGIC);                 q += 4;
     BE_WRITE_U16(q, LOBBY_VERSION);               q += 2;
@@ -484,7 +493,8 @@ static int32_t side_differs(const LobbyPlayer *a, const LobbyPlayer *b)
         return 1;
     if (a->hasTeam && memcmp(&a->team, &b->team, sizeof a->team) != 0)
         return 1;
-    if (a->tactic >= TACTIC_USER_A && memcmp(&a->userTactic, &b->userTactic, TACTIC_BYTES) != 0)
+    if ((a->tactic >= TACTIC_USER_A || lobby_user_indoor(a->tactic)) &&
+        memcmp(&a->userTactic, &b->userTactic, TACTIC_BYTES) != 0)
         return 1;
     return 0;
 }
@@ -730,6 +740,11 @@ static void assemble_match(void)
         if (tactic >= TACTIC_USER_A) {
             memcpy(tactic_slot(p), &side->userTactic, TACTIC_BYTES);   /* A, or B */
             tactic = TACTIC_USER_A + p;
+        } else if (lobby_user_indoor(tactic)) {
+            /* INDOOR: carried in USER A or B as well; the team marked with indoor USER A or B,
+             * which Indoor_BeginMatch fills from it on both machines (indoor.h) */
+            memcpy(tactic_slot(p), &side->userTactic, TACTIC_BYTES);
+            tactic = INDOOR_TACTICS + p;
         }
         team.team.teamControls = TEAM_PLAYER_CONTROLLED;
         team.team.tactics      = (uint8_t)tactic;

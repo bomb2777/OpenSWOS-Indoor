@@ -364,10 +364,35 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    follow the ball across only `WIDE_FOLLOW` 0.5 of `FOLLOW_X`, and `MIN_GAP_WIDE` is 4.0.
    The attacking shape now spans 10-11 of the 15 cells across (6-8 before); rows 0-2 are
    unchanged. CPU v CPU: 0:2, 1:2, 0:2. Tuning by play is open. NETPLAY_COMPAT 1006.
+   **Rounds 3-5** (2026-11-20/21, the owner after playing): forwards at least near the box
+   from halfway on (`A_ATTACK_Y`), 1-3-1's wingers a line of their own (`WING_Y`), per-tactic
+   numbers (`SHAPE_TWEAKS`: 2-1-2's forwards at the goal in the last third, 1-2-2 a reversed
+   triangle), and at a free kick in the opponents' half 2-1-2's and 1-2-2's forwards out to
+   the sides (`Indoor_FreeKickSpread`, not in the table: there it played too offensive).
+   A sixth tactic, **1-1-3** (`WING_A_Y`: its wing forwards at the midfield's height in the
+   own half, high and wide in the opponents'). NETPLAY_COMPAT 1014, 1016.
+5.9. **The player's own tactics** (2026-11-21): EDIT TACTICS on the PLAY MATCH screen indoors
+   edits the indoor USER A-F (`s_indoorUser`, slots 6-11 after the six built-in ones while
+   an indoor match is set up: `install_tactics`; they start as copies of 2-2-1 and live for
+   the session). The game's own editor with hooks only (`Indoor_UserTacticSlot`,
+   `Indoor_UserTacticName`, `Indoor_EditPlayers` -- five outfield players drawn and picked --
+   `Indoor_ImportTacticsMenu`, `Indoor_TacticsExt`): SAVE writes `NAME.ITC` (the 370-byte
+   .TAC record, ordinals 2-6 placed; `.ITC` because the file menus keep a 4-letter ending as
+   one 32-bit number), LOAD indoors lists `.ITC` only. Its pitch is the court
+   (`Indoor_TacticsPitchColours`: sprite 226, as the line-up screen's 225 -- `menu_pitch`:
+   no goal areas or arcs, the penalty area in the court's proportions, teal checkered), its
+   list six starters and the bench, as on PLAY MATCH. A team record's own (outdoor) tactic
+   past the six still plays 2-2-1. **Online:** the lobby sends an indoor USER tactic as its
+   `userTactic`, the host's START puts it in outdoor USER A/B (which the match setup carries)
+   and marks the team with indoor USER A/B, and `Indoor_BeginMatch` copies it in on both
+   machines (the player's own back after). `HOST_ENV="SWOS_LOBBY_INDOOR=1
+   SWOS_LOBBY_INDOOR_USER=1" scripts/netplay_lobby_test.sh` proves it (a changed USER A on
+   one side; both end identical; `[indoor] online: side 1 plays its own tactic`).
+   NETPLAY_COMPAT 1016.
 6. **Online** (2026-11-04) — done:
    - **The fork's own identity** (`include/project_identity.h`): `PROJECT_NETPLAY_TAG`
      `OPENSWOS-INDOOR`, `PROJECT_GGPO_GAME` `openswos-indoor`, and `NETPLAY_COMPAT` from
-     1000 (1012; `include/netplay_compat.h`), where upstream's numbers never reach -- a
+     1000 (1016; `include/netplay_compat.h`), where upstream's numbers never reach -- a
      fork build never meets one that has no INDOOR. A rebase that brings a raise of
      upstream's raises ours by one. The handshake also compares the rollback state's layout,
      which the indoor state below changed.

@@ -10,6 +10,7 @@
 
 #include "tactics_menu.h"
 #include "menu_system.h"
+#include "indoor.h"          /* INDOOR: its own USER A-F */
 
 /* ---- ASM externs ---- */
 extern uint16_t _chosenTactics;
@@ -29,7 +30,7 @@ extern uint16_t _chosenTactics;
 __attribute__((used, externally_visible))
 void User_A_Tactics(void)
 {
-    _chosenTactics = TACTIC_USER_A;
+    _chosenTactics = Indoor_UserTacticSlot(TACTIC_USER_A);    /* (INDOOR: 5-10) */
     SetExitMenuFlag();
 }
 
@@ -39,7 +40,7 @@ void User_A_Tactics(void)
 __attribute__((used, externally_visible))
 void User_B_Tactics(void)
 {
-    _chosenTactics = TACTIC_USER_B;
+    _chosenTactics = Indoor_UserTacticSlot(TACTIC_USER_B);    /* (INDOOR: 5-10) */
     SetExitMenuFlag();
 }
 
@@ -49,7 +50,7 @@ void User_B_Tactics(void)
 __attribute__((used, externally_visible))
 void User_C_Tactics(void)
 {
-    _chosenTactics = TACTIC_USER_C;
+    _chosenTactics = Indoor_UserTacticSlot(TACTIC_USER_C);    /* (INDOOR: 5-10) */
     SetExitMenuFlag();
 }
 
@@ -59,7 +60,7 @@ void User_C_Tactics(void)
 __attribute__((used, externally_visible))
 void User_D_Tactics(void)
 {
-    _chosenTactics = TACTIC_USER_D;
+    _chosenTactics = Indoor_UserTacticSlot(TACTIC_USER_D);    /* (INDOOR: 5-10) */
     SetExitMenuFlag();
 }
 
@@ -69,7 +70,7 @@ void User_D_Tactics(void)
 __attribute__((used, externally_visible))
 void User_E_Tactics(void)
 {
-    _chosenTactics = TACTIC_USER_E;
+    _chosenTactics = Indoor_UserTacticSlot(TACTIC_USER_E);    /* (INDOOR: 5-10) */
     SetExitMenuFlag();
 }
 
@@ -79,7 +80,7 @@ void User_E_Tactics(void)
 __attribute__((used, externally_visible))
 void User_F_Tactics(void)
 {
-    _chosenTactics = TACTIC_USER_F;
+    _chosenTactics = Indoor_UserTacticSlot(TACTIC_USER_F);    /* (INDOOR: 5-10) */
     SetExitMenuFlag();
 }
 

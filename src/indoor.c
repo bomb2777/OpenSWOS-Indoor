@@ -707,6 +707,39 @@ static void set_side_pixel(SpriteGraphics *spr, int16_t x, int16_t y, uint8_t c)
  * A match loads its sprites afresh after Indoor_BeginMatch (they are not there yet), so it is
  * done in the first frame (Indoor_KeepPlayersInside) and never given back: the next match
  * loads them white again. Drawing only. */
+/* The goals red and white indoors (the owner and a tester, 2026-11-21): the bottom goal's
+ * frame (sprite 1092: the crossbar its row 0, the posts its columns 0 and 72, down to row 14,
+ * all white, palette 2) in bands, red (10, 0xF00) and white -- 6 px along the bar, 4 down a
+ * post, red at the corners. The top goal's posts are the hall map's (make_indoor_hall.py),
+ * its crossbar the white row 5 of its net strip (sprite 1091), drawn over the map's.
+ * Like the ball: the match's sprites are loaded afresh, so it is done once a match. */
+#define SPR_GOAL_TOP    1091
+#define SPR_GOAL_BOTTOM 1092
+#define GOAL_POST_ROWS  15
+#define GOAL_TOP_BAR_ROW 5
+static void goal_stripes(void)
+{
+    SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[SPR_GOAL_TOP];
+    int16_t w;
+    if (spr && spr->sprData && spr->nlines > GOAL_TOP_BAR_ROW) {
+        w = (int16_t)(spr->wquads * 16);
+        for (int16_t x = 0; x < w; x++)
+            if (sprite_pixel(spr, SPR_GOAL_TOP, x, GOAL_TOP_BAR_ROW) == 2 && ((x / 6) & 1) == 0)
+                set_sprite_pixel(spr, SPR_GOAL_TOP, x, GOAL_TOP_BAR_ROW, 10);
+    }
+    spr = ((SpriteGraphics **)_spriteGraphicsPtr)[SPR_GOAL_BOTTOM];
+    if (!spr || !spr->sprData)
+        return;
+    w = (int16_t)(spr->wquads * 16);
+    for (int16_t x = 0; x < w; x++)                     /* the crossbar */
+        if (sprite_pixel(spr, SPR_GOAL_BOTTOM, x, 0) == 2 && ((x / 6) & 1) == 0)
+            set_sprite_pixel(spr, SPR_GOAL_BOTTOM, x, 0, 10);
+    for (int16_t y = 1; y < GOAL_POST_ROWS && y < spr->nlines; y++)    /* the posts */
+        for (int16_t x = 0; x < w; x++)
+            if ((x == 0 || x == 72) && sprite_pixel(spr, SPR_GOAL_BOTTOM, x, y) == 2 && ((y / 4) & 1) == 0)
+                set_sprite_pixel(spr, SPR_GOAL_BOTTOM, x, y, 10);
+}
+
 #define SPR_BALL_FIRST 1065
 #define SPR_BALL_LAST  1068
 static int16_t s_ballYellow;            /* this match's ball images are yellow */
@@ -734,6 +767,7 @@ static void ball_colours(int16_t yellow)
             }
     }
     s_ballYellow = 1;
+    goal_stripes();
 }
 
 /* hide: clear the arcs (saving what was there); else put it back. */

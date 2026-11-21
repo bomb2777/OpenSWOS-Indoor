@@ -179,7 +179,11 @@ def main():
     # was a dark floor blue, the owner: "old blue background"). Our own drawing, in the goal
     # sprites' greys (palette 50-59).
     gx0, gx1 = CX - 36, CX + 36              # the frame, outside to outside (300..372)
-    d.line([gx0, TOP - 18, gx1, TOP - 18], fill=grey(59))       # crossbar
+    # Red and white (2026-11-21, the owner and a tester): the crossbar in 6 px bands, the posts
+    # in 4 px ones, red at the corners -- as the bottom goal's sprite (indoor.c goal_stripes).
+    red = pal_rgb[nearest(pal, (255, 0, 0))]
+    for x in range(gx0, gx1 + 1):            # crossbar
+        d.point((x, TOP - 18), fill=red if ((x - gx0) // 6) % 2 == 0 else grey(59))
     d.line([gx0 + 1, TOP - 17, gx1, TOP - 17], fill=grey(50))
     shades = [54, 53, 52, 52, 52, 51, 51, 50]
     for i in range(16):                      # the net, light at the top to dark at the line
@@ -213,7 +217,7 @@ def main():
 
     for i in range(18):                      # the posts, white in the light
         y = TOP - 17 + i
-        c = grey([59, 58, 57, 56, 55][min(i // 4, 4)])
+        c = red if (i // 4) % 2 == 0 else grey([59, 58, 57, 56, 55][min(i // 4, 4)])
         d.point((gx0, y), fill=c)
         d.point((gx1 - 1, y), fill=c)
         d.point((gx0 + 1, y), fill=grey(50))

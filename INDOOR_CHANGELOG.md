@@ -13,6 +13,7 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 - "LINOLEUM NO HALF" is now "LINOL. NO HALF", so it fits the lobby's button.
 - **The glass** (PC) is lighter: you see more of the court through it, especially behind the
   bottom wall.
+- **The ball is yellow** indoors, as in futsal.
 - Older builds can't play online against this one (compat 1015).
 
 ## 2026-11-20

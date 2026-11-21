@@ -134,6 +134,7 @@ static void release_tactics(void);
 static void install_court(void);
 static void release_court(void);
 static void time_penalties_clear(void);
+static void ball_colours(int16_t yellow);
 
 void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
 {
@@ -174,6 +175,7 @@ void Indoor_BeginMatch(TeamFileEx *team1, TeamFileEx *team2)
     _gIndoorFloor = floor;
     _gIndoorNoHalf = noHalf ? 1 : 0;
     Indoor_BuildMarkSprites();
+    ball_colours(0);                    /* (the match loads its sprites afresh: Indoor_KeepPlayersInside) */
     Indoor_ClearMarker();
     time_penalties_clear();
     install_tactics(team1, team2);
@@ -644,23 +646,26 @@ static const uint8_t kArcSpans[][3] = {
 #define ARC_PIXELS (18 * 4)
 static uint8_t s_arcSaved[ARC_PIXELS];
 
-static uint8_t *side_pixel_at(SpriteGraphics *spr, int16_t x, int16_t y, uint16_t *bit, int16_t *planes)
+/* A pixel of sprite `idx`: one byte on the PC (chunky), bit planes on the Amiga. */
+static uint8_t *sprite_pixel_at(SpriteGraphics *spr, uint16_t idx, int16_t x, int16_t y, uint16_t *bit,
+                                int16_t *planes)
 {
     uint16_t wq = (uint16_t)spr->wquads;
 #ifdef SWOS_SDL_BUILD
+    (void)idx;
     *bit = 0; *planes = 0;
     return (uint8_t *)spr->sprData + (int32_t)y * wq * 16 + x;
 #else
-    *planes = (int16_t)spriteNumPlanes(SPR_SIDE_PITCH);
+    *planes = (int16_t)spriteNumPlanes(idx);
     *bit = (uint16_t)(0x8000u >> (x & 15));
     return (uint8_t *)spr->sprData + (int32_t)y * wq * 2 * *planes + (x >> 4) * 2;
 #endif
 }
 
-static uint8_t side_pixel(SpriteGraphics *spr, int16_t x, int16_t y)
+static uint8_t sprite_pixel(SpriteGraphics *spr, uint16_t idx, int16_t x, int16_t y)
 {
     uint16_t bit; int16_t planes;
-    uint8_t *p = side_pixel_at(spr, x, y, &bit, &planes);
+    uint8_t *p = sprite_pixel_at(spr, idx, x, y, &bit, &planes);
 #ifdef SWOS_SDL_BUILD
     return *p;
 #else
@@ -672,10 +677,10 @@ static uint8_t side_pixel(SpriteGraphics *spr, int16_t x, int16_t y)
 #endif
 }
 
-static void set_side_pixel(SpriteGraphics *spr, int16_t x, int16_t y, uint8_t c)
+static void set_sprite_pixel(SpriteGraphics *spr, uint16_t idx, int16_t x, int16_t y, uint8_t c)
 {
     uint16_t bit; int16_t planes;
-    uint8_t *p = side_pixel_at(spr, x, y, &bit, &planes);
+    uint8_t *p = sprite_pixel_at(spr, idx, x, y, &bit, &planes);
 #ifdef SWOS_SDL_BUILD
     *p = c;
 #else
@@ -684,6 +689,51 @@ static void set_side_pixel(SpriteGraphics *spr, int16_t x, int16_t y, uint8_t c)
         *w = (c & (1 << pl)) ? (uint16_t)(*w | bit) : (uint16_t)(*w & ~bit);
     }
 #endif
+}
+
+static uint8_t side_pixel(SpriteGraphics *spr, int16_t x, int16_t y)
+{
+    return sprite_pixel(spr, SPR_SIDE_PITCH, x, y);
+}
+
+static void set_side_pixel(SpriteGraphics *spr, int16_t x, int16_t y, uint8_t c)
+{
+    set_sprite_pixel(spr, SPR_SIDE_PITCH, x, y, c);
+}
+
+/* The ball yellow indoors (a tester, 2026-11-21: "and the ball yellow", as in futsal): in its
+ * four images (rolling 1065-1067, still 1068) the white (palette 2, 0xFFF) becomes the sprite
+ * palette's own yellow (15, 0xFF0) and its grey shading (1, 0x999) the dark yellow (9, 0x550).
+ * A match loads its sprites afresh after Indoor_BeginMatch (they are not there yet), so it is
+ * done in the first frame (Indoor_KeepPlayersInside) and never given back: the next match
+ * loads them white again. Drawing only. */
+#define SPR_BALL_FIRST 1065
+#define SPR_BALL_LAST  1068
+static int16_t s_ballYellow;            /* this match's ball images are yellow */
+
+static void ball_colours(int16_t yellow)
+{
+    if (!yellow) {                      /* a new match: its sprites come afresh, white */
+        s_ballYellow = 0;
+        return;
+    }
+    if (s_ballYellow)
+        return;
+    for (uint16_t idx = SPR_BALL_FIRST; idx <= SPR_BALL_LAST; idx++) {
+        SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[idx];
+        if (!spr || !spr->sprData)
+            return;                     /* (not loaded yet: the next frame) */
+    }
+    for (uint16_t idx = SPR_BALL_FIRST; idx <= SPR_BALL_LAST; idx++) {
+        SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[idx];
+        for (int16_t y = 0; y < spr->nlines; y++)
+            for (int16_t x = 0; x < spr->wquads * 16; x++) {
+                uint8_t c = sprite_pixel(spr, idx, x, y);
+                if (c == 2 || c == 1)
+                    set_sprite_pixel(spr, idx, x, y, c == 2 ? 15 : 9);
+            }
+    }
+    s_ballYellow = 1;
 }
 
 /* hide: clear the arcs (saving what was there); else put it back. */
@@ -1028,6 +1078,7 @@ void Indoor_KeepPlayersInside(void)
 {
     if (!_gIndoor)
         return;
+    ball_colours(1);                    /* the yellow ball, once its images are loaded */
     /* In play and at every stoppage -- a slide or a dive the whistle stops goes on, and
      * used to go on through the glass (phase 5.3) -- but not while the teams walk on or
      * off (kick-off, half time, the end) nor while a substitute walks to or from the bench. */

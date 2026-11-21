@@ -759,7 +759,7 @@ void Indoor_SidePitchColours(void)
  * Amiga, PC and 2020 styles). Set with the pitch type's colours (ApplyPitchPaletteAndFactors,
  * live and in the replay viewer), given back outdoors; the PC styles that build their own
  * palette each frame get them too (Indoor_CourtPaletteRGB). */
-/* The PC's glass sees the floor through a colour table (nearest entry to 60 % grey over each
+/* The PC's glass sees the floor through a colour table (nearest entry to 40 % grey over each
  * colour, glass_table): the palette has no grey teal, so the court behind the bottom wall
  * came out plain grey. Two entries no indoor match draws in (77, 82: not in the hall map,
  * the crowd or a sprite; not 16-31, the Amiga's sprite colours) hold the court's and the
@@ -773,14 +773,54 @@ void Indoor_SidePitchColours(void)
 static const uint8_t  kCourtEntry[4] = { 75, 76, 77, 82 };
 static const uint16_t kCourtTeal[4]  = { 0x188,     /* the court, #118888 */
                                          0x3AA,     /* its areas, #33AAAA */
-                                         0x477,     /* the court through the glass */
-                                         0x699 };   /* the areas through it: brighter than the
-                                                     * glass's 60 % grey would make them
-                                                     * (0x588), so the bottom penalty area
-                                                     * stands out behind the wall (the owner,
-                                                     * 2026-11-20) -- set in glass_table */
+                                         0x477,     /* the court through the glass, and */
+                                         0x699 };   /* the areas: what 60 % glass gave; now
+                                                     * computed from GLASS_PCT (court_teal),
+                                                     * the areas two steps brighter so the
+                                                     * bottom penalty area stands out (the
+                                                     * owner, 2026-11-20) */
 static uint16_t s_courtSaved[4];
 static int16_t  s_courtTeal;
+
+#ifdef SWOS_SDL_BUILD
+/* The PC glass's strength: how much of its grey (98) covers what is behind it, in %. 60 until
+ * 2026-11-21, then 40 -- a tester felt hemmed in by the bottom wall ("one feels restricted in
+ * one's view"); the owner chose it from four variants (40 or 60 %, 56 or 80 px high), the
+ * height kept. */
+#define GLASS_PCT 40
+static int16_t glass_pct(void) { return GLASS_PCT; }
+/* A 12-bit colour seen through the glass: each channel glass_pct % of the glass's grey (98). */
+static uint16_t glass_mix12(uint16_t c)
+{
+    uint16_t out = 0;
+    for (int16_t sh = 8; sh >= 0; sh -= 4) {
+        int32_t v = ((c >> sh) & 15) * 17;
+        int32_t m = (v * (100 - glass_pct()) + 98 * glass_pct()) / 100;
+        int32_t n = (m + 8) / 17;
+        out |= (uint16_t)((n > 15 ? 15 : n) << sh);
+    }
+    return out;
+}
+#endif
+
+/* The court's colours: through the glass computed from its strength (the areas' two steps
+ * brighter, so the bottom penalty area stands out: 60 % gave 0x477 and 0x699). */
+static uint16_t court_teal(int16_t k)
+{
+#ifdef SWOS_SDL_BUILD
+    if (k == 2)
+        return glass_mix12(kCourtTeal[0]);
+    if (k == 3) {
+        uint16_t c = glass_mix12(kCourtTeal[1]), out = 0;
+        for (int16_t sh = 8; sh >= 0; sh -= 4) {
+            int16_t n = (int16_t)(((c >> sh) & 15) + (sh == 8 ? 1 : 2));
+            out |= (uint16_t)((n > 15 ? 15 : n) << sh);
+        }
+        return out;
+    }
+#endif
+    return kCourtTeal[k];
+}
 
 void Indoor_CourtPalette(uint16_t *pal)
 {
@@ -788,7 +828,7 @@ void Indoor_CourtPalette(uint16_t *pal)
         for (int16_t k = 0; k < COURT_ENTRIES; k++) {
             if (!s_courtTeal)
                 s_courtSaved[k] = pal[kCourtEntry[k]];
-            pal[kCourtEntry[k]] = kCourtTeal[k];
+            pal[kCourtEntry[k]] = court_teal(k);
         }
         s_courtTeal = 1;
     } else if (s_courtTeal) {
@@ -801,14 +841,14 @@ void Indoor_CourtPalette(uint16_t *pal)
 #ifdef SWOS_SDL_BUILD
 void Indoor_CourtPaletteRGB(uint8_t *rgb)
 {
-    const uint16_t *c = kCourtTeal;
     const uint8_t *e = kCourtEntry;
     if (!_gIndoor)
         return;
     for (int16_t k = 0; k < COURT_ENTRIES; k++) {
-        rgb[e[k] * 3 + 0] = (uint8_t)(((c[k] >> 8) & 15) * 17);
-        rgb[e[k] * 3 + 1] = (uint8_t)(((c[k] >> 4) & 15) * 17);
-        rgb[e[k] * 3 + 2] = (uint8_t)((c[k] & 15) * 17);
+        uint16_t c = court_teal(k);
+        rgb[e[k] * 3 + 0] = (uint8_t)(((c >> 8) & 15) * 17);
+        rgb[e[k] * 3 + 1] = (uint8_t)(((c >> 4) & 15) * 17);
+        rgb[e[k] * 3 + 2] = (uint8_t)((c & 15) * 17);
     }
 }
 #endif
@@ -1248,7 +1288,7 @@ static int32_t nearest_colour(const uint8_t *rgb, int32_t r, int32_t g, int32_t 
 }
 
 /* The table from the palette on screen, rebuilt when it changes (the pitch condition's
- * colours): 60 % of the glass's grey over each colour, as LINO.MAP's glass. Never during a
+ * colours): GLASS_PCT % of the glass's grey over each colour. Never during a
  * fade (fade.c g_fadeLevel below FADE_MAX): a fade scales every colour alike, so the table
  * of the bright palette stays right, while one built from a dark palette sends every colour
  * to the wrong one -- after a goal's replay the bottom wall came out white for a frame.
@@ -1268,9 +1308,9 @@ static void glass_table(void)
         return;
     s_glassPalHash = h;
     for (int32_t i = 0; i < 256; i++)
-        s_glassLut[i] = (uint8_t)nearest_colour(rgb, (rgb[i * 3] * 4 + 98 * 6) / 10,
-                                                (rgb[i * 3 + 1] * 4 + 98 * 6) / 10,
-                                                (rgb[i * 3 + 2] * 4 + 98 * 6) / 10);
+        s_glassLut[i] = (uint8_t)nearest_colour(rgb, (rgb[i * 3] * (100 - glass_pct()) + 98 * glass_pct()) / 100,
+                                                (rgb[i * 3 + 1] * (100 - glass_pct()) + 98 * glass_pct()) / 100,
+                                                (rgb[i * 3 + 2] * (100 - glass_pct()) + 98 * glass_pct()) / 100);
     s_glassRim = (uint8_t)nearest_colour(rgb, 187, 187, 187);
     if (_gIndoor) {             /* the court and its areas each to their own (Indoor_CourtPalette) */
         s_glassLut[kCourtEntry[0]] = kCourtEntry[2];

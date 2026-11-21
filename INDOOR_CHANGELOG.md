@@ -11,6 +11,8 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 - **Time penalty:** a player sitting out who is swapped with one on the court in the bench
   menu comes back after his five minutes again.
 - "LINOLEUM NO HALF" is now "LINOL. NO HALF", so it fits the lobby's button.
+- **The glass** (PC) is lighter: you see more of the court through it, especially behind the
+  bottom wall.
 - Older builds can't play online against this one (compat 1015).
 
 ## 2026-11-20

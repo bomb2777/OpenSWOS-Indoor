@@ -29,7 +29,7 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
 
 - **FRIENDLY screen:** an INDOOR row under SUBSTITUTES (entries 11–12 of
   `bin/data_json/menus/friendlyGameMenu.json`; `FriendlyIndoorProc`, `FriendlyIndoorRefresh`
-  in `src/menus.c`). It cycles OFF → LINOLEUM → LINOLEUM NO HALF → OFF (NO HALF: the same
+  in `src/menus.c`). It cycles OFF → LINOLEUM → LINOL. NO HALF → OFF (NO HALF: the same
   hall without the keeper's halfway rule, `_gIndoorFriendlyNoHalf`). While it shows a floor, PITCH TYPE shows that
   floor's type and cannot be changed; OFF gives back what it said before. Like the pitch, it
   is fixed once the teams are chosen. **Both targets** have it: INDOOR is shared match code,
@@ -146,7 +146,7 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
       the halfway line before another player of either side touched it (`_lastPlayerPlayed`;
       checked in `UpdateBall`, `Indoor_KeeperRuleCheck`) gives the other side a free kick on the
       halfway line where it crossed: the foul's stoppage without a foul, `ST_FOUL`, no wall. Any
-      touch or stoppage disarms it. LINOLEUM NO HALF switches the rule off (`_gIndoorNoHalf`,
+      touch or stoppage disarms it. LINOL. NO HALF switches the rule off (`_gIndoorNoHalf`,
       set by `Indoor_BeginMatch`; online the lobby's PITCH TYPE bit `LOBBY_PITCH_NO_HALF` 0x80
       and the setup's floor word bit 0x100; `SWOS_INDOOR_NO_HALF=1` with `SWOS_INDOOR` for a
       test; NETPLAY_COMPAT 1012, 2026-11-19). A ball off a body that is not a kick, header or control
@@ -415,7 +415,7 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      rematch was out of step from frame 1. `move_pl_positions` moves it with the slot
      (2026-11-19; `MATCHES=3 FRAMES=221 HOST_ENV="SWOS_LOBBY_INDOOR=1"
      scripts/netplay_lobby_test.sh` showed it).
-   - `SWOS_LOBBY_INDOOR=1` has a test host choose LINOLEUM (=2 LINOLEUM NO HALF). Two players through the lobby
+   - `SWOS_LOBBY_INDOOR=1` has a test host choose LINOLEUM (=2 LINOL. NO HALF). Two players through the lobby
      with random input on an emulated wifi link (both predict wrong and roll back), no server
      needed: `HOST_WIDTH=362 JOIN_WIDTH=362 PROFILE=wifi HOST_ENV="SWOS_LOBBY_INDOOR=1
      SWOS_INDOOR_TEST_RED=1" JOIN_ENV="SWOS_INDOOR_TEST_RED=1" scripts/netplay_lobby_test.sh`

@@ -911,6 +911,12 @@ int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY)
  * for the match: then every tactic, outdoor or indoor, means the same on it. [4] of the
  * X limits is the Y sectors' leading bound (129), read as such by UpdateBall. */
 extern uint16_t _playerXQuadrantsCoordinates[15];
+
+int16_t Indoor_BookingSide(void)
+{
+    extern int16_t _foulXCoordinate;
+    return _gIndoor && _foulXCoordinate + 28 > INDOOR_RIGHT ? -1 : 1;
+}
 extern uint16_t _playerYQuadrantCoordinates[16];
 extern uint16_t _ballXQuadrantLimits[5];
 extern uint16_t _ballYQuadrantLimits[6];
@@ -1154,6 +1160,18 @@ void Indoor_TimePenalty(Sprite *player, TeamGeneralInfo *team)
 #endif
             return;
         }
+    }
+}
+
+void Indoor_SpritesSwapped(const Sprite *a, const Sprite *b)
+{
+    if (!_gIndoor)
+        return;
+    for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++) {
+        if (g_indoorSim.penalties[i].player == a)
+            g_indoorSim.penalties[i].player = (Sprite *)b;
+        else if (g_indoorSim.penalties[i].player == b)
+            g_indoorSim.penalties[i].player = (Sprite *)a;
     }
 }
 

@@ -4,6 +4,15 @@ What this fork (`bomb2777/OpenSWOS-Indoor`, branch `indoor`) has added to OpenSW
 first. All of it applies only to a friendly played with INDOOR switched on; with it off, the
 game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
+## 2026-11-21
+
+- **Referee:** a booking close to the right glass no longer hangs the game (the booking now
+  takes place on the other side of the foul).
+- **Time penalty:** a player sitting out who is swapped with one on the court in the bench
+  menu comes back after his five minutes again.
+- "LINOLEUM NO HALF" is now "LINOL. NO HALF", so it fits the lobby's button.
+- Older builds can't play online against this one (compat 1015).
+
 ## 2026-11-20
 
 - **MULTIPLAYER menu:** a YOUR IP row shows the address your friend has to type (asked of a

@@ -1500,6 +1500,7 @@ markPlayersMenuHandler(void)
                     ordTmp = spr1->playerOrdinal;
                     spr1->playerOrdinal = spr2->playerOrdinal;
                     spr2->playerOrdinal = ordTmp;
+                    Indoor_SpritesSwapped(spr1, spr2);   /* INDOOR: a time penalty follows its player */
                 }
 
                 InitializePlayerSpriteFrameIndices();
@@ -3742,6 +3743,7 @@ void MarkPlayersMenuHandler(void)
     int16_t tmpOrd = sprite1->playerOrdinal;
     sprite1->playerOrdinal = sprite2->playerOrdinal;
     sprite2->playerOrdinal = tmpOrd;
+    Indoor_SpritesSwapped(sprite1, sprite2);    /* INDOOR: a time penalty follows its player */
 
     InitializePlayerSpriteFrameIndices();
     ApplyTeamTactics((TeamGame *)_benchTeamGame);

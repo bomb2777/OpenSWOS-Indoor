@@ -17,6 +17,7 @@
 #include "display.h"      /* SIM_REFEREE_ENTRY_BELOW: f(view) */
 #include "game_types.h"
 #include "math68k.h"     /* CalculateDeltaXAndY */
+#include "indoor.h"      /* INDOOR: Indoor_BookingSide, the booking by the right glass */
 
 /* ---- Referee state machine ---- */
 #define REF_INCOMING            1
@@ -119,7 +120,7 @@ __attribute__((used, externally_visible))
 void ActivateReferee(void)
 {
     Sprite *a0 = &_refereeSprite;
-    int16_t d1 = (int16_t)_foulXCoordinate + 28;
+    int16_t d1 = (int16_t)_foulXCoordinate + 28 * Indoor_BookingSide();   /* INDOOR: - 28 by the right glass */
     int16_t d2 = (int16_t)_foulYCoordinate + 5;
 
     a0->destX = d1;
@@ -350,7 +351,7 @@ move_referee:;
         return;
 
     _refState      = REF_WAITING_PLAYER;
-    a0->direction = 6;
+    a0->direction = Indoor_BookingSide() < 0 ? 2 : 6;     /* (INDOOR: facing the player, right) */
     InitRefereeAnimationTable(_refWaitingAnimTable);
     return;
 

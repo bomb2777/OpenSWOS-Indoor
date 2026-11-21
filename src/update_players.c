@@ -2515,7 +2515,7 @@ not_in_penalty:
 
         /* booking_process_entry */
         if (player == _bookedPlayer) {
-            int16_t bx = _foulXCoordinate + 21;
+            int16_t bx = _foulXCoordinate + 21 * Indoor_BookingSide();   /* INDOOR: - 21 by the right glass */
             int16_t by = _foulYCoordinate;
             if (bx != player->x.s.i || by != player->y.s.i) {
                 player->destX = bx;

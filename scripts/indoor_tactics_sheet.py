@@ -30,6 +30,7 @@ LINE_COLOURS = {"D": (40, 90, 220), "M": (20, 150, 60), "A": (210, 40, 40), "K":
 # Each tactic's lines, ordinal 2 first (as kPlaces in src/indoor.c).
 LINES = {
     "2-2-1": "DDMMA", "2-1-2": "DDMAA", "1-2-2": "DMMAA", "3-1-1": "DDDMA", "1-3-1": "DMMMA",
+    "1-1-3": "DMAAA",
 }
 
 

@@ -199,12 +199,13 @@ __attribute__((used, externally_visible))
 void ChooseTacticsInit(void)
 {
     CheckIsTeamNational();
-    _menuEntries[1].fg = (uintptr_t)&_teamTacticsUSERA;
-    _menuEntries[2].fg = (uintptr_t)&_teamTacticsUSERB;
-    _menuEntries[3].fg = (uintptr_t)&_teamTacticsUSERC;
-    _menuEntries[4].fg = (uintptr_t)&_teamTacticsUSERD;
-    _menuEntries[5].fg = (uintptr_t)&_teamTacticsUSERE;
-    _menuEntries[6].fg = (uintptr_t)&_teamTacticsUSERF;
+    /* (INDOOR: the indoor USER A-F's names) */
+    _menuEntries[1].fg = Indoor_UserTacticName(0, (uintptr_t)&_teamTacticsUSERA);
+    _menuEntries[2].fg = Indoor_UserTacticName(1, (uintptr_t)&_teamTacticsUSERB);
+    _menuEntries[3].fg = Indoor_UserTacticName(2, (uintptr_t)&_teamTacticsUSERC);
+    _menuEntries[4].fg = Indoor_UserTacticName(3, (uintptr_t)&_teamTacticsUSERD);
+    _menuEntries[5].fg = Indoor_UserTacticName(4, (uintptr_t)&_teamTacticsUSERE);
+    _menuEntries[6].fg = Indoor_UserTacticName(5, (uintptr_t)&_teamTacticsUSERF);
 }
 
 /* ================================================================
@@ -300,6 +301,9 @@ void EnableOrDisablePlayerFacesItems(void)
         } else {
             entry->isDisabled = 0;
         }
+        /* INDOOR: the faces of the outfield players who do not play (6-10) hidden */
+        if (_gIndoor)
+            entry->isInvisible = (uint16_t)((9 - i) >= Indoor_EditPlayers());
         entry++;
     }
 }
@@ -551,7 +555,8 @@ void EditTactics_CommitPlayerPositionsAndRecalcSkill(void)
 __attribute__((used, externally_visible))
 void ImportTacticsInit(void)
 {
-    /* Empty — original was just rts */
+    /* Empty — original was just rts. (INDOOR: the eleven indoor tactics) */
+    Indoor_ImportTacticsMenu(&_menuEntries[1]);
 }
 
 /* ================================================================
@@ -789,17 +794,18 @@ void SaveAndExitEditTactics(void)
             if (Asset_PromptInsertSaveDiskDf0(_aSaveEditedTact) != 0)
                 return;
 
-            /* Build default filename: tactics name + ".TAC" */
+            /* Build default filename: tactics name + ".TAC" (INDOOR: ".ITC") */
             uint8_t *end = StringCopy((uint8_t *)_editTacticsCurrentTactics.name,
                                        &_importTacticsFilename);
+            uint32_t ext = Indoor_TacticsExt();
             *end++ = '.';
-            *end++ = 'T';
-            *end++ = 'A';
-            *end++ = 'C';
+            *end++ = (uint8_t)(ext >> 16);
+            *end++ = (uint8_t)(ext >> 8);
+            *end++ = (uint8_t)ext;
             *end = '\0';
 
             /* Show file selection dialog */
-            if (SelectFileToSaveDialog(0x2E544143,
+            if (SelectFileToSaveDialog(Indoor_TacticsExt(),
                                         &_importTacticsFilename,
                                         _aSaveEditedTact) != 0)
                 goto cleanup;
@@ -1316,7 +1322,7 @@ void DrawPlayerDirections(void)
     if (_editTacticsBallLocation == _editTacticsLastBallLocation)
         return;
 
-    for (uint16_t p = 1; p <= 10; p++) {
+    for (uint16_t p = 1; p <= Indoor_EditPlayers(); p++) {     /* (INDOOR: 5) */
         /* Get position at current ball location */
         int16_t curX, curY;
         GetPlayerXYPositionFromQuadrant(p, _editTacticsBallLocation,
@@ -1479,6 +1485,8 @@ void DrawLittlePlayersAndBall(void)
         }
 
         /* Player (idx = 1..10) */
+        if ((uint16_t)idx > Indoor_EditPlayers())
+            goto nextIter;              /* INDOOR: only five */
         int8_t playerNum = (int8_t)playerNums[idx];
 
         /* In status 5, only draw the marked player */
@@ -1603,7 +1611,8 @@ void DrawEditTacticsPitchAndPlayers(void)
     DrawMenuItemBackgroundMasked(21, 25, 1, 211);
     DrawMenuItemBackgroundMasked(152, 25, 3, 211);
 
-    /* Draw pitch sprite */
+    /* Draw pitch sprite (INDOOR: the court's teal, no arcs) */
+    Indoor_TacticsPitchColours();
     DrawSprite16Pixels(SPR_TACTICS_PITCH, 22, 36);
 
     /* Draw overlays */
@@ -1642,7 +1651,7 @@ void HandlePlayersOrBallInEditTactics(void)
     _editTacticsNearestSelectPitchWidth = 384;
 
 outerLoop:
-    for (uint16_t i = 0; i < 11; i++) {
+    for (uint16_t i = 0; i <= Indoor_EditPlayers(); i++) {      /* (INDOOR: the ball and five) */
         if (i == _markedPlayerNumber)
             continue;
 
@@ -2345,7 +2354,7 @@ void LoadTactics(void)
     if (GetFilenameAndExtension(0, _aLoadEditedTact, _aLoadEditedTact) != 0)
         goto cleanup;
 
-    if (_extension != 0x2E544143u) { /* '.TAC' */
+    if (_extension != Indoor_TacticsExt()) { /* '.TAC' (INDOOR: '.ITC') */
         ShowErrorMenu(_aNotATacticsFil);
         goto cleanup;
     }
@@ -3393,7 +3402,7 @@ void EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     if (d7 == 0x10) {
         d5 = 1;
         setBgColor(entry41, BLUE_TO_BLACK_8);
-    } else if (d7 < 0xB) {
+    } else if (d7 < Indoor_FirstBenchSlot()) {     /* 11; INDOOR the six who start */
         d5 = 0;
         if (d7 == 0) {
             setBgColor(entry41, YELLOW_GREEN_BLACK_14);
@@ -3404,6 +3413,10 @@ void EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
         d5 = 0;
         setBgColor(entry41, BLUE_TO_PURPLE_11);
     }
+    /* INDOOR: the gap between the starters and the bench (2 px, after row 11) after the
+     * six, as on the PLAY MATCH screen. Set, not added: this runs on every redraw. */
+    if (_gIndoor && d7 >= INDOOR_PLAYERS && d7 < 11)
+        cur->y = (int16_t)(_menuEntries[11].y + d7 * 9 + 2);
 
     /* Get player info */
     TeamFileEx *teamBase = _chooseTacticsTeamPtr;

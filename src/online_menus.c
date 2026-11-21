@@ -1127,6 +1127,21 @@ static void lobby_test_knobs(void)
             if (rec[i].team.countryNumber == file && rec[i].team.teamOrdinal == ordinal) {
                 lobby_pick_team(&rec[i]);
                 lineup_test_swap();
+                /* INDOOR: SWOS_LOBBY_INDOOR_USER=1 picks this player's indoor USER A, made
+                 * different from the other side's first (every player one cell to the right),
+                 * so a USER tactic that did not travel would part the games. */
+                if (getenv("SWOS_LOBBY_INDOOR_USER") && NetplayLobby_IndoorFloor() != INDOOR_OFF) {
+                    TeamTactics *t = Indoor_UserTactic(INDOOR_TACTICS);
+                    for (int32_t pl = 0; pl < 5; pl++)
+                        for (int32_t k = 0; k < 35; k++) {
+                            uint8_t *b = &((uint8_t *)t->positions)[pl * 35 + k];
+                            if ((*b >> 4) < 14)
+                                *b = (uint8_t)(*b + 0x10);
+                        }
+                    NetplayLobby_IndoorLineUp();        /* (arranged first, as the TACTICS screen's pick comes after) */
+                    NetplayLobby_SetTactic(INDOOR_TACTICS);
+                    fprintf(stderr, "[lobby-test] indoor USER A, changed, picked\n");
+                }
                 break;
             }
         }
@@ -1248,7 +1263,10 @@ static const char *tactic_name(const LobbyPlayer *p, char *buf, uint32_t cap)
 
     if (!p->hasTeam)
         return "-";
-    if (NetplayLobby_IndoorFloor() != INDOOR_OFF)     /* INDOOR: the five (indoor_line_up) */
+    if (NetplayLobby_IndoorFloor() != INDOOR_OFF && Indoor_IsUserTactic(p->tactic) &&
+        p != NetplayLobby_Player(NetplayLobby_LocalPlayer()))
+        name = (const char *)p->userTactic.name;                   /* INDOOR: their USER, as sent */
+    else if (NetplayLobby_IndoorFloor() != INDOOR_OFF)     /* INDOOR: the eleven (indoor_line_up) */
         name = Indoor_TacticName((int16_t)p->tactic);
     else if (p->tactic < TACTIC_USER_A)
         name = (const char *)_tacticsStringTable[p->tactic];

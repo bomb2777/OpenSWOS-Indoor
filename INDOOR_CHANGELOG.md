@@ -15,7 +15,14 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
   bottom wall.
 - **The ball is yellow** indoors, as in futsal.
 - **The goals are red and white:** crossbar and posts in bands.
-- Older builds can't play online against this one (compat 1015).
+- **Your own tactics:** EDIT TACTICS on the PLAY MATCH screen works indoors. Make USER A-F
+  for five players on the court and save them as .ITC files; online the other player gets
+  your tactic too.
+- **A sixth tactic, 1-1-3:** three forwards; the two on the wings drop back to midfield when
+  defending.
+- **The little pitch and the tactic editor's pitch** look like the court: no 5 m box, the
+  penalty area in the hall's size.
+- Older builds can't play online against this one (compat 1016).
 
 ## 2026-11-20
 

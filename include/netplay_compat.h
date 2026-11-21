@@ -39,7 +39,8 @@
  * 1013: a ball in the goal stays in the net (no glass bounce out of its corners);
  * 1014: forwards at the box from halfway on, the 1-3-1 wingers a line of their own;
  * 1015: a booking by the right glass takes place on the foul's left (Indoor_BookingSide);
- *   a time penalty follows its player when the bench menu swaps two (Indoor_SpritesSwapped). */
-#define NETPLAY_COMPAT 1015   /* upstream's history -- 16: a long bench is the front row (places 6.. standing before the game's dugouts); 15: a World 2026-27 friendly's long bench (long_bench.c); 14: main's 13 and mod41-match's 13 merged (a world's stoppage time); 13: SWOS 2020's AMIGA60 and MOON gameplay styles (the handshake's style byte 3 and 4: dos_mode.h); 12: a two-legged tie's first leg leaves its injuries and sendings-off on the second (netplay_lobby.c leg_carry); 11: the replay ring is 38000 bytes on SDL, the resync state with it (10: the handshake carries the mods that change the match; 9: the XBOX gameplay style, the handshake's style byte; 8: the host's crowd in the setup; 7: the lobby's match mode and service ids; 6: the lobby chat) */
+ *   a time penalty follows its player when the bench menu swaps two (Indoor_SpritesSwapped);
+ * 1016: the indoor USER A-F (tactics 5-10): the lobby sends them, the setup carries them in USER A/B. */
+#define NETPLAY_COMPAT 1016   /* upstream's history -- 16: a long bench is the front row (places 6.. standing before the game's dugouts); 15: a World 2026-27 friendly's long bench (long_bench.c); 14: main's 13 and mod41-match's 13 merged (a world's stoppage time); 13: SWOS 2020's AMIGA60 and MOON gameplay styles (the handshake's style byte 3 and 4: dos_mode.h); 12: a two-legged tie's first leg leaves its injuries and sendings-off on the second (netplay_lobby.c leg_carry); 11: the replay ring is 38000 bytes on SDL, the resync state with it (10: the handshake carries the mods that change the match; 9: the XBOX gameplay style, the handshake's style byte; 8: the host's crowd in the setup; 7: the lobby's match mode and service ids; 6: the lobby chat) */
 
 #endif

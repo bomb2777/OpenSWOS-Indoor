@@ -158,9 +158,31 @@ const uint8_t *Indoor_ListOrder(const uint8_t *rolesOrder);
  * first five presets in _teamTacticsTable (and of their names and line-up pictures), so
  * a team's tactic 0-4 means them; a team on another tactic plays 2-2-1. All given back
  * at the end of the match. */
-#define INDOOR_TACTICS 5
+#define INDOOR_TACTICS 6       /* 2-2-1 2-1-2 1-2-2 3-1-1 1-3-1, and 1-1-3 (2026-11-21) */
 extern TeamTactics _indoorTactics[INDOOR_TACTICS];
 extern uint16_t    _indoorSidePitch[INDOOR_TACTICS][33];
+
+/* The player's own indoor tactics (2026-11-21, the owner): USER A-F, made in the game's tactic
+ * editor (EDIT TACTICS) as outdoors, saved as .ITC files (the same 370-byte record as a .TAC,
+ * only ordinals 2-6 placed). In an indoor match they are table slots 5-10, after the five, so
+ * a team's tactic 0-10 is an indoor one; they start as copies of 2-2-1 and live for the
+ * session (SAVE / LOAD keep them). The outdoor USER A-F (12-17) are left alone. */
+#define INDOOR_USER_TACTICS 6
+#define INDOOR_ALL_TACTICS  (INDOOR_TACTICS + INDOOR_USER_TACTICS)
+#define INDOOR_TAC_EXT      0x2E495443u     /* ".ITC" (.TAC: 0x2E544143) */
+/* The editor's hooks (edit_tactics.c, tactics_menu.c); outdoors each gives its argument back. */
+struct MenuEntry;
+uint16_t    Indoor_UserTacticSlot(uint16_t outdoorSlot);   /* USER A-F: 12-17 -> 5-10 indoors */
+uintptr_t   Indoor_UserTacticName(int16_t user, uintptr_t outdoorName);
+uint16_t    Indoor_EditPlayers(void);                      /* outfield players to edit: 10, 5 */
+uint32_t    Indoor_TacticsExt(void);                       /* .TAC, .ITC indoors */
+void        Indoor_ImportTacticsMenu(struct MenuEntry *first);  /* entries 1..18 */
+/* Online (netplay_lobby.c): indoors a tactic 5-10 is a USER one too -- its record travels as
+ * the lobby's userTactic, the host's START puts it in USER A or B (outdoor slots 12/13, which
+ * the match setup carries) and marks the team with indoor slot 5 or 6; at an online kick-off
+ * Indoor_BeginMatch copies USER A/B into indoor USER A/B (the player's own back after). */
+int16_t      Indoor_IsUserTactic(int32_t tactic);         /* 5-10 */
+TeamTactics *Indoor_UserTactic(int32_t tactic);           /* its record, 5-10 */
 
 /* The line-up screen's 18 tactic buttons (entries 38-55), indoors: the first five
  * named after the indoor tactics, the rest hidden. The menu is unpacked afresh every
@@ -181,8 +203,10 @@ void Indoor_StadiumRows(struct MenuEntry *first);
  * Indoor_MenuSpritesReloaded. */
 void Indoor_SidePitchColours(void);
 void Indoor_MenuSpritesReloaded(void);
+/* The tactic editor's pitch (sprite 226) the same, before it is drawn (edit_tactics.c). */
+void Indoor_TacticsPitchColours(void);
 
-/* How many tactics a team can choose from: 18 outdoors, INDOOR_TACTICS indoors. */
+/* How many tactics a team can choose from: 18 outdoors, INDOOR_ALL_TACTICS indoors. */
 int16_t Indoor_TacticsCount(void);
 /* An indoor tactic's name (0-4), the indoor line-up of a team (its tactic made one of the
  * five first), and the lobby's team screen shown indoors (online, the host's floor). */

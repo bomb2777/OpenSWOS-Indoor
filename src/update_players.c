@@ -2721,6 +2721,7 @@ not_in_penalty:
                         if (team == &_topTeamData) {
                             dx = positions[idx];
                             dy = positions[idx + 1];
+                            Indoor_KickOffPlace(gs, team == _lastTeamPlayedBeforeBreak, player->playerOrdinal, &dx, &dy);
                             if (dx <= -1000) {
                                 dx += 1000;
                                 dx += freeKickDestX_local;
@@ -2738,6 +2739,7 @@ not_in_penalty:
                         } else {
                             dx = positions[idx];
                             dy = positions[idx + 1];
+                            Indoor_KickOffPlace(gs, team == _lastTeamPlayedBeforeBreak, player->playerOrdinal, &dx, &dy);
                             if (dx <= -1000) {
                                 dx += 1000;
                                 dx = -dx;
@@ -2800,6 +2802,7 @@ not_in_penalty:
 
     finalize:
         Indoor_FreeKickSpread(player, team);     /* INDOOR: forwards out wide at a free kick */
+        Indoor_KeeperOptions(player, team);      /* INDOOR: two come back for the keeper's ball */
         /* UpdatePlayerSpeed */
         UpdatePlayerSpeed(player, team);
 

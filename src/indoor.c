@@ -1128,6 +1128,35 @@ static void mirror_dest(int16_t *dest, int32_t saved)
 
 static void mark_glass(Sprite *ball, int16_t side);
 
+/* The ball came off the glass: a pass on its way (passingToPlayer, its receiver in
+ * passToPlayerPtr) was going somewhere else. SWOS picks the receiver once, from the
+ * pass's direction, and keeps him until the ball arrives -- outdoors the ball never turns
+ * back. Indoors (a tester, 2026-11-24: "the players are not activated well after the ball
+ * comes off the boards") both teams' pass is ended here: the old receiver stops running
+ * for the old spot, the passer may be picked again, and UpdatePlayerBeingPassedTo picks
+ * the nearest man to the ball from the next frame on, as for a loose ball. */
+static void glass_reselect(void)
+{
+    extern TeamGeneralInfo _topTeamData, _bottomTeamData;
+    TeamGeneralInfo *teams[2] = { &_topTeamData, &_bottomTeamData };
+    if (_gameStatePl != ST_GAME_IN_PROGRESS)
+        return;
+    for (int16_t t = 0; t < 2; t++) {
+        TeamGeneralInfo *team = teams[t];
+        Sprite *to = team->passToPlayerPtr;
+        if (!team->passingToPlayer)
+            continue;
+        if (to && to->playerState == PL_NORMAL) {
+            to->destX = to->x.s.i;
+            to->destY = to->y.s.i;
+        }
+        team->passingToPlayer = 0;
+        team->passToPlayerPtr = (Sprite *)0;
+        team->passingKickingPlayer = (Sprite *)0;
+        team->playerSwitchTimer = 0;
+    }
+}
+
 int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY)
 {
     int16_t bx = ball->x.s.i;
@@ -1160,6 +1189,7 @@ int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY)
     }
     if (hit) {
         mark_glass(ball, side);         /* (before its speed is cut) */
+        glass_reselect();
         ball->x.raw = savedX;
         ball->y.raw = savedY;
         ball->speed = (int16_t)(ball->speed - (ball->speed >> INDOOR_WALL_KEEP_SHIFT));
@@ -1173,6 +1203,35 @@ int16_t Indoor_BallAtWall(Sprite *ball, int32_t savedX, int32_t savedY)
  * for the match: then every tactic, outdoor or indoor, means the same on it. [4] of the
  * X limits is the Y sectors' leading bound (129), read as such by UpdateBall. */
 extern uint16_t _playerXQuadrantsCoordinates[15];
+
+void Indoor_KickOffPlace(int16_t gs, int16_t kicking, int16_t ordinal, int16_t *dx, int16_t *dy)
+{
+    if (!_gIndoor || gs != ST_PLAYERS_TO_INITIAL_POSITIONS || *dx <= -1000 || *dx >= 1000)
+        return;
+    if (kicking && ordinal == 5) {      /* (outdoor role 10, at (220, 320) beside the kicker) */
+        *dx = 210;
+        *dy = 290;                      /* 30 behind the halfway line (320), 40 to the side */
+    } else if (!kicking && (ordinal == 5 || ordinal == 6)) {
+        *dy -= 20;                      /* (roles 10, 11 at y 277: 43 from the line, now 63) */
+    }
+}
+
+#define KEEPER_OPTIONS_AFTER 25     /* frames the keeper has held it first (half a second) */
+void Indoor_KeeperOptions(Sprite *player, const TeamGeneralInfo *team)
+{
+    extern int16_t _stoppageTimerActive, _gameState;
+    extern TeamGeneralInfo _topTeamData, *_lastTeamPlayedBeforeBreak;
+    int16_t up;
+    if (!_gIndoor || _gameState != ST_KEEPER_HOLDS_BALL || team != _lastTeamPlayedBeforeBreak)
+        return;
+    if ((player->playerOrdinal != 2 && player->playerOrdinal != 3) || player->sentAway ||
+        player->playerState != PL_NORMAL || _stoppageTimerActive < KEEPER_OPTIONS_AFTER)
+        return;
+    up = team == &_topTeamData;         /* (its own goal at the top) */
+    /* ordinal 2 on the team's right (a top team's right is the low x), 3 on its left */
+    player->destX = (int16_t)(336 + (((player->playerOrdinal == 2) == up) ? -1 : 1) * (INDOOR_BOX_HALF_WIDTH + 14));
+    player->destY = (int16_t)(up ? INDOOR_TOP + INDOOR_BOX_DEPTH * 2 / 3 : INDOOR_BOTTOM - INDOOR_BOX_DEPTH * 2 / 3);
+}
 
 int16_t Indoor_BookingSide(void)
 {
@@ -1435,6 +1494,31 @@ void Indoor_SpritesSwapped(const Sprite *a, const Sprite *b)
             g_indoorSim.penalties[i].player = (Sprite *)b;
         else if (g_indoorSim.penalties[i].player == b)
             g_indoorSim.penalties[i].player = (Sprite *)a;
+    }
+}
+
+extern TeamGeneralInfo _bottomTeamData;
+
+void Indoor_PlayersEntered(void)
+{
+    if (!_gIndoor || _gameState == ST_STARTING_GAME)
+        return;
+    for (int16_t i = 0; i < INDOOR_PENALTY_SLOTS; i++) {
+        Sprite *p = g_indoorSim.penalties[i].player;
+        TeamGeneralInfo *teams[2] = { &_topTeamData, &_bottomTeamData };
+        if (!p || !p->sentAway)
+            continue;
+        for (int16_t t = 0; t < 2; t++)
+            for (int16_t k = 0; k < 11; k++)
+                if (teams[t]->spritesTable && teams[t]->spritesTable[k] == p)
+                    g_indoorSim.penalties[i].team = teams[t];
+        p->x.s.i = p->destX = INDOOR_BENCH_X + 10;
+        p->y.s.i = p->destY = (int16_t)(team_bench_y(g_indoorSim.penalties[i].team) + 20);
+        p->x.s.frac = p->y.s.frac = 0;
+#ifdef SWOS_SDL_BUILD
+        fprintf(stderr, "[indoor] time penalty goes on over half time: player %d, back at minute %d\n",
+                p->playerOrdinal, g_indoorSim.penalties[i].backAt);
+#endif
     }
 }
 

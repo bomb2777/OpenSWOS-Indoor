@@ -431,6 +431,7 @@ void InitPlayersBeforeEnteringPitch(void)
             spritesTableA = _team2SpritesTable;
         }
     }
+    Indoor_PlayersEntered();    /* INDOOR: a time penalty goes on over half time */
     { extern void ModMatch_PlayersEntered(void); ModMatch_PlayersEntered(); }   /* a mod's lines left out */
 }
 
@@ -770,7 +771,9 @@ void PrepareForInitialKick(void)
     _foulXCoordinate = 0x150;
     _foulYCoordinate = 0x1C1;
     _cameraDirection = direction;
-    _playerTurnFlags = turnFlags;
+    /* INDOOR: the kick-off may go backwards (a tester, 2026-11-24): every direction, as at a
+     * free kick, not only sideways and forwards */
+    _playerTurnFlags = _gIndoor ? 0xFF : turnFlags;
     _lastTeamPlayedBeforeBreak = kickoffTeam;
     _stoppageTimerTotal = 0;
     _stoppageTimerActive = 0;

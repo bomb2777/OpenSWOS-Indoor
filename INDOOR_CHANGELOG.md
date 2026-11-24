@@ -4,6 +4,19 @@ What this fork (`bomb2777/OpenSWOS-Indoor`, branch `indoor`) has added to OpenSW
 first. All of it applies only to a friendly played with INDOOR switched on; with it off, the
 game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
+## 2026-11-24
+
+- **Time penalty over half time:** a red or second yellow shortly before the break goes on
+  into the second half; the player sits by his own bench and comes back after five minutes.
+- **Multiplayer:** a PASTE button beside HOST ADDRESS takes the IP from the clipboard.
+- **After the glass:** a pass that comes off the boards no longer keeps its old receiver;
+  the player nearest the ball is picked, as for a loose ball.
+- **Keeper's ball:** two players come back to the sides of the own penalty area for a short
+  ball out of the keeper's hands.
+- **Kick-off:** one player at the spot, his team-mate behind him; the kick-off may go
+  backwards; the other team stands further away.
+- Older builds can't play online against this one (compat 1017).
+
 ## 2026-11-21
 
 - **Referee:** a booking close to the right glass no longer hangs the game (the booking now

@@ -55,6 +55,7 @@ enum {
     P2PMenu_ipLabel,        /* (OpenSWOS-Indoor) YOUR IP, after the rest so they keep their numbers */
     P2PMenu_ip,
     P2PMenu_modeJoin,       /* (OpenSWOS-Indoor) JOIN beside HOST (P2PMenu_mode) */
+    P2PMenu_paste,          /* (OpenSWOS-Indoor) PASTE beside HOST ADDRESS */
     P2PMenu_kNumEntries
 };
 
@@ -222,6 +223,29 @@ static const char *ip_text(void)
     return s_ipText;
 }
 
+/* (OpenSWOS-Indoor) PASTE: the host's address from the clipboard (YOUR IP's COPY on the
+ * host's side, sent over a chat): only an IPv4 address is taken, spaces around it trimmed. */
+static void p2pMenu_paste_OnSelect(void)
+{
+    char *clip, *a, *e;
+    if (s_hosting || link_is_open(P2PLink_State()))
+        return;
+    notice(NULL, NULL);
+    clip = SDL_GetClipboardText();
+    a = clip ? clip : (char *)"";
+    while (*a == ' ' || *a == '\t' || *a == '\r' || *a == '\n')
+        a++;
+    e = a + strlen(a);
+    while (e > a && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r' || e[-1] == '\n'))
+        *--e = 0;
+    if (strlen(a) < sizeof s_address && P2PLink_IsAddress(a))
+        snprintf(s_address, sizeof s_address, "%s", a);
+    else
+        notice("NO IP ADDRESS IN THE CLIPBOARD", "COPY ONE, THEN CHOOSE PASTE");
+    if (clip)
+        SDL_free(clip);
+}
+
 static void p2pMenu_ip_OnSelect(void)
 {
     if (StunIp_State() == STUN_IP_KNOWN) {
@@ -262,10 +286,11 @@ static void p2pMenu_OnDraw(void)
      * that said HOST A GAME / JOIN A GAME was not clear about what pressing it did. */
     set_row(P2PMenu_mode, "HOST", !open);
     set_row(P2PMenu_modeJoin, "JOIN", !open);
+    set_row(P2PMenu_paste, "PASTE", !open && !s_hosting);
     if (!open)
         entry_at(s_hosting ? P2PMenu_mode : P2PMenu_modeJoin)->bgColor = kGreen;
     set_row(P2PMenu_address,
-            s_hosting ? "NOT NEEDED WHEN HOSTING" : (s_address[0] ? s_address : "TYPE IT HERE"),
+            s_hosting ? "NOT NEEDED" : (s_address[0] ? s_address : "TYPE IT HERE"),   /* (OpenSWOS-Indoor: shorter, PASTE beside it) */
             !open && !s_hosting);
     set_row(P2PMenu_port, s_port, !open);
     set_row(P2PMenu_delay, delay_text(), !open);
@@ -375,6 +400,7 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(p2pMenu_exit_OnSelect),
     HANDLER(p2pMenu_ip_OnSelect),
     HANDLER(p2pMenu_join_OnSelect),
+    HANDLER(p2pMenu_paste_OnSelect),
 };
 
 #undef HANDLER

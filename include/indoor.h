@@ -121,6 +121,12 @@ void Indoor_WallSpot(int16_t ballX, int16_t ballY, int16_t goalY, int16_t slot, 
  * swapped with one on the court, never came back). */
 void Indoor_SpritesSwapped(const Sprite *a, const Sprite *b);
 
+/* The teams walked on (InitPlayersBeforeEnteringPitch): at the second half a time penalty
+ * goes on over half time (the owner, 2026-11-24) -- its team found again (the halves swap
+ * the top and bottom teams' records) and the player back by his team's dugout, not at the
+ * tunnel with the rest. */
+void Indoor_PlayersEntered(void);
+
 /* Which side of the foul a booking takes place on: +1 the original's (the player at the foul
  * + 21, the referee at + 28, facing left), -1 indoors when that would be beyond the right
  * glass -- keep_inside held the player off his spot, the referee waited for him for ever: a
@@ -131,6 +137,18 @@ int16_t Indoor_BookingSide(void);
  * its forwards (ordinals 5, 6) go out to their sides, grid x 1 and 13, not the kicker
  * (UpdatePlayers' finalize, every destination before the move; the owner, 2026-11-20). */
 void Indoor_FreeKickSpread(Sprite *player, const TeamGeneralInfo *team);
+/* The keeper holds the ball (ST_KEEPER_HOLDS_BALL): after a moment ordinals 2 and 3 of his
+ * team come back to the sides of their own penalty area, just outside it, for a short ball
+ * out of his hands (a tester, 2026-11-24). SWOS sends nobody towards a keeper's ball: its
+ * team-mate who comes for a free kick is the pass target, and there is none while the keeper
+ * holds it (ballInPlay 0). UpdatePlayers' finalize, as Indoor_FreeKickSpread. */
+void Indoor_KeeperOptions(Sprite *player, const TeamGeneralInfo *team);
+/* The kick-off's places (gs 0, _topStartingPositions / _bottomStartingPositions, in the
+ * table's own units, before UpdatePlayers mirrors and maps them; a tester, 2026-11-24:
+ * "one player at the spot, the kick-off backwards must be possible, the other team further
+ * away"): the kicking side's ordinal 5 not beside the kicker (6) but behind him in its own
+ * half, the other side's front two further back. Nothing outdoors. */
+void Indoor_KickOffPlace(int16_t gs, int16_t kicking, int16_t ordinal, int16_t *dx, int16_t *dy);
 
 /* Whether the player in this slot of a side (0 = the keeper .. 10) is parked: never
  * offered for substitution. Always 0 outdoors. */

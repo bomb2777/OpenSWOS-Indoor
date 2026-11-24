@@ -1,6 +1,6 @@
 {
   "name": "p2pMenu",
-  "comment": "OpenSWOS's MULTIPLAYER menu: two players connect directly, by IP address. JSON-only (docs/MENUS.md section 10); handlers in src/p2p_menu.c, the connection in src/p2p_link.c. (OpenSWOS-Indoor: YOUR IP, entries 15-16, the public address from src/stun_ip.c; choosing it copies it. Entry 3 is HOST and 17 JOIN, two buttons for the old HOST A GAME / JOIN A GAME switch.)",
+  "comment": "OpenSWOS's MULTIPLAYER menu: two players connect directly, by IP address. JSON-only (docs/MENUS.md section 10); handlers in src/p2p_menu.c, the connection in src/p2p_link.c. (OpenSWOS-Indoor: YOUR IP, entries 15-16, the public address from src/stun_ip.c; choosing it copies it. Entry 3 is HOST and 17 JOIN, two buttons for the old HOST A GAME / JOIN A GAME switch; 18 PASTE fills HOST ADDRESS from the clipboard.)",
   "menu_flags": {
     "dos_redraw": true
   },
@@ -58,11 +58,11 @@
     {
       "kind": "entry",
       "name": "address",
-      "coords": { "x": 132, "y": 60, "w": 150, "h": 14 },
+      "coords": { "x": 132, "y": 60, "w": 102, "h": 14 },
       "commands": [
         { "op": "text_no_ptr", "flags": "0x0" },
         { "op": "colors", "frame_color": 0, "background_color": 13 },
-        { "op": "nav", "left": -1, "right": -1, "up": 3, "down": 7 },
+        { "op": "nav", "left": -1, "right": 18, "up": 3, "down": 7 },
         { "op": "onselect_fire", "func": "p2pMenu_address_OnSelect" }
       ]
     },
@@ -181,6 +181,17 @@
         { "op": "colors", "frame_color": 0, "background_color": 13 },
         { "op": "nav", "left": 3, "right": -1, "up": -1, "down": 5 },
         { "op": "onselect_fire", "func": "p2pMenu_join_OnSelect" }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "paste",
+      "coords": { "x": 236, "y": 60, "w": 46, "h": 14 },
+      "commands": [
+        { "op": "text_no_ptr", "flags": "0x0" },
+        { "op": "colors", "frame_color": 0, "background_color": 13 },
+        { "op": "nav", "left": 5, "right": -1, "up": 17, "down": 7 },
+        { "op": "onselect_fire", "func": "p2pMenu_paste_OnSelect" }
       ]
     }
   ]

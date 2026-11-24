@@ -13,6 +13,7 @@
 #include "game_types.h"
 #include "netplay_match.h"    /* NetplayMatch_IsLive: no goal replay online (SDL) */
 #include "stoppage.h"
+#include "indoor.h"          /* INDOOR: _gIndoor, the kick-off after a goal backwards too */
 extern int32_t ModMatch_Active(void);   /* (mod_match.c: a mod's match is the one being played) */
 
 /* ---- Extern globals ---- */
@@ -775,7 +776,8 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
 
         _gameState = ST_PLAYERS_TO_INITIAL_POSITIONS;
         _breakCameraMode = 0xFFFF;
-        writeRestartGlobalsAndStopPlayers(opTeam, 336, 449, camDir, turnFlags);
+        /* (INDOOR: the kick-off after a goal may go backwards too: match_setup.c) */
+        writeRestartGlobalsAndStopPlayers(opTeam, 336, 449, camDir, _gIndoor ? 0xFF : turnFlags);
     }
 }
 

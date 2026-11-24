@@ -389,10 +389,21 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
    SWOS_LOBBY_INDOOR_USER=1" scripts/netplay_lobby_test.sh` proves it (a changed USER A on
    one side; both end identical; `[indoor] online: side 1 plays its own tactic`).
    NETPLAY_COMPAT 1016.
+5.10. **Testers' round** (2026-11-24): a time penalty goes on over half time (its team found
+   again and the player back by his dugout: `Indoor_PlayersEntered`, from
+   `InitPlayersBeforeEnteringPitch` -- the halves swap the top and bottom team records); a
+   pass that comes off the glass is ended for both teams (`glass_reselect`: SWOS keeps a
+   pass's receiver until the ball arrives, `UpdatePlayerBeingPassedTo`); with the keeper
+   holding the ball ordinals 2 and 3 come back to the sides of the own penalty area after
+   half a second (`Indoor_KeeperOptions` -- SWOS sends nobody: no pass target while
+   `ballInPlay` is 0); the kick-off: one at the spot, ordinal 5 behind him, the other side's
+   front two 20 further back (`Indoor_KickOffPlace`, in the starting tables' units), and
+   every direction allowed (`_playerTurnFlags` 0xFF indoors, match_setup.c and game_timers.c:
+   outdoors only sideways and forwards). NETPLAY_COMPAT 1017.
 6. **Online** (2026-11-04) — done:
    - **The fork's own identity** (`include/project_identity.h`): `PROJECT_NETPLAY_TAG`
      `OPENSWOS-INDOOR`, `PROJECT_GGPO_GAME` `openswos-indoor`, and `NETPLAY_COMPAT` from
-     1000 (1016; `include/netplay_compat.h`), where upstream's numbers never reach -- a
+     1000 (1017; `include/netplay_compat.h`), where upstream's numbers never reach -- a
      fork build never meets one that has no INDOOR. A rebase that brings a raise of
      upstream's raises ours by one. The handshake also compares the rollback state's layout,
      which the indoor state below changed.

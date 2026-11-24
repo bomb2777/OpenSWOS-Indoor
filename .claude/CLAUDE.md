@@ -201,7 +201,7 @@ only, never for a competition, career, training or arcade match (online: the hos
 `_gIndoor` and nothing else, and with it 0 a match plays exactly as upstream's** -- the career
 golden test (and the replay/rollback/netplay rigs, where `tests/dos` exists) prove it.
 `SWOS_INDOOR=1` forces it for a test. Online (phase 6) the HOST picks it in the lobby (PITCH TYPE
-→ LINOLEUM), the match setup carries the floor (version 5) and `g_indoorSim` is its rollback
+→ LINOLEUM), the match setup carries the floor (version 7 since upstream took 5 and 6) and `g_indoorSim` is its rollback
 state; the fork has its own online identity (`OPENSWOS-INDOOR`, `NETPLAY_COMPAT` from 1000) and
 MULTIPLAYER opens the direct-IP menu. Built in phases (INDOOR.md "Plan"); keep the doc's status
 line current.

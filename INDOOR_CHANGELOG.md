@@ -15,7 +15,8 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
   ball out of the keeper's hands.
 - **Kick-off:** one player at the spot, his team-mate behind him; the kick-off may go
   backwards; the other team stands further away.
-- Older builds can't play online against this one (compat 1017).
+- Brought up to date with OpenSWOS (its kit colours, CALL BENCH, the online shoot-out and
+  the rest of its changes). Older builds can't play online against this one (compat 1023).
 
 ## 2026-11-21
 

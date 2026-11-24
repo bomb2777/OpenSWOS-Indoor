@@ -416,7 +416,7 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      `LOBBY_PITCH_INDOOR` + the floor in `LobbyRules.pitchType` (`include/netplay_lobby.h`),
      so the rules' wire format is unchanged; `clamp_rules` accepts it. At kick-off the lobby
      sets `_gIndoorOnlineFloor` and the floor's pitch type (`NetplayLobby_ApplyMatch`).
-   - **The match setup carries the floor** (`src/netplay_setup.c`, version 5: one word after
+   - **The match setup carries the floor** (`src/netplay_setup.c`, version 7 since the rebase onto upstream 49023cd6, which took 5 and 6 for CALL BENCH and the kit rule: one word after
      the crowd, the floor + 1, 0 outdoors), so the joiner and `--srp-resim` play the hall
      from the host's data; a version-4 setup is outdoors. `Indoor_BeginMatch` takes
      `_gIndoorOnlineFloor` while `NetplayMatch_Enabled()` (never this machine's FRIENDLY

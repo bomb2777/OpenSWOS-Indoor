@@ -4,6 +4,11 @@ What this fork (`bomb2777/OpenSWOS-Indoor`, branch `indoor`) has added to OpenSW
 first. All of it applies only to a friendly played with INDOOR switched on; with it off, the
 game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
+## 2026-11-25
+
+- Brought up to date with OpenSWOS again (World 2026-27's national kits and shirt numbers,
+  Serbia's flag, career and national-coach fixes). Online compatibility unchanged (compat 1023).
+
 ## 2026-11-24
 
 - **Time penalty over half time:** a red or second yellow shortly before the break goes on

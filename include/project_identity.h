@@ -31,7 +31,7 @@
 #define PROJECT_GGPO_GAME       "openswos-indoor"
 #define PROJECT_TEAM_FORMAT     "openswos-team"
 /* The public matchmaking server (and recorder, reports, team check): its host. */
-#define PROJECT_MM_HOST         "online.openswos.net"
+#define PROJECT_MM_HOST         "87.229.115.28"     /* OpenSWOS-Indoor: the owner's VPS (2026-11-27) */
 
 /* The player's folder: saves, SWOS.ini, SWOS.log, the assets the setup makes (swos_io.c,
  * tools/swosdata SwosData_DefaultAssetsDir) -- Documents/<it> on Windows, the app-data

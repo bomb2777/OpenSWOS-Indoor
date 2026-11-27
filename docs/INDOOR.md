@@ -1,6 +1,6 @@
 # INDOOR.md — six a side in a hall
 
-> **Status (2026-11-09): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2-5.5 (the owner's lists after playing), 5.6 (the hall's menu music, PC), 5.7, 5.8 (the tactics made for the court), 6 (online, by direct IP, fork builds only).** This fork's own
+> **Status (2026-11-27): in progress — phases 1–5 done (the switch, five a side, tactics, court and walls, the hall), phases 5.1 (six a side, the indoor rules, the hall's sides), 5.2-5.5 (the owner's lists after playing), 5.6 (the hall's menu music, PC), 5.7, 5.8 (the tactics made for the court), 6 (online, fork builds only: direct IP, since 2026-11-27 the fork's own server).** This fork's own
 > feature (`bomb2777/OpenSWOS-Indoor`, branch `indoor`); upstream OpenSWOS has no INDOOR.
 
 ## What it is
@@ -407,9 +407,14 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      fork build never meets one that has no INDOOR. A rebase that brings a raise of
      upstream's raises ours by one. The handshake also compares the rollback state's layout,
      which the indoor state below changed.
-   - **Direct IP, no server of our own:** the main menu's MULTIPLAYER opens `p2p/p2pMenu`
-     (`MultiplayerMenuSelected`, `src/menus.c`) instead of the login to upstream's server.
-     A connected pair goes to the usual lobby.
+   - **Our own server** (since 2026-11-27; until then direct IP only): the main menu's
+     MULTIPLAYER opens the online flow as upstream's does (`swos2020/logInMenu`: name, player
+     list, lobby), against the fork's matchmaking server on the owner's VPS
+     (`PROJECT_MM_HOST` 87.229.115.28, port 19602; `SWOS_MM_HOST` / SWOS.ini `matchmaker=`
+     override it). The server is upstream's `third_party/matchmaker`, built here by
+     `scripts/build_openswos_indoor_server.sh <version>` (static OpenSSL, glibc <= Debian 13's)
+     into `dist/openswos_indoor_server-<version>.tar.gz`, which the owner's Ansible installs.
+     The direct-IP menu stays for tests (`--menu=p2p/p2pMenu`).
    - **The host chooses it in the lobby**, on PITCH TYPE: ... SPRING, RANDOM, **LINOLEUM**
      (`next_pitch`, `src/online_menus.c`), which sets SUBSTITUTES to 5 FROM 5 as the
      FRIENDLY screen's row does (leaving it: 2 FROM 5). The value is

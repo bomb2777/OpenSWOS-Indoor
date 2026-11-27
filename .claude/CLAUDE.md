@@ -203,7 +203,8 @@ golden test (and the replay/rollback/netplay rigs, where `tests/dos` exists) pro
 `SWOS_INDOOR=1` forces it for a test. Online (phase 6) the HOST picks it in the lobby (PITCH TYPE
 → LINOLEUM), the match setup carries the floor (version 7 since upstream took 5 and 6) and `g_indoorSim` is its rollback
 state; the fork has its own online identity (`OPENSWOS-INDOOR`, `NETPLAY_COMPAT` from 1000) and
-MULTIPLAYER opens the direct-IP menu. Built in phases (INDOOR.md "Plan"); keep the doc's status
+its own matchmaking server (`PROJECT_MM_HOST`, the owner's VPS; MULTIPLAYER opens the online flow,
+as upstream's; `scripts/build_openswos_indoor_server.sh <version>` builds the server's archive). Built in phases (INDOOR.md "Plan"); keep the doc's status
 line current.
 
 **`SWOS_WORLDS`** (default 1; `make SWOS_WORLDS=0`, the same on `Makefile.amiga`): the football worlds

@@ -36,6 +36,7 @@
 
 class Recorder;
 class ReportDesk;
+class RankDesk;     // OpenSWOS-Indoor: the ranking desk (RankDesk.h)
 struct ssl_st;
 struct ssl_ctx_st;
 
@@ -116,7 +117,8 @@ class TcpGate
 {
 public:
     // Listens only if there is someone to hand a connection to.
-    TcpGate(uint16_t port, WebGate* web, Recorder* recorder, ReportDesk* reports = nullptr);
+    TcpGate(uint16_t port, WebGate* web, Recorder* recorder, ReportDesk* reports = nullptr,
+            RankDesk* rank = nullptr);
     ~TcpGate();
 
     void Update();
@@ -135,5 +137,6 @@ private:
     WebGate* m_web;
     Recorder* m_recorder;
     ReportDesk* m_reports;
+    RankDesk* m_rank;
     std::vector<Pending> m_pending;
 };

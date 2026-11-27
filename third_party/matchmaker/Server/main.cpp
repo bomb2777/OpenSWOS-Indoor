@@ -15,6 +15,8 @@
 #include "TeamDesk.h"
 #include "Recorder.h"
 #include "ReportDesk.h"
+#include "RankDesk.h"
+#include "rank_proto.h"
 #include "WebGate.h"
 #include <csignal>
 
@@ -47,11 +49,13 @@ int main(int argc, char** argv)
     std::string ledgerPath;
     std::string teamsFile;
     std::string tlsCert, tlsKey;
+    RankOptions rankOptions;            // OpenSWOS-Indoor: the ranking desk (RankDesk.h)
     auto usage = [&]() {
         std::cerr << "usage: " << argv[0] << " [port] [--relay] [--netem PROFILE|cycle]"
                      " [--netem-seed N] [--record] [--recordings DIR] [--ledger FILE]\n"
                      "       [--reports DIR] [--websocket [--tls-cert FILE --tls-key FILE]]\n"
                      "       [--teams FILE] [--relay-fallback]\n"
+                     "       [--rank-key FILE --rank-ranking ID [--rank-api URL]] [--rank-keygen FILE]\n"
                      "  port        UDP, 1-65535, default 19602\n"
                      "  --relay     OpenSWOS pairs play through this server\n"
                      "  --relay-fallback  a pair whose direct connection fails plays through\n"
@@ -79,7 +83,14 @@ int main(int argc, char** argv)
                      "              same port number, and any match with one in it is relayed\n"
                      "  --tls-cert  with --tls-key: also wss://, on the same port, for pages\n"
                      "              served over https -- PEM files (certbot's fullchain.pem and\n"
-                     "              privkey.pem), re-read within a minute when they change\n";
+                     "              privkey.pem), re-read within a minute when they change\n"
+                     "  --rank-key  OpenSWOS-Indoor: the ranking desk -- games log in to SWOS United's\n"
+                     "              site and report their ranked matches through this server\n"
+                     "              (TCP, the same port number), sealed to this secret key\n"
+                     "  --rank-ranking  the ranking_id their matches go into (OOO Indoor: 16)\n"
+                     "  --rank-api  the API (default https://swos.swosunited.com; http:// for a test)\n"
+                     "  --rank-keygen  write a new secret key to FILE, print its public key, exit\n"
+                     "  --rank-selftest  the sealed messages' round trip, then exit\n";
         return 2;
     };
     for (int i = 1; i < argc; i++) {
@@ -111,6 +122,18 @@ int main(int argc, char** argv)
             tlsKey = argv[++i];
         } else if (a == "--teams" && i + 1 < argc) {
             teamsFile = argv[++i];
+        } else if (a == "--rank-key" && i + 1 < argc) {
+            rankOptions.keyFile = argv[++i];
+        } else if (a == "--rank-ranking" && i + 1 < argc) {
+            rankOptions.ranking = atoi(argv[++i]);
+        } else if (a == "--rank-api" && i + 1 < argc) {
+            rankOptions.api = argv[++i];
+        } else if (a == "--rank-keygen" && i + 1 < argc) {
+            return RankDesk::KeyGen(argv[++i]);
+        } else if (a == "--rank-selftest") {
+            int r = Rank_SelfTest();
+            std::cout << "rank selftest " << (r ? "FAILED " + std::to_string(r) : std::string("passed")) << "\n";
+            return r ? 1 : 0;
         } else if (a == "--ledger" && i + 1 < argc) {
             ledgerPath = argv[++i];
         } else {
@@ -126,6 +149,10 @@ int main(int argc, char** argv)
     }
     if (tlsCert.empty() != tlsKey.empty()) {
         std::cerr << "--tls-cert and --tls-key go together\n";
+        return 2;
+    }
+    if (!rankOptions.keyFile.empty() && rankOptions.ranking <= 0) {
+        std::cerr << "--rank-key needs --rank-ranking (the ranking_id the matches count in)\n";
         return 2;
     }
     if (!tlsCert.empty() && !websocket) {
@@ -155,8 +182,9 @@ int main(int argc, char** argv)
     // arrives there, because the browser build sends its datagrams to that port.
     WebGate web(websocket, (uint16_t)port, tlsCert, tlsKey);
     ReportDesk reports(!reportsDir.empty(), ledger, reportsDir);
+    RankDesk rank(rankOptions, ledger);
     TcpGate tcp((uint16_t)port, web.Enabled() ? &web : nullptr, recorder.Enabled() ? &recorder : nullptr,
-                reports.Enabled() ? &reports : nullptr);
+                reports.Enabled() ? &reports : nullptr, rank.Enabled() ? &rank : nullptr);
     std::signal(SIGINT, OnStopSignal);
     std::signal(SIGTERM, OnStopSignal);
 #ifndef _WIN32
@@ -176,12 +204,13 @@ int main(int argc, char** argv)
         web.Update();
         recorder.Update();
         reports.Update();
+        rank.Update();
         // UDP -- the game's messages and every relayed packet -- wakes the wait at once; TCP
         // (browsers, recording streams, reports) is polled by the Updates above. So the wait
         // is a millisecond only while a TCP connection is open, and otherwise 20: an idle
         // server going round a thousand times a second cost two thirds of a core on an Atom
         // N2800 (online.swos.eu, 2026-10-31), where 50 times a second costs next to nothing.
-        const int wait = tcp.Busy() || web.Busy() || recorder.Busy() || reports.Busy() ? 1 : 20;
+        const int wait = tcp.Busy() || web.Busy() || recorder.Busy() || reports.Busy() || rank.Busy() ? 1 : 20;
         while (enet_host_service(connections.Host(), &event, (enet_uint32)wait) > 0)
         {
             switch (event.type) {

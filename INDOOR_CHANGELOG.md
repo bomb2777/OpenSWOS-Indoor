@@ -6,9 +6,15 @@ game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
 ## 2026-11-27
 
+- **Ranked matches (OOO Indoor):** MULTIPLAYER now logs in with your swosunited.com account
+  (username + password). When opening a game, choose RANKED (OOO INDOOR): played in the hall
+  (PITCH TYPE LINOLEUM), and after each match both games send the result to the OOO Indoor
+  ranking on swosunited.com. Rematches are further legs of the same session; leaving the lobby
+  closes it, and the site scores it within five minutes. Older builds can't play online against
+  this one (compat 1024).
 - **Multiplayer has its own server now:** MULTIPLAYER opens the online flow (name, player
   list, lobby) as in OpenSWOS, against the INDOOR server (87.229.115.28). No IP addresses
-  to swap any more. Online compatibility unchanged (compat 1023).
+  to swap any more.
 
 ## 2026-11-25
 

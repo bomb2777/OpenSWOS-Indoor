@@ -62,7 +62,13 @@ set(SWOS_TREE "${CMAKE_CURRENT_SOURCE_DIR}/../..")
 add_executable(swos-matchmaker ${server_sources} ${common_sources}
     "${SWOS_TREE}/src/netem_core.c"
     "${SWOS_TREE}/src/srp_writer.c"
-    "${SWOS_TREE}/src/miniz_impl.c")
+    "${SWOS_TREE}/src/miniz_impl.c"
+    # OpenSWOS-Indoor: the ranking desk's sealed messages (Server/RankDesk.cpp, include/rank_proto.h)
+    "${SWOS_TREE}/src/rank_seal.c"
+    "${SWOS_TREE}/third_party/monocypher/monocypher.c")
+target_compile_definitions(swos-matchmaker PRIVATE RANK_SERVER=1)
+find_package(Threads REQUIRED)
+target_link_libraries(swos-matchmaker Threads::Threads)
 target_include_directories(swos-matchmaker PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Server/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/include"

@@ -204,7 +204,10 @@ golden test (and the replay/rollback/netplay rigs, where `tests/dos` exists) pro
 → LINOLEUM), the match setup carries the floor (version 7 since upstream took 5 and 6) and `g_indoorSim` is its rollback
 state; the fork has its own online identity (`OPENSWOS-INDOOR`, `NETPLAY_COMPAT` from 1000) and
 its own matchmaking server (`PROJECT_MM_HOST`, the owner's VPS; MULTIPLAYER opens the online flow,
-as upstream's; `scripts/build_openswos_indoor_server.sh <version>` builds the server's archive). Built in phases (INDOOR.md "Plan"); keep the doc's status
+as upstream's; `scripts/build_openswos_indoor_server.sh <version>` builds the server's archive).
+Its LOGIN is a swosunited.com account and RANKED matches go into the OOO Indoor ranking
+(`src/indoor_ranking.c`, the provider behind `online_account.h`), sealed through the server's
+ranking desk (`Server/RankDesk.cpp`, `include/rank_proto.h`, Monocypher); INDOOR.md "Ranked". Built in phases (INDOOR.md "Plan"); keep the doc's status
 line current.
 
 **`SWOS_WORLDS`** (default 1; `make SWOS_WORLDS=0`, the same on `Makefile.amiga`): the football worlds

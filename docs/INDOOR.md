@@ -415,6 +415,36 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
      `scripts/build_openswos_indoor_server.sh <version>` (static OpenSSL, glibc <= Debian 13's)
      into `dist/openswos_indoor_server-<version>.tar.gz`, which the owner's Ansible installs.
      The direct-IP menu stays for tests (`--menu=p2p/p2pMenu`).
+   - **Ranked: log-in and the OOO Indoor ranking** (2026-11-27, NETPLAY_COMPAT 1024). The fork's
+     online provider, `src/indoor_ranking.c` (registered by `Account_Init`, `src/online_account.c`,
+     through upstream's hooks in `include/online_account.h`), puts SWOS United's site behind them:
+     - LOGIN asks USERNAME + PASSWORD, a **swosunited.com account, required** (the owner). The
+       password goes once to the site's `auth/key`; only the API key comes back, kept in memory for
+       the run. After log-in, sessions an earlier run left open are closed (`open-matches`).
+     - OPEN offers FRIENDLY or RANKED (OOO INDOOR) (SWOS 2020's `openLobbyMenu`). A ranked game is
+       played **in the hall only**: the host's START waits for PITCH TYPE LINOLEUM (said in the
+       chat), then for the site's match -- `create` (ranking 16, the opponent's lobby name as their
+       username), `add-leg` for each rematch; the ids go to the guest in `LobbyRules.matchId/legId`.
+     - After each finished match both games `report` from their own side: goals in the 90 minutes,
+       extra time's goals when extra time was played (a goal in it, or a shoot-out after it), the
+       shoot-out's when there was one -- computed the same way on both sides, which the site
+       requires. The chat says WAITING / COUNTED / THE RESULTS DIFFER.
+     - Leaving the lobby the host `close`s the session; the site scores it within 5 minutes.
+     - **Through the server**: the game speaks no HTTPS. Each request is one TCP connection to the
+       matchmaker's port, `SWRK`, sealed to the server's public key (`RANK_SERVER_PUBLIC_KEY`,
+       `include/project_identity.h`) with Monocypher (X25519, BLAKE2b, XChaCha20-Poly1305;
+       `include/rank_proto.h`, `src/rank_seal.c`, `third_party/monocypher`). The server's desk
+       (`Server/RankDesk.cpp`: `--rank-key FILE --rank-ranking 16 [--rank-api URL]`) opens it,
+       allows only those six calls, sets the ranking itself, calls the API over HTTPS on a thread
+       and answers sealed. It never logs a password or key; the ledger gets a `rank` line a call.
+       `--rank-keygen FILE` makes a key pair (the secret: the owner's Ansible vault, never git);
+       a new key needs a new game build. `--rank-selftest` checks the sealing.
+     - **Test** (no real site): `scripts/fake_ooo_api.py` behind a local server with
+       `--rank-api http://127.0.0.1:18080`, then the lobby test with
+       `HOST_ENV="SWOS_MM_HOST=127.0.0.1 SWOS_MM_PORT=<port> SWOS_OOO_USER=HOST SWOS_OOO_PASSWORD=pw
+       SWOS_OOO_RANKED=1 SWOS_LOBBY_INDOOR=2"` and the same for the joiner (`SWOS_OOO_USER=JOIN`);
+       `SWOS_RANK_KEY` for a server with another key. Usernames: the menus type capitals, so a
+       site username must match without case (to be confirmed on the real site).
    - **The host chooses it in the lobby**, on PITCH TYPE: ... SPRING, RANDOM, **LINOLEUM**
      (`next_pitch`, `src/online_menus.c`), which sets SUBSTITUTES to 5 FROM 5 as the
      FRIENDLY screen's row does (leaving it: 2 FROM 5). The value is

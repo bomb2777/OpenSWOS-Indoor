@@ -18,6 +18,7 @@
 #ifdef SWOS_SDL_BUILD
 #include <stdio.h>
 #include "mod_api.h"
+#include "indoor_ranking.h"
 static ModOnlineProvider s_provider;
 static int32_t s_hasProvider;
 
@@ -36,7 +37,15 @@ const char *OnlineProvider_MmHost(void) { return s_hasProvider ? s_provider.mmHo
 uint16_t    OnlineProvider_MmPort(void) { return s_hasProvider ? s_provider.mmPort : 0; }
 #define P(fn) (s_hasProvider && s_provider.fn)
 
-void        Account_Init(void)                 { if (P(init)) s_provider.init(); }
+void        Account_Init(void)
+{
+    /* OpenSWOS-Indoor: the fork's own provider, the OOO Indoor ranking (src/indoor_ranking.c),
+     * unless a mod has set one. */
+    if (!s_hasProvider)
+        IndoorRanking_Register();
+    if (P(init))
+        s_provider.init();
+}
 int32_t     Account_Has(AccountFeature feature) { return P(has) ? s_provider.has(feature) : 0; }
 int32_t     Account_Enabled(void)              { return P(enabled) ? s_provider.enabled() : 0; }
 const char *Account_Prompt(void)

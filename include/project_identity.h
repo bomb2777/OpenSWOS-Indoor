@@ -32,6 +32,10 @@
 #define PROJECT_TEAM_FORMAT     "openswos-team"
 /* The public matchmaking server (and recorder, reports, team check): its host. */
 #define PROJECT_MM_HOST         "87.229.115.28"     /* OpenSWOS-Indoor: the owner's VPS (2026-11-27) */
+/* OpenSWOS-Indoor: the public key of that server's ranking desk (include/rank_proto.h; the secret
+ * half is its --rank-key, made by --rank-keygen): the game's log-in and ranked results are sealed
+ * to it. A new key on the server needs a new game build. SWOS_RANK_KEY overrides it for a test. */
+#define RANK_SERVER_PUBLIC_KEY  "d09a6c01884697ef9d4a0a3d22a493bdab4e68d6fa3f2b3715e603e120798945"
 
 /* The player's folder: saves, SWOS.ini, SWOS.log, the assets the setup makes (swos_io.c,
  * tools/swosdata SwosData_DefaultAssetsDir) -- Documents/<it> on Windows, the app-data

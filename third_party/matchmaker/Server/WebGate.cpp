@@ -3,6 +3,7 @@
 #include "WebGate.h"
 #include "Recorder.h"
 #include "ReportDesk.h"
+#include "RankDesk.h"
 #include "Ledger.h"
 #include <algorithm>
 #include <iostream>
@@ -19,8 +20,8 @@ WebGate::~WebGate() {}
 void WebGate::Adopt(int, const std::string&, uint16_t, bool) {}
 void WebGate::Update() {}
 
-TcpGate::TcpGate(uint16_t, WebGate* web, Recorder* recorder, ReportDesk* reports)
-    : m_web(web), m_recorder(recorder), m_reports(reports) {}
+TcpGate::TcpGate(uint16_t, WebGate* web, Recorder* recorder, ReportDesk* reports, RankDesk* rank)
+    : m_web(web), m_recorder(recorder), m_reports(reports), m_rank(rank) {}
 TcpGate::~TcpGate() {}
 void TcpGate::Update() {}
 
@@ -748,10 +749,10 @@ void WebGate::Update()
 // TcpGate
 // ============================================================================
 
-TcpGate::TcpGate(uint16_t port, WebGate* web, Recorder* recorder, ReportDesk* reports)
-    : m_web(web), m_recorder(recorder), m_reports(reports)
+TcpGate::TcpGate(uint16_t port, WebGate* web, Recorder* recorder, ReportDesk* reports, RankDesk* rank)
+    : m_web(web), m_recorder(recorder), m_reports(reports), m_rank(rank)
 {
-    if (!m_web && !m_recorder && !m_reports)
+    if (!m_web && !m_recorder && !m_reports && !m_rank)
         return;
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0)
@@ -820,6 +821,8 @@ void TcpGate::Update()
             m_web->Adopt(p.fd, p.ip, p.port, true);
         else if (n == 4 && memcmp(head, "SWMR", 4) == 0 && m_reports)     // a match report
             m_reports->Adopt(p.fd, p.ip + ":" + std::to_string(p.port));
+        else if (n == 4 && memcmp(head, "SWRK", 4) == 0 && m_rank)        // OpenSWOS-Indoor: the ranking desk
+            m_rank->Adopt(p.fd, p.ip, p.port);
         else if (n == 4 && !tls && memcmp(head, "GET ", 4) != 0 && m_recorder)
             m_recorder->Adopt(p.fd, p.ip + ":" + std::to_string(p.port));
         else if (n == 4 || n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) ||

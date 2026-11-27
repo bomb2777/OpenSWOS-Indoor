@@ -227,7 +227,7 @@ int main(int argc, char** argv)
             }
             case ENET_EVENT_TYPE_DISCONNECT:
             {
-                connections.LostConnection(event.peer);
+                connections.LostConnection(event.peer, event.data);
                 break;
             }
             case ENET_EVENT_TYPE_NONE:

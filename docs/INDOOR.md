@@ -445,6 +445,17 @@ change is behind `_gIndoor`, and nothing outside a friendly can set it.
        SWOS_OOO_RANKED=1 SWOS_LOBBY_INDOOR=2"` and the same for the joiner (`SWOS_OOO_USER=JOIN`);
        `SWOS_RANK_KEY` for a server with another key. Usernames: the menus type capitals, so a
        site username must match without case (to be confirmed on the real site).
+     - **The game list** (2026-11-28): OPEN tags the host's game ("R" ranked) as CREATE's third
+       part (`MmClient_SetCreateTag`); the fork's server keeps it and lists the game as
+       "NAME~R" (`Game::ShortInfo`), which `mm_client.c` splits back into `MmGame.tag`, so the row
+       says RANKED. Upstream's server takes the third part and ignores it (FRIENDLY shown), older
+       games see no tag. The screen's title is `PROJECT_MATCHMAKING_TITLE`. `SWOS_MM_CREATE_TAG=R`
+       tags a test's game (`HOST_ENV` of `scripts/relay_test.sh`).
+     - **Logging the matchmaker connection**: `[mm] HH:MM:SS` lines in SWOS.log -- every message
+       each way (the list broadcasts when they change), connecting, failing (and how long since the
+       last poll), a screen that leaves the connection unserviced for over 3 s. The game says
+       goodbye with ENET disconnect data 1, so the server's journal says per player "said goodbye"
+       or "no goodbye (timed out, or an older game)", and logs every message with its sender.
    - **The host chooses it in the lobby**, on PITCH TYPE: ... SPRING, RANDOM, **LINOLEUM**
      (`next_pitch`, `src/online_menus.c`), which sets SUBSTITUTES to 5 FROM 5 as the
      FRIENDLY screen's row does (leaving it: 2 FROM 5). The value is

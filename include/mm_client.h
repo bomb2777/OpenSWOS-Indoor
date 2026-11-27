@@ -64,7 +64,9 @@ typedef enum {
 } MmFailure;
 
 typedef struct { char name[MM_NAME_MAX]; } MmUser;
-typedef struct { char owner[MM_NAME_MAX]; } MmGame;
+/* tag: what the game counts for, as its host said at CREATE ("R" ranked, "" a friendly) --
+ * passed on by servers that keep it (OpenSWOS-Indoor's), "" from any other. */
+typedef struct { char owner[MM_NAME_MAX]; char tag[8]; } MmGame;
 
 /* The game you are in, as host or joiner. `requested` are players waiting for
  * the host to approve them; as host they are yours to approve or eject. */
@@ -125,6 +127,8 @@ const MmGameInfo *MmClient_GameInfo(void);
 
 /* Lobby actions. Each returns 0 when the request went out. */
 int32_t MmClient_CreateGame(void);
+/* The next CREATE's tag (letters only, up to 7; "" none): see MmGame.tag. */
+void    MmClient_SetCreateTag(const char *tag);
 int32_t MmClient_JoinGame(const char *owner);
 int32_t MmClient_Approve(const char *player);
 int32_t MmClient_Eject(const char *player);

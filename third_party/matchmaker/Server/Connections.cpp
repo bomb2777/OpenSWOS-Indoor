@@ -31,14 +31,19 @@ void Connections::NewConnection(ENetPeer* peer)
     if (!m_users.count(peer))
         m_users.insert({ peer, std::make_unique<User>(peer,this) });
 
-    std::cout << "added user, currently " << m_users.size() << " connected\n";
+    std::cout << "added user " << ToReadableString(peer->address) << ", currently " << m_users.size() << " connected\n";
 }
 
-void Connections::LostConnection(ENetPeer* peer)
+void Connections::LostConnection(ENetPeer* peer, enet_uint32 data)
 {
     if (m_users.count(peer) == 0)
         return;
     auto& u = m_users.at(peer);
+    // OpenSWOS-Indoor: who, and whether they said goodbye (the fork's games send 1 when they
+    // leave: mm_client.c). No goodbye: ENET's timeout -- a game that stopped servicing its
+    // connection, a network that dropped it -- or a build that does not say one.
+    std::cout << "removing user " << u->Name() << " (" << ToReadableString(peer->address) << "): "
+              << (data == 1 ? "said goodbye" : "no goodbye (timed out, or an older game)") << "\n";
 
     RemoveUserFromAnyGames(u.get());
 
@@ -77,6 +82,9 @@ void Connections::ReceiveMessage(ENetPeer* peer, const unsigned char* data, size
     if (!m_users.count(peer))
         return;
     auto& user = m_users.at(peer);
+    // OpenSWOS-Indoor: every message a player sends, with who sent it.
+    std::cout << "<- " << (user->Name().empty() ? ToReadableString(peer->address) : user->Name()) << ": "
+              << std::string((const char*)data, std::min<size_t>(len, 120)) << "\n";
     try
     {
         user->OnMessage(Message::Parse(data, len));
@@ -196,9 +204,10 @@ void Connections::Update()
 {
    
 }
-bool Connections::OpenGame(User* creator, int min_players, int max_players)
+bool Connections::OpenGame(User* creator, int min_players, int max_players, const std::string& tag)
 {
     m_games.push_back(Game(creator, min_players, max_players));
+    m_games.back().SetTag(tag);
     return true;
 }
 

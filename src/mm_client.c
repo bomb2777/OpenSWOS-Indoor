@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 /* Which server everything here talks to unless told otherwise. One copy, above
  * the netplay split, because three entry points need it -- the menus, the
@@ -172,6 +173,7 @@ typedef struct {
     MmState     state;
     MmFailure   failure;
     uint32_t    connectStartMs;
+    uint32_t    lastPollMs;         /* (OpenSWOS-Indoor) the log's "since the last poll" */
 
     char        userName[MM_NAME_MAX];
     char        gameId[MM_NAME_MAX];
@@ -217,6 +219,24 @@ static void copy_str(char *dst, int32_t cap, const char *src, int32_t len)
     dst[len] = '\0';
 }
 
+/* (OpenSWOS-Indoor) What the matchmaker connection does, in SWOS.log with the wall clock, so a
+ * lost connection can be laid beside the server's journal: every message each way (the list
+ * broadcasts only when they change), each state change and why. */
+#include <time.h>
+static void mm_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+static void mm_log(const char *fmt, ...)
+{
+    char clock[16];
+    time_t t = time(NULL);
+    va_list ap;
+    strftime(clock, sizeof clock, "%H:%M:%S", localtime(&t));
+    fprintf(stderr, "[mm] %s ", clock);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+}
+
 static void send_text(const char *header, const char *content)
 {
     char buf[512];
@@ -227,6 +247,7 @@ static void send_text(const char *header, const char *content)
     n = snprintf(buf, sizeof buf, "%s%s", header, content ? content : "");
     if (n < 0)
         return;
+    mm_log("-> %.120s", buf);
     if (n > (int)sizeof buf - 1)
         n = (int)sizeof buf - 1;
     {
@@ -659,6 +680,11 @@ static void close_socket(void)
 
 static void fail(MmFailure why)
 {
+    static const char *const k_why[] = { "none", "unavailable", "bad address", "no socket", "no answer", "lost" };
+    mm_log("connection FAILED (%s, was %s), %u ms since the last poll",
+           (uint32_t)why < sizeof k_why / sizeof k_why[0] ? k_why[why] : "?",
+           s_mm.state == MM_CONNECTED ? "connected" : s_mm.state == MM_CONNECTING ? "connecting" : "other",
+           (unsigned)(enet_time_get() - s_mm.lastPollMs));
     close_socket();
     s_mm.state = MM_FAILED;
     s_mm.failure = why;
@@ -719,15 +745,20 @@ int32_t MmClient_Connect(const char *host, uint16_t port,
     s_mm.state = MM_CONNECTING;
     s_mm.failure = MM_FAIL_NONE;
     s_mm.connectStartMs = enet_time_get();
+    s_mm.lastPollMs = s_mm.connectStartMs;
+    mm_log("connecting to %s:%u as %s (%s)", host && host[0] ? host : MM_DEFAULT_HOST, (unsigned)addr.port,
+           s_mm.userName, s_mm.gameId);
     return 0;
 }
 
 void MmClient_Disconnect(void)
 {
+    if (s_mm.server)
+        mm_log("disconnecting (the game's choice)");
     if (s_mm.server && s_mm.state != MM_FAILED) {
         /* Ask politely, then go. The server drops us on the ENET disconnect
          * anyway, so there is nothing to wait for. */
-        enet_peer_disconnect(s_mm.server, 0);
+        enet_peer_disconnect(s_mm.server, 1);    /* (1: a goodbye, the fork's server logs it) */
         if (s_mm.host)
             enet_host_flush(s_mm.host);
     }
@@ -739,6 +770,20 @@ void MmClient_Disconnect(void)
 
 static void handle_packet(const char *data, size_t len)
 {
+    {   /* the log: every message, the two list broadcasts only when they change */
+        static char lastUsers[160], lastGames[160];
+        char text[160];
+        char *last = NULL;
+        copy_str(text, sizeof text, data, (int32_t)(len < sizeof text - 1 ? len : sizeof text - 1));
+        if (strncmp(text, H_PLAYERSACTIVE, sizeof H_PLAYERSACTIVE - 1) == 0)
+            last = lastUsers;
+        else if (strncmp(text, H_GAMESOPEN, sizeof H_GAMESOPEN - 1) == 0)
+            last = lastGames;
+        if (!last || strcmp(last, text) != 0)
+            mm_log("<- %s", text);
+        if (last)
+            snprintf(last, 160, "%s", text);
+    }
     const char *body;
     size_t blen;
 
@@ -752,6 +797,15 @@ static void handle_packet(const char *data, size_t len)
     if ((body = match_header(data, len, H_GAMESOPEN, &blen)) != NULL) {
         s_mm.numGames = parse_open_games(body, blen, (char (*)[MM_NAME_MAX])s_mm.games,
                                          (int32_t)sizeof(MmGame), MM_MAX_GAMES);
+        /* A game's tag comes after its owner, "NAME~TAG" (Server/Game.cpp ShortInfo). */
+        for (int32_t i = 0; i < s_mm.numGames; i++) {
+            char *t = strchr(s_mm.games[i].owner, '~');
+            s_mm.games[i].tag[0] = 0;
+            if (t) {
+                *t = 0;
+                snprintf(s_mm.games[i].tag, sizeof s_mm.games[i].tag, "%s", t + 1);
+            }
+        }
         return;
     }
     if ((body = match_header(data, len, H_GAMEINFO, &blen)) != NULL) {
@@ -827,6 +881,13 @@ static void mm_service(uint32_t timeoutMs)
 
     if (!s_mm.host)
         return;
+    {   /* A connection nobody services for a while is dropped by ENET (its timeouts): say so. */
+        const uint32_t now = enet_time_get();
+        if (s_mm.state == MM_CONNECTED && now - s_mm.lastPollMs > 3000)
+            mm_log("not polled for %u ms (a screen that does not service the connection)",
+                   (unsigned)(now - s_mm.lastPollMs));
+        s_mm.lastPollMs = now;
+    }
 
     if (s_mm.state == MM_CONNECTING &&
         enet_time_get() - s_mm.connectStartMs > MM_CONNECT_TIMEOUT_MS &&
@@ -952,6 +1013,9 @@ static int32_t require_connected(void)
     return s_mm.state == MM_CONNECTED && s_mm.server;
 }
 
+static char s_createTag[8];     /* MmClient_SetCreateTag */
+void MmClient_SetCreateTag(const char *tag);
+
 int32_t MmClient_CreateGame(void)
 {
     if (!require_connected())
@@ -963,8 +1027,25 @@ int32_t MmClient_CreateGame(void)
      * obvious guess) looks exactly like the server ignoring you.
      *
      * SWOS is two players, so both are 2. */
-    send_text(H_CREATE, "2,2");
+    if (!s_createTag[0] && getenv("SWOS_MM_CREATE_TAG"))   /* a test: the host's game tagged */
+        MmClient_SetCreateTag(getenv("SWOS_MM_CREATE_TAG"));
+    if (s_createTag[0]) {
+        char body[16];
+        snprintf(body, sizeof body, "2,2,%s", s_createTag);
+        send_text(H_CREATE, body);     /* (a third part: the server takes ">= 2" and keeps it) */
+    } else {
+        send_text(H_CREATE, "2,2");
+    }
     return 0;
+}
+
+void MmClient_SetCreateTag(const char *tag)
+{
+    int32_t i, n = 0;
+    for (i = 0; tag && tag[i] && n < (int32_t)sizeof s_createTag - 1; i++)
+        if ((tag[i] >= 'A' && tag[i] <= 'Z') || (tag[i] >= 'a' && tag[i] <= 'z'))
+            s_createTag[n++] = tag[i];
+    s_createTag[n] = 0;
 }
 
 int32_t MmClient_JoinGame(const char *owner)
@@ -1272,6 +1353,7 @@ const MmUser *MmClient_Users(int32_t *count) { if (count) *count = 0; return NUL
 const MmGame *MmClient_OpenGames(int32_t *count) { if (count) *count = 0; return NULL; }
 const MmGameInfo *MmClient_GameInfo(void) { return NULL; }
 int32_t MmClient_CreateGame(void) { return 1; }
+void    MmClient_SetCreateTag(const char *tag) { (void)tag; }
 int32_t MmClient_JoinGame(const char *owner) { (void)owner; return 1; }
 int32_t MmClient_Approve(const char *player) { (void)player; return 1; }
 int32_t MmClient_Eject(const char *player) { (void)player; return 1; }

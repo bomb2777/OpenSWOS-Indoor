@@ -585,6 +585,12 @@ static void matchMaking_layout(void)
     entry_at(MatchMakingMenu_desc)->x = (uint16_t)(20 + 24 - kShift);
     entry_at(MatchMakingMenu_connector)->x = (uint16_t)(203 + 24 - kShift);
     entry_at(MatchMakingMenu_numOfUsers)->dwWidth = 120 - 8;
+#ifdef PROJECT_MATCHMAKING_TITLE
+    /* A fork's own title (project_identity.h), the button widened about its middle (107 + 90/2). */
+    set_text(MatchMakingMenu_header, PROJECT_MATCHMAKING_TITLE);
+    entry_at(MatchMakingMenu_header)->dwWidth = 130;
+    entry_at(MatchMakingMenu_header)->x = (uint16_t)(152 - 130 / 2);
+#endif
 }
 
 static void matchMakingMenu_OnDraw(void)
@@ -701,7 +707,9 @@ static void matchMakingMenu_OnDraw(void)
         s_rowGame[row] = hasGame ? row : -1;
         if (hasGame) {
             snprintf(s_hostRow[row], sizeof s_hostRow[row], "%s", games[row].owner);
-            snprintf(s_modeRow[row], sizeof s_modeRow[row], "FRIENDLY");
+            /* What the game counts for, when its host's build said so at CREATE (MmGame.tag). */
+            snprintf(s_modeRow[row], sizeof s_modeRow[row], "%s",
+                     strcmp(games[row].tag, "R") == 0 ? "RANKED" : "FRIENDLY");
             set_text(MatchMakingMenu_host_00 + row, s_hostRow[row]);
             set_text(MatchMakingMenu_mode_00 + row, s_modeRow[row]);
         }
@@ -2656,6 +2664,8 @@ static void matchMaking_openGame_onSelect(void)
         s_openMode = LOBBY_MODE_FRIENDLY;
         return;
     }
+    /* The game list shows what it counts for (the server passes the tag on). */
+    MmClient_SetCreateTag(s_openMode == LOBBY_MODE_RANKED ? "R" : "");
     /* A match picked with its own style (a league or cup match's ranking): no question. */
     if (Account_Has(ACCOUNT_HAS_RANKED) && Account_ChosenStyle() >= 0) {
         extern void GameplayStyle_Set(int dos, int persist);

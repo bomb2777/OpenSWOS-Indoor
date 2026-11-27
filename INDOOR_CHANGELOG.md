@@ -4,6 +4,13 @@ What this fork (`bomb2777/OpenSWOS-Indoor`, branch `indoor`) has added to OpenSW
 first. All of it applies only to a friendly played with INDOOR switched on; with it off, the
 game is upstream's. How it works in detail: [docs/INDOOR.md](docs/INDOOR.md).
 
+## 2026-11-28
+
+- **INDOOR MATCH MAKING:** the server's game list shows RANKED for a ranked game (instead of
+  always FRIENDLY), and the screen has its own title.
+- More logging of the connection to the server (SWOS.log `[mm]` lines, the server's journal),
+  to find out why the connection is sometimes lost.
+
 ## 2026-11-27
 
 - **Ranked matches (OOO Indoor):** MULTIPLAYER now logs in with your swosunited.com account

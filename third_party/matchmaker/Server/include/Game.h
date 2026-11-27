@@ -18,6 +18,7 @@ public:
 	void SendInfoToAll() const;
 	bool CanStart() const;
 	std::string ShortInfo() const;
+	void SetTag(const std::string& tag) { m_tag = tag; }   // OpenSWOS-Indoor: "R" ranked (User::CreateGame)
 	User* FirstJoiner() { return *m_joined.begin(); }
 private:
 	std::string FullInfo() const;
@@ -26,4 +27,5 @@ private:
 	std::set< User*> m_pending;
 	int m_maxPlayers;
 	int m_minPlayers;
+	std::string m_tag;
 };

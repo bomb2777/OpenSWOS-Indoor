@@ -17,7 +17,7 @@ User::~User()
 }
 void User::DisconnectUser(const std::string& reason)
 {
-    std::cout << "Kick user off: user " << reason << "\n";
+    std::cout << "Kick user off: user " << m_name << " (" << ToReadableString(m_peer->address) << "): " << reason << "\n";
     SendInfoMessage(reason);
     ChangeState<KickedOffState>();
     enet_peer_disconnect_later(m_peer, 0);
@@ -103,7 +103,14 @@ bool User::CreateGame(const std::string& data)
         int min_players = std::stoi(s[0]);
         int max_players = std::stoi(s[1]);
         
-        if (m_connections->OpenGame(this, min_players, max_players))
+        // OpenSWOS-Indoor: a third part, letters only, is the game's tag ("R": ranked), shown
+        // in the open-games list after the owner's name ("NAME~R": Game::ShortInfo).
+        std::string tag;
+        if (s.size() >= 3)
+            for (char c : s[2])
+                if (((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) && tag.size() < 7)
+                    tag += c;
+        if (m_connections->OpenGame(this, min_players, max_players, tag))
         {
             Message::Make(MessageType::Create,Name()).OnData(SendTo(Peer()));
             m_connections->BroadcastMessage(Message::Make(MessageType::Info, "New Game created"));

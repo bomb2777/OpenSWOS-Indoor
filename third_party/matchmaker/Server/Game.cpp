@@ -86,7 +86,8 @@ std::string Game::FullInfo() const
 
 std::string Game::ShortInfo() const
 {
-	return m_creator->Name();
+	// OpenSWOS-Indoor: "NAME~TAG" for a game with a tag (User::CreateGame).
+	return m_tag.empty() ? m_creator->Name() : m_creator->Name() + "~" + m_tag;
 }
 
 bool Game::RequestUserJoin(  User* user)

@@ -32,6 +32,8 @@
 #define PROJECT_TEAM_FORMAT     "openswos-team"
 /* The public matchmaking server (and recorder, reports, team check): its host. */
 #define PROJECT_MM_HOST         "87.229.115.28"     /* OpenSWOS-Indoor: the owner's VPS (2026-11-27) */
+/* OpenSWOS-Indoor: the matchmaking screen's title (src/online_menus.c; unset: SWOS 2020's MATCH MAKING). */
+#define PROJECT_MATCHMAKING_TITLE "INDOOR MATCH MAKING"
 /* OpenSWOS-Indoor: the public key of that server's ranking desk (include/rank_proto.h; the secret
  * half is its --rank-key, made by --rank-keygen): the game's log-in and ranked results are sealed
  * to it. A new key on the server needs a new game build. SWOS_RANK_KEY overrides it for a test. */
